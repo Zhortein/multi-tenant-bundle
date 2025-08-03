@@ -22,7 +22,7 @@ services:
     tags:
       - { name: kernel.event_subscriber }
 
-  Zhortein\MultiTenantBundle\Service\TenantSettingsManager: ~
+  Zhortein\MultiTenantBundle\Manager\TenantSettingsManager: ~
 
   Zhortein\MultiTenantBundle\Doctrine\:
     resource: '../../Doctrine/'

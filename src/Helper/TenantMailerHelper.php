@@ -4,7 +4,7 @@ namespace Zhortein\MultiTenantBundle\Helper;
 
 use Symfony\Bridge\Twig\Mime\TemplatedEmail;
 use Symfony\Component\Mailer\MailerInterface;
-use Zhortein\MultiTenantBundle\Service\TenantSettingsManager;
+use Zhortein\MultiTenantBundle\Manager\TenantSettingsManager;
 
 final class TenantMailerHelper
 {

@@ -22,7 +22,7 @@ Le bundle vous permet de stocker dynamiquement des paires clé/valeur pour chaqu
 ## Utilisation
 
 ```php
-use Zhortein\MultiTenantBundle\Service\TenantSettingsManager;
+use Zhortein\MultiTenantBundle\Manager\TenantSettingsManager;
 
 public function __construct(
     private readonly TenantSettingsManager $settings
