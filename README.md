@@ -476,16 +476,37 @@ php bin/console tenant:fixtures:load --tenant=acme --group=demo
 
 ## 📚 Documentation
 
-### Core Documentation
-- [Configuration Guide](docs/configuration.md) - Complete configuration reference
-- [Tenant-Aware Services](docs/tenant-aware-services.md) - Mailer, Messenger, Storage services
-- [Advanced Features](docs/advanced-features.md) - Custom resolvers, events, middleware
+### 🚀 Getting Started
+- [Installation & Setup](docs/installation.md) - Install and configure the bundle
+- [Configuration Reference](docs/configuration.md) - Complete configuration options
+- [Database Strategies](docs/database-strategies.md) - Shared DB vs Multi-DB approaches
 
-### Usage Examples
-- [Mailer Usage](docs/examples/mailer-usage.md) - Tenant-specific email configuration and sending
-- [Messenger Usage](docs/examples/messenger-usage.md) - Tenant-aware message queues and processing
-- [Storage Usage](docs/examples/storage-usage.md) - File storage with tenant isolation
-- [Database Usage](docs/examples/database-usage.md) - Entity setup, repositories, and migrations
+### 🏗️ Core Concepts
+- [Tenant Context](docs/tenant-context.md) - How tenant resolution and access works
+- [Tenant Resolution](docs/tenant-resolution.md) - Subdomain, path, header, and custom resolvers
+- [Doctrine Tenant Filter](docs/doctrine-tenant-filter.md) - Automatic database filtering
+- [Tenant Settings](docs/tenant-settings.md) - Configuration system with fallback rules
+
+### 🔧 Service Integration
+- [Mailer](docs/mailer.md) - Tenant-aware email configuration and sending
+- [Messenger](docs/messenger.md) - Tenant-aware message queues and processing
+- [Storage](docs/storage.md) - Tenant-specific file storage mechanisms
+
+### 🗄️ Database Management
+- [Migrations](docs/migrations.md) - Running migrations for each tenant
+- [Fixtures](docs/fixtures.md) - Creating and loading fixtures per tenant
+
+### 🛠️ Development Tools
+- [CLI Commands](docs/cli.md) - Console commands with examples
+- [Testing](docs/testing.md) - Unit and functional testing for multi-tenant apps
+- [FAQ](docs/faq.md) - Frequently asked questions and troubleshooting
+
+### 📖 Examples
+- [Basic Usage Examples](docs/examples/basic-usage.md) - Practical code examples
+- [Mailer Usage Examples](docs/examples/mailer-usage.md) - Email configuration examples
+- [Messenger Usage Examples](docs/examples/messenger-usage.md) - Message queue examples
+- [Storage Usage Examples](docs/examples/storage-usage.md) - File storage examples
+- [Database Usage Examples](docs/examples/database-usage.md) - Entity and repository examples
 
 ## Testing
 

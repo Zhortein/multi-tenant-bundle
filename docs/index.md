@@ -6,24 +6,35 @@ Welcome to the comprehensive documentation for the Zhortein Multi-Tenant Bundle,
 
 ### Getting Started
 - [Installation](installation.md) - Install and enable the bundle
-- [Configuration](configuration.md) - Configure the bundle for your needs
-- [Tenant Entity](tenant-entity.md) - Create your tenant entity
-- [Doctrine Filter](doctrine-filter.md) - Set up automatic tenant filtering
+- [Configuration](configuration.md) - Complete configuration reference
+- [Database Strategies](database-strategies.md) - Shared DB vs Multi-DB approaches
 
-### Core Features
-- [Tenant Resolvers](resolvers.md) - Path, subdomain, and custom resolution strategies
-- [Tenant Settings](tenant_settings.md) - Manage tenant-specific configuration
-- [Database Strategies](tenant_database_info.md) - Shared vs separate database approaches
-- [File Storage](storage.md) - Tenant-aware file storage abstraction
+### Core Concepts
+- [Tenant Context](tenant-context.md) - How tenant resolution and access works
+- [Tenant Resolution](tenant-resolution.md) - Subdomain, path, header, and custom resolvers
+- [Doctrine Tenant Filter](doctrine-tenant-filter.md) - Automatic database filtering
+- [Tenant Settings](tenant-settings.md) - Configuration system with fallback rules
 
-### Usage Guide
-- [Basic Usage](usage.md) - Common usage patterns and examples
-- [Console Commands](commands.md) - Management commands for tenants
-- [Testing](testing.md) - Testing multi-tenant applications
+### Service Integration
+- [Mailer](mailer.md) - Tenant-aware email configuration and sending
+- [Messenger](messenger.md) - Tenant-aware message queues and processing
+- [Storage](storage.md) - Tenant-specific file storage mechanisms
+
+### Database Management
+- [Migrations](migrations.md) - Running migrations for each tenant
+- [Fixtures](fixtures.md) - Creating and loading fixtures per tenant
+
+### Development
+- [CLI Commands](cli.md) - Console commands with examples
+- [Testing](testing.md) - Unit and functional testing for multi-tenant apps
+- [FAQ](faq.md) - Frequently asked questions
 
 ### Examples
 - [Basic Usage Examples](examples/basic-usage.md) - Practical code examples
-- [Configuration Examples](configuration-examples.md) - Various configuration scenarios
+- [Mailer Usage Examples](examples/mailer-usage.md) - Email configuration examples
+- [Messenger Usage Examples](examples/messenger-usage.md) - Message queue examples
+- [Storage Usage Examples](examples/storage-usage.md) - File storage examples
+- [Database Usage Examples](examples/database-usage.md) - Entity and repository examples
 
 ## Overview
 
