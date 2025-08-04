@@ -1,31 +1,55 @@
 # Tenant-Aware Messenger
 
-The tenant-aware messenger system enables tenant-specific message queue configuration and processing. Each tenant can have its own message transport, routing rules, and processing logic while maintaining tenant isolation throughout the message lifecycle.
+The Zhortein Multi-Tenant Bundle provides comprehensive tenant-aware message queue functionality through its messenger integration. This allows you to route messages to tenant-specific transports and maintain tenant context throughout asynchronous processing.
 
 ## Overview
 
-The messenger integration provides:
+The tenant-aware messenger system consists of several components:
 
-- **Tenant-specific transports**: Each tenant can use different message brokers
-- **Tenant context preservation**: Tenant information is maintained across async processing
-- **Fallback configuration**: Global defaults when tenant settings are not configured
-- **Automatic routing**: Messages are routed to tenant-specific queues
-- **Isolation**: Complete message isolation between tenants
+- **TenantMessengerConfigurator**: Manages tenant-specific messenger settings
+- **TenantMessengerTransportResolver**: Middleware that routes messages to tenant-specific transports
+- **TenantStamp**: Carries tenant information with messages for async processing
+- **TenantMessengerTransportFactory**: Creates tenant-specific transport instances
+
+## Requirements
+
+The messenger functionality requires the following package:
+
+```bash
+composer require symfony/messenger
+```
 
 ## Configuration
 
-### Bundle Configuration
+Enable the messenger integration in your bundle configuration:
 
 ```yaml
 # config/packages/zhortein_multi_tenant.yaml
 zhortein_multi_tenant:
     messenger:
         enabled: true
+        default_transport: 'async'
+        add_tenant_headers: true
+        tenant_transport_map:
+            acme: 'acme_transport'
+            bio: 'bio_transport'
+            startup: 'startup_transport'
         fallback_dsn: 'sync://'
         fallback_bus: 'messenger.bus.default'
 ```
 
-### Symfony Messenger Configuration
+### Configuration Options
+
+- `enabled`: Enable/disable tenant-aware messenger functionality
+- `default_transport`: Default transport when no tenant-specific mapping exists
+- `add_tenant_headers`: Add tenant information to message stamps/headers
+- `tenant_transport_map`: Mapping of tenant slugs to transport names
+- `fallback_dsn`: Default messenger DSN when tenant has no specific configuration
+- `fallback_bus`: Default messenger bus when tenant has no specific configuration
+
+## Symfony Messenger Configuration
+
+Configure your transports in the standard Symfony Messenger configuration:
 
 ```yaml
 # config/packages/messenger.yaml
@@ -38,10 +62,6 @@ framework:
                 middleware:
                     - validation
                     - doctrine_transaction
-            
-            query.bus:
-                middleware:
-                    - validation
         
         transports:
             # Default transport
@@ -51,920 +71,460 @@ framework:
                     max_retries: 3
                     multiplier: 2
             
-            # Tenant-aware transport
-            tenant_async:
-                dsn: 'tenant://default'
+            # Tenant-specific transports
+            acme_transport:
+                dsn: 'redis://localhost:6379/acme_messages'
                 retry_strategy:
-                    max_retries: 3
-                    delay: 1000
-                    multiplier: 2
-                    max_delay: 0
+                    max_retries: 5
+                    
+            bio_transport:
+                dsn: 'amqp://guest:guest@localhost:5672/bio_vhost/bio_messages'
+                
+            startup_transport:
+                dsn: 'doctrine://default?queue_name=startup_messages'
         
         routing:
-            'App\Message\*': tenant_async
-            'App\Query\*': query.bus
+            # Route messages to appropriate transports
+            'App\Message\*': async
 ```
 
-### Environment Variables
+## Tenant Settings
 
-```bash
-# .env
-MESSENGER_TRANSPORT_DSN=doctrine://default?auto_setup=0
-```
-
-## Basic Usage
-
-### Creating Tenant-Aware Messages
+Configure messenger settings per tenant using the tenant settings system:
 
 ```php
-<?php
+use Zhortein\MultiTenantBundle\Manager\TenantSettingsManager;
 
+public function configureMessenger(TenantSettingsManager $settings): void
+{
+    // Messenger configuration
+    $settings->set('messenger_transport_dsn', 'redis://localhost:6379/tenant_messages');
+    $settings->set('messenger_bus', 'command.bus');
+    $settings->set('messenger_delay', 5000); // 5 seconds delay
+    $settings->set('messenger_delay_email', 10000); // 10 seconds for email transport
+}
+```
+
+### Available Settings
+
+| Setting Key | Description | Example |
+|-------------|-------------|---------|
+| `messenger_transport_dsn` | Transport DSN | `redis://localhost:6379/messages` |
+| `messenger_bus` | Bus name | `command.bus` |
+| `messenger_delay` | Default delay in milliseconds | `5000` |
+| `messenger_delay_{transport}` | Transport-specific delay | `messenger_delay_email: 10000` |
+
+## Usage
+
+### Basic Message Dispatching
+
+Messages are automatically routed to tenant-specific transports:
+
+```php
+use Symfony\Component\Messenger\MessageBusInterface;
+use App\Message\SendEmailMessage;
+
+public function sendMessage(MessageBusInterface $bus): void
+{
+    $message = new SendEmailMessage('user@example.com', 'Welcome!');
+    
+    // Message will be automatically routed to tenant-specific transport
+    // and tagged with tenant information
+    $bus->dispatch($message);
+}
+```
+
+### Custom Message with Tenant Context
+
+Create messages that are tenant-aware:
+
+```php
 namespace App\Message;
 
-use Zhortein\MultiTenantBundle\Entity\TenantInterface;
-
-class ProcessOrderMessage
+class TenantAwareMessage
 {
     public function __construct(
-        private int $orderId,
-        private ?TenantInterface $tenant = null,
-    ) {}
-
-    public function getOrderId(): int
-    {
-        return $this->orderId;
+        private readonly string $tenantSlug,
+        private readonly string $data,
+    ) {
     }
-
-    public function getTenant(): ?TenantInterface
-    {
-        return $this->tenant;
-    }
-
-    public function setTenant(?TenantInterface $tenant): void
-    {
-        $this->tenant = $tenant;
-    }
-}
-```
-
-### Message Handler with Tenant Context
-
-```php
-<?php
-
-namespace App\MessageHandler;
-
-use Symfony\Component\Messenger\Attribute\AsMessageHandler;
-use App\Message\ProcessOrderMessage;
-use App\Repository\OrderRepository;
-use Zhortein\MultiTenantBundle\Context\TenantContextInterface;
-use Psr\Log\LoggerInterface;
-
-#[AsMessageHandler]
-class ProcessOrderMessageHandler
-{
-    public function __construct(
-        private OrderRepository $orderRepository,
-        private TenantContextInterface $tenantContext,
-        private LoggerInterface $logger,
-    ) {}
-
-    public function __invoke(ProcessOrderMessage $message): void
-    {
-        // Set tenant context from message
-        $tenant = $message->getTenant();
-        
-        if ($tenant) {
-            $this->tenantContext->setTenant($tenant);
-            
-            $this->logger->info('Processing order for tenant', [
-                'tenant_slug' => $tenant->getSlug(),
-                'order_id' => $message->getOrderId(),
-            ]);
-        }
-
-        try {
-            // Process the order - queries are automatically filtered by tenant
-            $order = $this->orderRepository->find($message->getOrderId());
-            
-            if (!$order) {
-                throw new \RuntimeException('Order not found: ' . $message->getOrderId());
-            }
-
-            // Your order processing logic here
-            $this->processOrder($order);
-            
-            $this->logger->info('Order processed successfully', [
-                'tenant_slug' => $tenant?->getSlug(),
-                'order_id' => $order->getId(),
-            ]);
-            
-        } catch (\Exception $e) {
-            $this->logger->error('Failed to process order', [
-                'tenant_slug' => $tenant?->getSlug(),
-                'order_id' => $message->getOrderId(),
-                'error' => $e->getMessage(),
-            ]);
-            
-            throw $e;
-        } finally {
-            // Clear tenant context
-            $this->tenantContext->clear();
-        }
-    }
-
-    private function processOrder(Order $order): void
-    {
-        // Update order status
-        $order->setStatus('processing');
-        
-        // Send confirmation email
-        // Calculate shipping
-        // Update inventory
-        // etc.
-    }
-}
-```
-
-### Dispatching Messages
-
-```php
-<?php
-
-namespace App\Service;
-
-use Symfony\Component\Messenger\MessageBusInterface;
-use App\Message\ProcessOrderMessage;
-use Zhortein\MultiTenantBundle\Context\TenantContextInterface;
-
-class OrderService
-{
-    public function __construct(
-        private MessageBusInterface $messageBus,
-        private TenantContextInterface $tenantContext,
-    ) {}
-
-    public function submitOrderForProcessing(Order $order): void
-    {
-        $tenant = $this->tenantContext->getTenant();
-        
-        // Create message with tenant context
-        $message = new ProcessOrderMessage($order->getId(), $tenant);
-        
-        // Dispatch to tenant-specific queue
-        $this->messageBus->dispatch($message);
-    }
-}
-```
-
-## Advanced Configuration
-
-### Tenant-Specific Transport Configuration
-
-```php
-<?php
-
-namespace App\Service;
-
-use Zhortein\MultiTenantBundle\Manager\TenantSettingsManager;
-use Zhortein\MultiTenantBundle\Messenger\TenantMessengerConfigurator;
-
-class TenantMessengerConfigurationService
-{
-    public function __construct(
-        private TenantSettingsManager $settingsManager,
-        private TenantMessengerConfigurator $messengerConfigurator,
-    ) {}
-
-    public function configureMessengerSettings(array $settings): void
-    {
-        $this->validateMessengerSettings($settings);
-
-        $this->settingsManager->setMultiple([
-            'messenger_transport_dsn' => $settings['transport_dsn'],
-            'messenger_bus' => $settings['bus_name'] ?? 'messenger.bus.default',
-            'messenger_retry_max' => $settings['retry_max'] ?? 3,
-            'messenger_retry_delay' => $settings['retry_delay'] ?? 1000,
-            'messenger_retry_multiplier' => $settings['retry_multiplier'] ?? 2,
-        ]);
-    }
-
-    public function getMessengerSettings(): array
-    {
-        return [
-            'transport_dsn' => $this->messengerConfigurator->getTransportDsn(),
-            'bus_name' => $this->messengerConfigurator->getBusName(),
-            'retry_max' => $this->settingsManager->get('messenger_retry_max', 3),
-            'retry_delay' => $this->settingsManager->get('messenger_retry_delay', 1000),
-            'retry_multiplier' => $this->settingsManager->get('messenger_retry_multiplier', 2),
-        ];
-    }
-
-    private function validateMessengerSettings(array $settings): void
-    {
-        if (empty($settings['transport_dsn'])) {
-            throw new \InvalidArgumentException('Transport DSN is required');
-        }
-
-        // Validate DSN format
-        if (!$this->isValidDsn($settings['transport_dsn'])) {
-            throw new \InvalidArgumentException('Invalid transport DSN format');
-        }
-    }
-
-    private function isValidDsn(string $dsn): bool
-    {
-        $validSchemes = ['amqp', 'redis', 'doctrine', 'sync', 'in-memory'];
-        $parsed = parse_url($dsn);
-        
-        return $parsed !== false && in_array($parsed['scheme'] ?? '', $validSchemes);
-    }
-}
-```
-
-### Custom Message Middleware
-
-```php
-<?php
-
-namespace App\Messenger\Middleware;
-
-use Symfony\Component\Messenger\Envelope;
-use Symfony\Component\Messenger\Middleware\MiddlewareInterface;
-use Symfony\Component\Messenger\Middleware\StackInterface;
-use Symfony\Component\Messenger\Stamp\BusNameStamp;
-use Zhortein\MultiTenantBundle\Context\TenantContextInterface;
-use Zhortein\MultiTenantBundle\Messenger\Stamp\TenantStamp;
-
-class TenantContextMiddleware implements MiddlewareInterface
-{
-    public function __construct(
-        private TenantContextInterface $tenantContext,
-    ) {}
-
-    public function handle(Envelope $envelope, StackInterface $stack): Envelope
-    {
-        // Add tenant stamp if not already present
-        if (!$envelope->last(TenantStamp::class)) {
-            $tenant = $this->tenantContext->getTenant();
-            
-            if ($tenant) {
-                $envelope = $envelope->with(new TenantStamp($tenant->getSlug()));
-            }
-        }
-
-        // Set tenant context from stamp for handlers
-        $tenantStamp = $envelope->last(TenantStamp::class);
-        
-        if ($tenantStamp) {
-            // Resolve tenant from stamp and set context
-            $tenant = $this->resolveTenantFromStamp($tenantStamp);
-            $this->tenantContext->setTenant($tenant);
-        }
-
-        try {
-            return $stack->next()->handle($envelope, $stack);
-        } finally {
-            // Clear tenant context after handling
-            if ($tenantStamp) {
-                $this->tenantContext->clear();
-            }
-        }
-    }
-
-    private function resolveTenantFromStamp(TenantStamp $stamp): ?TenantInterface
-    {
-        // Implementation to resolve tenant from stamp
-        // This would typically use the tenant registry
-        return null;
-    }
-}
-```
-
-### Tenant Stamp
-
-```php
-<?php
-
-namespace Zhortein\MultiTenantBundle\Messenger\Stamp;
-
-use Symfony\Component\Messenger\Stamp\StampInterface;
-
-class TenantStamp implements StampInterface
-{
-    public function __construct(
-        private string $tenantSlug,
-    ) {}
 
     public function getTenantSlug(): string
     {
         return $this->tenantSlug;
     }
-}
-```
 
-## Message Types and Patterns
-
-### Command Messages
-
-```php
-<?php
-
-namespace App\Message\Command;
-
-use Zhortein\MultiTenantBundle\Entity\TenantInterface;
-
-class CreateUserCommand
-{
-    public function __construct(
-        private string $email,
-        private string $name,
-        private array $roles = [],
-        private ?TenantInterface $tenant = null,
-    ) {}
-
-    public function getEmail(): string
+    public function getData(): string
     {
-        return $this->email;
-    }
-
-    public function getName(): string
-    {
-        return $this->name;
-    }
-
-    public function getRoles(): array
-    {
-        return $this->roles;
-    }
-
-    public function getTenant(): ?TenantInterface
-    {
-        return $this->tenant;
-    }
-
-    public function setTenant(?TenantInterface $tenant): void
-    {
-        $this->tenant = $tenant;
+        return $this->data;
     }
 }
 ```
 
-### Event Messages
+### Message Handlers with Tenant Context
+
+Access tenant information in your message handlers:
 
 ```php
-<?php
+namespace App\MessageHandler;
 
-namespace App\Message\Event;
-
-use Zhortein\MultiTenantBundle\Entity\TenantInterface;
-
-class UserCreatedEvent
-{
-    public function __construct(
-        private int $userId,
-        private string $email,
-        private \DateTimeImmutable $createdAt,
-        private ?TenantInterface $tenant = null,
-    ) {}
-
-    public function getUserId(): int
-    {
-        return $this->userId;
-    }
-
-    public function getEmail(): string
-    {
-        return $this->email;
-    }
-
-    public function getCreatedAt(): \DateTimeImmutable
-    {
-        return $this->createdAt;
-    }
-
-    public function getTenant(): ?TenantInterface
-    {
-        return $this->tenant;
-    }
-
-    public function setTenant(?TenantInterface $tenant): void
-    {
-        $this->tenant = $tenant;
-    }
-}
-```
-
-### Query Messages
-
-```php
-<?php
-
-namespace App\Message\Query;
-
-use Zhortein\MultiTenantBundle\Entity\TenantInterface;
-
-class GetUserStatisticsQuery
-{
-    public function __construct(
-        private \DateTimeInterface $startDate,
-        private \DateTimeInterface $endDate,
-        private ?TenantInterface $tenant = null,
-    ) {}
-
-    public function getStartDate(): \DateTimeInterface
-    {
-        return $this->startDate;
-    }
-
-    public function getEndDate(): \DateTimeInterface
-    {
-        return $this->endDate;
-    }
-
-    public function getTenant(): ?TenantInterface
-    {
-        return $this->tenant;
-    }
-
-    public function setTenant(?TenantInterface $tenant): void
-    {
-        $this->tenant = $tenant;
-    }
-}
-```
-
-## Message Handlers
-
-### Command Handler
-
-```php
-<?php
-
-namespace App\MessageHandler\Command;
-
+use App\Message\TenantAwareMessage;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
-use App\Message\Command\CreateUserCommand;
-use App\Message\Event\UserCreatedEvent;
-use App\Entity\User;
-use App\Repository\UserRepository;
-use Symfony\Component\Messenger\MessageBusInterface;
+use Symfony\Component\Messenger\Envelope;
+use Symfony\Component\Messenger\Stamp\StampInterface;
 use Zhortein\MultiTenantBundle\Context\TenantContextInterface;
+use Zhortein\MultiTenantBundle\Messenger\TenantStamp;
 
 #[AsMessageHandler]
-class CreateUserCommandHandler
+class TenantAwareMessageHandler
 {
     public function __construct(
-        private UserRepository $userRepository,
-        private MessageBusInterface $eventBus,
-        private TenantContextInterface $tenantContext,
-    ) {}
+        private readonly TenantContextInterface $tenantContext,
+    ) {
+    }
 
-    public function __invoke(CreateUserCommand $command): void
+    public function __invoke(TenantAwareMessage $message, Envelope $envelope): void
     {
-        // Set tenant context
-        $tenant = $command->getTenant();
+        // Get tenant information from the stamp
+        /** @var TenantStamp|null $tenantStamp */
+        $tenantStamp = $envelope->last(TenantStamp::class);
         
-        if ($tenant) {
-            $this->tenantContext->setTenant($tenant);
-        }
-
-        try {
-            // Create user
-            $user = new User();
-            $user->setEmail($command->getEmail());
-            $user->setName($command->getName());
-            $user->setRoles($command->getRoles());
+        if ($tenantStamp) {
+            $tenantSlug = $tenantStamp->getTenantSlug();
+            $tenantName = $tenantStamp->getTenantName();
             
-            if ($tenant) {
-                $user->setTenant($tenant);
-            }
-
-            $this->userRepository->save($user);
-
-            // Dispatch event
-            $event = new UserCreatedEvent(
-                $user->getId(),
-                $user->getEmail(),
-                $user->getCreatedAt(),
-                $tenant
-            );
-
-            $this->eventBus->dispatch($event);
-
-        } finally {
-            $this->tenantContext->clear();
+            // Process message with tenant context
+            $this->processForTenant($message, $tenantSlug, $tenantName);
         }
+    }
+    
+    private function processForTenant(TenantAwareMessage $message, string $slug, string $name): void
+    {
+        // Your tenant-specific processing logic
+        echo "Processing message for tenant: {$name} ({$slug})";
+        echo "Data: " . $message->getData();
     }
 }
 ```
 
-### Event Handler
+### Manual Transport Resolution
+
+You can manually resolve transport names for specific tenants:
 
 ```php
-<?php
+use Zhortein\MultiTenantBundle\Messenger\TenantMessengerConfigurator;
 
-namespace App\MessageHandler\Event;
+public function getTransportInfo(TenantMessengerConfigurator $configurator): array
+{
+    return [
+        'dsn' => $configurator->getTransportDsn(),
+        'bus' => $configurator->getBusName(),
+        'delay' => $configurator->getDelay(),
+        'emailDelay' => $configurator->getDelay('email'),
+    ];
+}
+```
 
-use Symfony\Component\Messenger\Attribute\AsMessageHandler;
-use App\Message\Event\UserCreatedEvent;
-use App\Service\EmailService;
+## Transport Resolver Middleware
+
+The `TenantMessengerTransportResolver` middleware automatically:
+
+1. **Routes messages** to tenant-specific transports based on configuration
+2. **Adds tenant stamps** to preserve tenant context in async processing
+3. **Handles fallbacks** when no tenant-specific transport is configured
+
+### How It Works
+
+```php
+// When a message is dispatched:
+$bus->dispatch(new MyMessage());
+
+// The middleware:
+// 1. Gets current tenant from TenantContext
+// 2. Looks up transport name in tenant_transport_map
+// 3. Adds TransportNamesStamp with resolved transport
+// 4. Adds TenantStamp with tenant information
+// 5. Passes message to next middleware
+```
+
+### Middleware Priority
+
+The transport resolver runs with high priority (100) to ensure tenant routing happens early in the middleware stack.
+
+## Advanced Usage
+
+### Custom Transport Mapping
+
+You can implement custom logic for transport resolution:
+
+```php
+namespace App\Messenger;
+
+use Symfony\Component\Messenger\Envelope;
+use Symfony\Component\Messenger\Middleware\MiddlewareInterface;
+use Symfony\Component\Messenger\Middleware\StackInterface;
+use Symfony\Component\Messenger\Stamp\TransportNamesStamp;
 use Zhortein\MultiTenantBundle\Context\TenantContextInterface;
 
-#[AsMessageHandler]
-class UserCreatedEventHandler
+class CustomTenantTransportMiddleware implements MiddlewareInterface
 {
     public function __construct(
-        private EmailService $emailService,
-        private TenantContextInterface $tenantContext,
-    ) {}
+        private readonly TenantContextInterface $tenantContext,
+    ) {
+    }
 
-    public function __invoke(UserCreatedEvent $event): void
+    public function handle(Envelope $envelope, StackInterface $stack): Envelope
     {
-        // Set tenant context
-        $tenant = $event->getTenant();
+        $tenant = $this->tenantContext->getTenant();
         
-        if ($tenant) {
-            $this->tenantContext->setTenant($tenant);
+        if ($tenant && !$envelope->last(TransportNamesStamp::class)) {
+            // Custom logic for transport selection
+            $transportName = $this->resolveCustomTransport($tenant, $envelope);
+            $envelope = $envelope->with(new TransportNamesStamp([$transportName]));
         }
-
-        try {
-            // Send welcome email
-            $this->emailService->sendWelcomeEmail(
-                $event->getEmail(),
-                'Welcome to our platform!'
-            );
-
-            // Log user creation
-            $this->logUserCreation($event);
-
-            // Update statistics
-            $this->updateUserStatistics($event);
-
-        } finally {
-            $this->tenantContext->clear();
-        }
-    }
-
-    private function logUserCreation(UserCreatedEvent $event): void
-    {
-        // Log user creation for analytics
-    }
-
-    private function updateUserStatistics(UserCreatedEvent $event): void
-    {
-        // Update tenant-specific user statistics
-    }
-}
-```
-
-### Query Handler
-
-```php
-<?php
-
-namespace App\MessageHandler\Query;
-
-use Symfony\Component\Messenger\Attribute\AsMessageHandler;
-use App\Message\Query\GetUserStatisticsQuery;
-use App\Repository\UserRepository;
-use Zhortein\MultiTenantBundle\Context\TenantContextInterface;
-
-#[AsMessageHandler]
-class GetUserStatisticsQueryHandler
-{
-    public function __construct(
-        private UserRepository $userRepository,
-        private TenantContextInterface $tenantContext,
-    ) {}
-
-    public function __invoke(GetUserStatisticsQuery $query): array
-    {
-        // Set tenant context
-        $tenant = $query->getTenant();
         
-        if ($tenant) {
-            $this->tenantContext->setTenant($tenant);
-        }
-
-        try {
-            return [
-                'total_users' => $this->userRepository->countUsers(),
-                'new_users' => $this->userRepository->countUsersBetween(
-                    $query->getStartDate(),
-                    $query->getEndDate()
-                ),
-                'active_users' => $this->userRepository->countActiveUsers(),
-                'tenant_slug' => $tenant?->getSlug(),
-            ];
-
-        } finally {
-            $this->tenantContext->clear();
-        }
+        return $stack->next()->handle($envelope, $stack);
+    }
+    
+    private function resolveCustomTransport(object $tenant, Envelope $envelope): string
+    {
+        // Your custom transport resolution logic
+        $messageClass = get_class($envelope->getMessage());
+        
+        return match ($messageClass) {
+            'App\Message\EmailMessage' => $tenant->getSlug() . '_email',
+            'App\Message\ReportMessage' => $tenant->getSlug() . '_reports',
+            default => $tenant->getSlug() . '_default',
+        };
     }
 }
 ```
 
-## Scheduled Messages
+### Tenant-Specific Message Routing
 
-### Tenant-Specific Cron Jobs
-
-```php
-<?php
-
-namespace App\Service;
-
-use Symfony\Component\Messenger\MessageBusInterface;
-use App\Message\Command\GenerateReportsCommand;
-use Zhortein\MultiTenantBundle\Registry\TenantRegistryInterface;
-
-class ScheduledTaskService
-{
-    public function __construct(
-        private MessageBusInterface $messageBus,
-        private TenantRegistryInterface $tenantRegistry,
-    ) {}
-
-    public function scheduleMonthlyReports(): void
-    {
-        // Schedule reports for all active tenants
-        foreach ($this->tenantRegistry->getAll() as $tenant) {
-            if (!$tenant->isActive()) {
-                continue;
-            }
-
-            $command = new GenerateReportsCommand(
-                'monthly',
-                new \DateTimeImmutable('first day of last month'),
-                new \DateTimeImmutable('last day of last month'),
-                $tenant
-            );
-
-            $this->messageBus->dispatch($command);
-        }
-    }
-
-    public function scheduleDataCleanup(): void
-    {
-        foreach ($this->tenantRegistry->getAll() as $tenant) {
-            $command = new CleanupDataCommand(
-                new \DateTimeImmutable('-90 days'),
-                $tenant
-            );
-
-            $this->messageBus->dispatch($command);
-        }
-    }
-}
-```
-
-### Cron Configuration
+Configure different routing rules per tenant:
 
 ```yaml
-# config/packages/cron.yaml
-cron:
-    jobs:
-        monthly_reports:
-            command: 'app:schedule-monthly-reports'
-            schedule: '0 2 1 * *' # First day of month at 2 AM
-            
-        daily_cleanup:
-            command: 'app:schedule-data-cleanup'
-            schedule: '0 3 * * *' # Daily at 3 AM
+# config/packages/messenger.yaml
+framework:
+    messenger:
+        routing:
+            # High-priority messages for premium tenants
+            'App\Message\PriorityMessage':
+                - 'acme_priority'  # Premium tenant
+                - 'async'          # Default for others
+                
+            # Email messages to dedicated email transports
+            'App\Message\EmailMessage':
+                - 'acme_email'
+                - 'bio_email'
+                - 'email_default'
+```
+
+### Delayed Message Processing
+
+Configure tenant-specific delays:
+
+```php
+use Symfony\Component\Messenger\MessageBusInterface;
+use Symfony\Component\Messenger\Stamp\DelayStamp;
+
+public function scheduleMessage(MessageBusInterface $bus, TenantMessengerConfigurator $configurator): void
+{
+    $delay = $configurator->getDelay('email', 5000); // 5 second default
+    
+    $bus->dispatch(
+        new SendEmailMessage('user@example.com', 'Delayed message'),
+        [new DelayStamp($delay)]
+    );
+}
 ```
 
 ## Testing
 
-### Unit Testing Message Handlers
+### Unit Testing
+
+Test your message handlers with tenant context:
 
 ```php
-<?php
-
-namespace App\Tests\MessageHandler;
-
 use PHPUnit\Framework\TestCase;
-use App\MessageHandler\Command\CreateUserCommandHandler;
-use App\Message\Command\CreateUserCommand;
-use App\Repository\UserRepository;
-use Symfony\Component\Messenger\MessageBusInterface;
-use Zhortein\MultiTenantBundle\Context\TenantContextInterface;
+use Symfony\Component\Messenger\Envelope;
+use Zhortein\MultiTenantBundle\Messenger\TenantStamp;
 
-class CreateUserCommandHandlerTest extends TestCase
+class MessageHandlerTest extends TestCase
 {
-    public function testHandleCreateUserCommand(): void
+    public function testTenantAwareHandler(): void
     {
-        $userRepository = $this->createMock(UserRepository::class);
-        $eventBus = $this->createMock(MessageBusInterface::class);
-        $tenantContext = $this->createMock(TenantContextInterface::class);
-
-        $tenant = $this->createMockTenant('acme');
-        $command = new CreateUserCommand('test@example.com', 'John Doe', ['ROLE_USER'], $tenant);
-
-        $tenantContext
-            ->expects($this->once())
-            ->method('setTenant')
-            ->with($tenant);
-
-        $userRepository
-            ->expects($this->once())
-            ->method('save')
-            ->with($this->callback(function ($user) {
-                return $user->getEmail() === 'test@example.com'
-                    && $user->getName() === 'John Doe';
-            }));
-
-        $eventBus
-            ->expects($this->once())
-            ->method('dispatch')
-            ->with($this->isInstanceOf(UserCreatedEvent::class));
-
-        $handler = new CreateUserCommandHandler($userRepository, $eventBus, $tenantContext);
-        $handler($command);
-    }
-
-    private function createMockTenant(string $slug): TenantInterface
-    {
-        $tenant = $this->createMock(TenantInterface::class);
-        $tenant->method('getSlug')->willReturn($slug);
-        return $tenant;
+        $message = new TenantAwareMessage('acme', 'test data');
+        $tenantStamp = new TenantStamp('acme', 'Acme Corporation');
+        $envelope = new Envelope($message, [$tenantStamp]);
+        
+        $handler = new TenantAwareMessageHandler($this->tenantContext);
+        $handler($message, $envelope);
+        
+        // Assert message was processed correctly
     }
 }
 ```
 
 ### Integration Testing
 
+Test the complete message flow:
+
 ```php
-<?php
-
-namespace App\Tests\Integration;
-
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
-use Symfony\Component\Messenger\MessageBusInterface;
-use App\Message\Command\CreateUserCommand;
-use App\Repository\UserRepository;
-use Zhortein\MultiTenantBundle\Context\TenantContextInterface;
 
 class MessengerIntegrationTest extends KernelTestCase
 {
-    public function testMessageHandlingWithTenantContext(): void
+    public function testTenantMessageRouting(): void
     {
         self::bootKernel();
-        $container = static::getContainer();
-
-        $messageBus = $container->get(MessageBusInterface::class);
-        $userRepository = $container->get(UserRepository::class);
-        $tenantContext = $container->get(TenantContextInterface::class);
-
-        // Create test tenant
-        $tenant = $this->createTestTenant();
-        $tenantContext->setTenant($tenant);
-
-        // Dispatch command
-        $command = new CreateUserCommand('test@example.com', 'John Doe', ['ROLE_USER'], $tenant);
-        $messageBus->dispatch($command);
-
-        // Process messages synchronously in test
-        $this->processMessages();
-
-        // Verify user was created
-        $user = $userRepository->findOneBy(['email' => 'test@example.com']);
-        $this->assertNotNull($user);
-        $this->assertEquals('John Doe', $user->getName());
-        $this->assertEquals($tenant->getId(), $user->getTenant()->getId());
-    }
-
-    private function processMessages(): void
-    {
-        // Process messages synchronously for testing
-        $container = static::getContainer();
-        $receiver = $container->get('messenger.receiver.tenant_async');
         
-        while ($envelopes = $receiver->get()) {
-            foreach ($envelopes as $envelope) {
-                $receiver->ack($envelope);
-            }
-        }
+        // Set tenant context
+        $tenantContext = self::getContainer()->get(TenantContextInterface::class);
+        $tenantContext->setTenant($tenant);
+        
+        // Dispatch message
+        $bus = self::getContainer()->get(MessageBusInterface::class);
+        $bus->dispatch(new TestMessage());
+        
+        // Verify message was routed to correct transport
+        // and tenant stamp was added
     }
 }
 ```
 
-## Console Commands
+## Troubleshooting
 
-### Process Messages
+### Common Issues
 
-```bash
-# Process messages for all tenants
-php bin/console messenger:consume tenant_async
+1. **Messages not routed**: Check tenant_transport_map configuration
+2. **Tenant context lost**: Ensure TenantStamp is properly added and read
+3. **Transport not found**: Verify transport is defined in messenger.yaml
+4. **Middleware not working**: Check middleware registration and priority
 
-# Process messages with specific options
-php bin/console messenger:consume tenant_async --limit=10 --time-limit=3600
+### Debug Information
 
-# Process messages for specific tenant (if using tenant-specific queues)
-php bin/console messenger:consume tenant_async_acme
-```
-
-### Monitor Message Queues
-
-```bash
-# Check message queue status
-php bin/console messenger:stats
-
-# Failed messages
-php bin/console messenger:failed:show
-
-# Retry failed messages
-php bin/console messenger:failed:retry
-```
-
-### Tenant-Specific Commands
-
-```bash
-# Send test message for tenant
-php bin/console tenant:message:send-test --tenant=acme --message="Test message"
-
-# Process messages for specific tenant
-php bin/console tenant:message:process --tenant=acme
-
-# Clear messages for tenant
-php bin/console tenant:message:clear --tenant=acme
-```
-
-## Monitoring and Debugging
-
-### Message Logging
+Enable debug mode to see detailed messenger information:
 
 ```yaml
 # config/packages/dev/monolog.yaml
 monolog:
     handlers:
-        messenger:
+        main:
             type: stream
-            path: '%kernel.logs_dir%/messenger.log'
+            path: "%kernel.logs_dir%/%kernel.environment%.log"
             level: debug
-            channels: ['messenger']
+            channels: ["messenger"]
 ```
 
-### Performance Monitoring
+### Inspect Message Stamps
+
+Debug message stamps in your handlers:
 
 ```php
-<?php
-
-namespace App\Messenger\Middleware;
-
-use Symfony\Component\Messenger\Envelope;
-use Symfony\Component\Messenger\Middleware\MiddlewareInterface;
-use Symfony\Component\Messenger\Middleware\StackInterface;
-use Symfony\Component\Stopwatch\Stopwatch;
-use Psr\Log\LoggerInterface;
-
-class PerformanceMiddleware implements MiddlewareInterface
+public function __invoke(MyMessage $message, Envelope $envelope): void
 {
-    public function __construct(
-        private Stopwatch $stopwatch,
-        private LoggerInterface $logger,
-    ) {}
-
-    public function handle(Envelope $envelope, StackInterface $stack): Envelope
-    {
-        $messageClass = get_class($envelope->getMessage());
-        $this->stopwatch->start($messageClass);
-
-        try {
-            $envelope = $stack->next()->handle($envelope, $stack);
-            
-            $event = $this->stopwatch->stop($messageClass);
-            
-            $this->logger->info('Message processed', [
-                'message_class' => $messageClass,
-                'duration_ms' => $event->getDuration(),
-                'memory_mb' => $event->getMemory() / 1024 / 1024,
-            ]);
-            
-            return $envelope;
-            
-        } catch (\Exception $e) {
-            $this->stopwatch->stop($messageClass);
-            
-            $this->logger->error('Message processing failed', [
-                'message_class' => $messageClass,
-                'error' => $e->getMessage(),
-            ]);
-            
-            throw $e;
+    // Debug all stamps
+    foreach ($envelope->all() as $stampClass => $stamps) {
+        foreach ($stamps as $stamp) {
+            dump($stampClass, $stamp);
         }
+    }
+    
+    // Check for tenant stamp specifically
+    $tenantStamp = $envelope->last(TenantStamp::class);
+    if ($tenantStamp) {
+        dump('Tenant:', $tenantStamp->getTenantSlug(), $tenantStamp->getTenantName());
     }
 }
 ```
 
 ## Best Practices
 
-1. **Always Include Tenant Context**: Ensure messages carry tenant information
-2. **Use Proper Message Types**: Distinguish between commands, events, and queries
-3. **Handle Failures Gracefully**: Implement proper error handling and retry logic
-4. **Monitor Performance**: Track message processing times and queue sizes
-5. **Test Message Handlers**: Write comprehensive tests for message handlers
-6. **Use Middleware**: Leverage middleware for cross-cutting concerns
-7. **Isolate Tenant Data**: Ensure complete tenant isolation in message processing
-8. **Configure Retries**: Set appropriate retry strategies for different message types
-9. **Log Important Events**: Log message processing for debugging and monitoring
-10. **Scale Appropriately**: Configure transport and worker settings for your load
+1. **Transport Isolation**: Use separate transports for different tenants to ensure isolation
+2. **Fallback Configuration**: Always provide fallback settings for reliability
+3. **Stamp Usage**: Use TenantStamp to maintain tenant context in async processing
+4. **Error Handling**: Handle missing tenant context gracefully in message handlers
+5. **Testing**: Test message routing with different tenant configurations
+6. **Performance**: Consider transport performance characteristics for each tenant
+7. **Monitoring**: Monitor queue lengths and processing times per tenant
+8. **Security**: Ensure tenant isolation is maintained throughout message processing
+
+## Examples
+
+### Complete Example: Tenant-Aware Email Processing
+
+```php
+// Message
+namespace App\Message;
+
+class SendTenantEmailMessage
+{
+    public function __construct(
+        private readonly string $to,
+        private readonly string $subject,
+        private readonly string $template,
+        private readonly array $context = [],
+    ) {
+    }
+
+    // Getters...
+}
+
+// Handler
+namespace App\MessageHandler;
+
+use App\Message\SendTenantEmailMessage;
+use Symfony\Component\Messenger\Attribute\AsMessageHandler;
+use Symfony\Component\Messenger\Envelope;
+use Zhortein\MultiTenantBundle\Context\TenantContextInterface;
+use Zhortein\MultiTenantBundle\Mailer\TenantAwareMailer;
+use Zhortein\MultiTenantBundle\Messenger\TenantStamp;
+
+#[AsMessageHandler]
+class SendTenantEmailHandler
+{
+    public function __construct(
+        private readonly TenantAwareMailer $mailer,
+        private readonly TenantContextInterface $tenantContext,
+    ) {
+    }
+
+    public function __invoke(SendTenantEmailMessage $message, Envelope $envelope): void
+    {
+        // Get tenant from stamp
+        $tenantStamp = $envelope->last(TenantStamp::class);
+        if (!$tenantStamp) {
+            throw new \RuntimeException('Tenant context required for email processing');
+        }
+
+        // Set tenant context for the handler
+        $tenant = $this->tenantRegistry->getBySlug($tenantStamp->getTenantSlug());
+        $this->tenantContext->setTenant($tenant);
+
+        // Send tenant-aware email
+        $this->mailer->sendTemplatedEmail(
+            $message->getTo(),
+            $message->getSubject(),
+            $message->getTemplate(),
+            $message->getContext()
+        );
+    }
+}
+
+// Usage
+public function scheduleEmail(MessageBusInterface $bus): void
+{
+    $bus->dispatch(new SendTenantEmailMessage(
+        'user@example.com',
+        'Welcome!',
+        'emails/welcome.html.twig',
+        ['user' => $user]
+    ));
+    // Message will be automatically routed to tenant-specific transport
+    // and processed with tenant context preserved
+}
+```
+
+See the [Messenger Usage Examples](examples/messenger-usage.md) for more practical implementation examples.

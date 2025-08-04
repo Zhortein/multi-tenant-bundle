@@ -32,6 +32,7 @@ use Zhortein\MultiTenantBundle\Resolver\HeaderTenantResolver;
 use Zhortein\MultiTenantBundle\Resolver\PathTenantResolver;
 use Zhortein\MultiTenantBundle\Resolver\SubdomainTenantResolver;
 use Zhortein\MultiTenantBundle\Resolver\TenantResolverInterface;
+use Zhortein\MultiTenantBundle\Messenger\TenantMessengerTransportResolver;
 
 /**
  * Extension class for the multi-tenant bundle.
@@ -89,6 +90,9 @@ final class ZhorteinMultiTenantExtension extends Extension
         $container->setParameter('zhortein_multi_tenant.cache.ttl', $config['cache']['ttl']);
         $container->setParameter('zhortein_multi_tenant.mailer.enabled', $config['mailer']['enabled']);
         $container->setParameter('zhortein_multi_tenant.messenger.enabled', $config['messenger']['enabled']);
+        $container->setParameter('zhortein_multi_tenant.messenger.default_transport', $config['messenger']['default_transport']);
+        $container->setParameter('zhortein_multi_tenant.messenger.add_tenant_headers', $config['messenger']['add_tenant_headers']);
+        $container->setParameter('zhortein_multi_tenant.messenger.tenant_transport_map', $config['messenger']['tenant_transport_map']);
         $container->setParameter('zhortein_multi_tenant.fixtures.enabled', $config['fixtures']['enabled']);
         $container->setParameter('zhortein_multi_tenant.events.dispatch_database_switch', $config['events']['dispatch_database_switch']);
         $container->setParameter('zhortein_multi_tenant.container.enable_tenant_scope', $config['container']['enable_tenant_scope']);
@@ -309,6 +313,11 @@ final class ZhorteinMultiTenantExtension extends Extension
      */
     private function registerMailerServices(ContainerBuilder $container, array $config): void
     {
+        // Only register mailer services if Symfony Mailer is available
+        if (!class_exists('Symfony\Component\Mailer\MailerInterface')) {
+            return;
+        }
+
         $container->register('zhortein_multi_tenant.mailer.configurator', 'Zhortein\MultiTenantBundle\Mailer\TenantMailerConfigurator')
             ->setAutowired(true)
             ->setAutoconfigured(true);
@@ -331,6 +340,11 @@ final class ZhorteinMultiTenantExtension extends Extension
      */
     private function registerMessengerServices(ContainerBuilder $container, array $config): void
     {
+        // Only register messenger services if Symfony Messenger is available
+        if (!class_exists('Symfony\Component\Messenger\MessageBusInterface')) {
+            return;
+        }
+
         $container->register('zhortein_multi_tenant.messenger.configurator', 'Zhortein\MultiTenantBundle\Messenger\TenantMessengerConfigurator')
             ->setAutowired(true)
             ->setAutoconfigured(true);
@@ -339,6 +353,15 @@ final class ZhorteinMultiTenantExtension extends Extension
             ->setAutowired(true)
             ->setAutoconfigured(true)
             ->addTag('messenger.transport_factory');
+
+        // Register transport resolver middleware
+        $container->register('zhortein_multi_tenant.messenger.transport_resolver', 'Zhortein\MultiTenantBundle\Messenger\TenantMessengerTransportResolver')
+            ->setAutowired(true)
+            ->setAutoconfigured(true)
+            ->setArgument('$tenantTransportMap', '%zhortein_multi_tenant.messenger.tenant_transport_map%')
+            ->setArgument('$defaultTransport', '%zhortein_multi_tenant.messenger.default_transport%')
+            ->setArgument('$addTenantHeaders', '%zhortein_multi_tenant.messenger.add_tenant_headers%')
+            ->addTag('messenger.middleware', ['priority' => 100]);
     }
 
     /**

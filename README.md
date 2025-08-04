@@ -173,8 +173,8 @@ class DashboardController extends AbstractController
 - [Tenant Settings](docs/tenant-settings.md) - Configuration system
 
 ### 🔧 Service Integration
-- [Mailer](docs/mailer.md) - Tenant-aware email
-- [Messenger](docs/messenger.md) - Tenant-aware queues
+- [Mailer](docs/mailer.md) - Tenant-aware email with templated support
+- [Messenger](docs/messenger.md) - Tenant-aware queues with transport routing
 - [Storage](docs/storage.md) - File storage isolation
 
 ### 🗄️ Database Management
@@ -188,6 +188,8 @@ class DashboardController extends AbstractController
 
 ### 📖 Examples
 - [Basic Usage](docs/examples/basic-usage.md) - Code examples
+- [Mailer Examples](docs/examples/mailer-usage.md) - Email templates and configuration
+- [Messenger Examples](docs/examples/messenger-usage.md) - Message routing and handling
 - [Service Integration](docs/examples/) - Practical implementations
 
 ## Testing

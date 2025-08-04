@@ -24,8 +24,6 @@
     "symfony/dependency-injection": "^7.0",
     "symfony/filesystem": "^7.0",
     "symfony/http-kernel": " ^7.0",
-    "symfony/messenger": " ^7.0",
-    "symfony/mailer": " ^7.0",
     "symfony/orm-pack": "^2.0"
   },
   "require-dev": {
@@ -37,7 +35,10 @@
     "friendsofphp/php-cs-fixer": "^v3.75.0",
     "symfony/phpunit-bridge": "^7.3",
     "roave/security-advisories": "dev-latest",
-    "symfony/test-pack": "^1.0"
+    "symfony/test-pack": "^1.0",
+    "symfony/mailer": "^7.0",
+    "symfony/messenger": "^7.0",
+    "symfony/twig-bundle": "^7.0"
   },
   "config": {
     "sort-packages": true
@@ -62,6 +63,7 @@
   },
   "suggest": {
     "symfony/mailer": "Needed for dynamic tenant-aware mail sending",
-    "symfony/messenger": "Needed for dynamic tenant-aware async message dispatching"
+    "symfony/messenger": "Needed for dynamic tenant-aware async message dispatching",
+    "symfony/twig-bundle": "Needed for templated tenant-aware emails"
   }
 }

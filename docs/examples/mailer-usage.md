@@ -1,5 +1,7 @@
 # Tenant-Aware Mailer Usage Examples
 
+This document provides practical examples of using the tenant-aware mailer functionality with the enhanced templated email support.
+
 ## Basic Configuration
 
 ### 1. Configure Tenant Settings
@@ -16,35 +18,33 @@ class TenantConfigurationController
 
     public function configureMailer(): void
     {
-        // Set tenant-specific mailer DSN
+        // Email transport configuration
         $this->settingsManager->set('mailer_dsn', 'smtp://user:pass@smtp.example.com:587');
         
-        // Set sender information
-        $this->settingsManager->set('email_sender', 'Company Name');
-        $this->settingsManager->set('email_from', 'noreply@tenant.example.com');
+        // Sender information
+        $this->settingsManager->set('email_sender', 'Acme Corporation');
+        $this->settingsManager->set('email_from', 'noreply@acme.example.com');
+        $this->settingsManager->set('email_reply_to', 'support@acme.example.com');
+        $this->settingsManager->set('email_bcc', 'admin@acme.example.com');
         
-        // Optional: Set reply-to address
-        $this->settingsManager->set('email_reply_to', 'support@tenant.example.com');
+        // Branding settings for templates
+        $this->settingsManager->set('logo_url', 'https://cdn.acme.com/logo.png');
+        $this->settingsManager->set('primary_color', '#ff6b35');
+        $this->settingsManager->set('website_url', 'https://acme.com');
     }
 }
 ```
 
-### 2. Service Configuration
+### 2. Bundle Configuration
 
 ```yaml
-# config/services.yaml
-services:
-    # The tenant-aware mailer will automatically be used
-    Zhortein\MultiTenantBundle\Mailer\TenantAwareMailer:
-        decorates: 'mailer'
-        arguments:
-            $mailer: '@.inner'
-            $configurator: '@Zhortein\MultiTenantBundle\Mailer\TenantMailerConfigurator'
-
-    # Transport factory for dynamic DSN resolution
-    Zhortein\MultiTenantBundle\Mailer\TenantMailerTransportFactory:
-        tags:
-            - { name: 'mailer.transport_factory' }
+# config/packages/zhortein_multi_tenant.yaml
+zhortein_multi_tenant:
+    mailer:
+        enabled: true
+        fallback_dsn: '%env(MAILER_DSN)%'
+        fallback_from: 'noreply@example.com'
+        fallback_sender: 'Default Application'
 ```
 
 ## Usage Examples
@@ -65,11 +65,64 @@ class NotificationService
     {
         $email = (new Email())
             // From address will be automatically set based on tenant settings
+            // Headers X-Tenant-ID and X-Tenant-Name are added automatically
             ->to($userEmail)
             ->subject('Welcome to our platform!')
             ->html('<h1>Welcome ' . $userName . '!</h1>');
 
         $this->mailer->send($email);
+    }
+}
+```
+
+### 2. Templated Emails with TenantAwareMailer
+
+```php
+use Zhortein\MultiTenantBundle\Mailer\TenantAwareMailer;
+
+class UserService
+{
+    public function __construct(
+        private TenantAwareMailer $mailer
+    ) {}
+
+    public function sendWelcomeEmail(string $userEmail, array $user): void
+    {
+        // Sends email using tenant-specific template with automatic tenant context
+        $this->mailer->sendTemplatedEmail(
+            to: $userEmail,
+            subject: 'Welcome to our platform!',
+            template: 'emails/welcome.html.twig',
+            context: [
+                'user' => $user,
+                'activationUrl' => $this->generateActivationUrl($user['id'])
+            ]
+        );
+    }
+
+    public function sendPasswordReset(string $userEmail, string $resetToken): void
+    {
+        $this->mailer->sendTemplatedEmail(
+            to: $userEmail,
+            subject: 'Password Reset Request',
+            template: 'emails/password-reset.html.twig',
+            context: [
+                'resetUrl' => $this->generateResetUrl($resetToken),
+                'expiresAt' => new \DateTime('+1 hour')
+            ]
+        );
+    }
+
+    public function sendSystemNotification(string $userEmail, string $message): void
+    {
+        // Override from address for system emails
+        $this->mailer->sendTemplatedEmail(
+            to: $userEmail,
+            subject: 'System Notification',
+            template: 'emails/system-notification.html.twig',
+            context: ['message' => $message],
+            fromOverride: 'system@example.com'
+        );
     }
 }
 ```
@@ -234,6 +287,187 @@ class TenantAwareMailerTest extends TestCase
 - **Amazon SES**: `ses://access_key:secret_key@default?region=us-east-1`
 - **Null (testing)**: `null://null`
 
+## Template Examples
+
+### Base Layout Template
+
+```twig
+{# templates/emails/layout.html.twig #}
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>{{ tenant.name ?? 'Application' }}</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            line-height: 1.6; 
+            color: #333; 
+            margin: 0; 
+            padding: 0; 
+        }
+        .container { 
+            max-width: 600px; 
+            margin: 0 auto; 
+            background: #ffffff; 
+        }
+        .header { 
+            background-color: {{ tenant.primaryColor|default('#007bff') }}; 
+            color: white; 
+            padding: 20px; 
+            text-align: center; 
+        }
+        .content { 
+            padding: 30px 20px; 
+        }
+        .footer { 
+            background-color: #f8f9fa; 
+            padding: 20px; 
+            text-align: center; 
+            font-size: 14px; 
+            color: #666; 
+        }
+        .button {
+            display: inline-block;
+            background-color: {{ tenant.primaryColor|default('#007bff') }};
+            color: white;
+            padding: 12px 24px;
+            text-decoration: none;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            {% if tenant.logoUrl %}
+                <img src="{{ tenant.logoUrl }}" alt="{{ tenant.name }} Logo" style="max-height: 60px; margin-bottom: 10px;">
+            {% endif %}
+            <h1>{{ tenant.name ?? 'Application' }}</h1>
+        </div>
+        
+        <div class="content">
+            {% block content %}{% endblock %}
+        </div>
+        
+        <div class="footer">
+            <p>&copy; {{ "now"|date("Y") }} {{ tenant.name ?? 'Application' }}. All rights reserved.</p>
+            {% if tenant.websiteUrl %}
+                <p><a href="{{ tenant.websiteUrl }}" style="color: {{ tenant.primaryColor|default('#007bff') }};">Visit our website</a></p>
+            {% endif %}
+        </div>
+    </div>
+</body>
+</html>
+```
+
+### Welcome Email Template
+
+```twig
+{# templates/emails/welcome.html.twig #}
+{% extends 'emails/layout.html.twig' %}
+
+{% block content %}
+<h2>Welcome to {{ tenant.name }}!</h2>
+
+<p>Hello {{ user.name }},</p>
+
+<p>Thank you for joining {{ tenant.name }}! We're excited to have you as part of our community.</p>
+
+<p>To get started, please activate your account by clicking the button below:</p>
+
+<p style="text-align: center;">
+    <a href="{{ activationUrl }}" class="button">Activate Account</a>
+</p>
+
+<p>If the button doesn't work, you can also copy and paste this link into your browser:</p>
+<p><a href="{{ activationUrl }}">{{ activationUrl }}</a></p>
+
+<p>If you have any questions, feel free to contact our support team.</p>
+
+<p>Best regards,<br>
+The {{ tenant.name }} Team</p>
+{% endblock %}
+```
+
+### Tenant-Specific Template
+
+```twig
+{# templates/emails/tenant/acme/welcome.html.twig #}
+{% extends 'emails/layout.html.twig' %}
+
+{% block content %}
+<h2>Welcome to Acme Corporation!</h2>
+
+<p>Dear {{ user.name }},</p>
+
+<p>Welcome to the Acme family! As a leading innovator in our industry, we're thrilled to have you join our exclusive platform.</p>
+
+<div style="background-color: #f8f9fa; padding: 20px; border-left: 4px solid {{ tenant.primaryColor }}; margin: 20px 0;">
+    <h3>What's Next?</h3>
+    <ul>
+        <li>Activate your account using the link below</li>
+        <li>Complete your profile setup</li>
+        <li>Explore our premium features</li>
+        <li>Connect with our dedicated account manager</li>
+    </ul>
+</div>
+
+<p style="text-align: center;">
+    <a href="{{ activationUrl }}" class="button">Activate Your Premium Account</a>
+</p>
+
+<p>As an Acme member, you'll have access to:</p>
+<ul>
+    <li>Priority customer support</li>
+    <li>Advanced analytics dashboard</li>
+    <li>Exclusive industry insights</li>
+    <li>Custom integrations</li>
+</ul>
+
+<p>Your dedicated account manager will contact you within 24 hours to help you get the most out of your Acme experience.</p>
+
+<p>Welcome aboard!</p>
+
+<p>Best regards,<br>
+The Acme Team<br>
+<em>Innovation. Excellence. Results.</em></p>
+{% endblock %}
+```
+
+### Password Reset Template
+
+```twig
+{# templates/emails/password-reset.html.twig #}
+{% extends 'emails/layout.html.twig' %}
+
+{% block content %}
+<h2>Password Reset Request</h2>
+
+<p>Hello,</p>
+
+<p>We received a request to reset your password for your {{ tenant.name }} account.</p>
+
+<p>If you made this request, click the button below to reset your password:</p>
+
+<p style="text-align: center;">
+    <a href="{{ resetUrl }}" class="button">Reset Password</a>
+</p>
+
+<p><strong>This link will expire at {{ expiresAt|date('Y-m-d H:i:s') }} UTC.</strong></p>
+
+<p>If you didn't request a password reset, you can safely ignore this email. Your password will remain unchanged.</p>
+
+<p>For security reasons, this link can only be used once.</p>
+
+<p>If you have any concerns about your account security, please contact our support team immediately.</p>
+
+<p>Best regards,<br>
+The {{ tenant.name }} Security Team</p>
+{% endblock %}
+```
+
 ## Best Practices
 
 1. **Always provide fallback values** when retrieving tenant settings
@@ -241,3 +475,6 @@ class TenantAwareMailerTest extends TestCase
 3. **Test email configuration** before deploying to production
 4. **Monitor email delivery** and handle failures gracefully
 5. **Use tenant-specific templates** for better branding consistency
+6. **Implement template inheritance** for maintainable email designs
+7. **Test templates** with different tenant configurations
+8. **Handle missing Twig gracefully** in production environments
