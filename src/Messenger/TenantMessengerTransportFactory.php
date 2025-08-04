@@ -2,13 +2,11 @@
 
 namespace Zhortein\MultiTenantBundle\Messenger;
 
-use Symfony\Component\Messenger\Transport\Dsn;
+use Symfony\Component\Messenger\Transport\Serialization\SerializerInterface;
 use Symfony\Component\Messenger\Transport\TransportFactoryInterface;
 use Symfony\Component\Messenger\Transport\TransportInterface;
 use Zhortein\MultiTenantBundle\Context\TenantContext;
 use Zhortein\MultiTenantBundle\Entity\TenantInterface;
-use Symfony\Component\Messenger\Transport\TransportFactoryInterface as MessengerFactory;
-use Symfony\Component\Messenger\Transport\TransportInterface as MessengerTransport;
 
 final class TenantMessengerTransportFactory implements TransportFactoryInterface
 {
@@ -18,7 +16,7 @@ final class TenantMessengerTransportFactory implements TransportFactoryInterface
     ) {
     }
 
-    public function createTransport(Dsn $dsn, array $options): TransportInterface
+    public function createTransport(string $dsn, array $options, SerializerInterface $serializer): TransportInterface
     {
         $tenant = $this->tenantContext->getTenant();
         if (!$tenant instanceof TenantInterface) {
@@ -30,19 +28,17 @@ final class TenantMessengerTransportFactory implements TransportFactoryInterface
             throw new \RuntimeException('No messenger DSN configured for tenant.');
         }
 
-        $resolved = Dsn::fromString($tenantDsn);
-
         foreach ($this->factories as $factory) {
-            if ($factory->supports($resolved, $options)) {
-                return $factory->createTransport($resolved, $options);
+            if ($factory->supports($tenantDsn, $options)) {
+                return $factory->createTransport($tenantDsn, $options, $serializer);
             }
         }
 
         throw new \RuntimeException('No messenger transport factory supports this tenant DSN.');
     }
 
-    public function supports(Dsn $dsn, array $options): bool
+    public function supports(string $dsn, array $options): bool
     {
-        return 'tenant' === $dsn->getScheme();
+        return str_starts_with($dsn, 'tenant://');
     }
 }

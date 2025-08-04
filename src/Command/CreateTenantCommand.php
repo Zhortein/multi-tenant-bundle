@@ -7,8 +7,8 @@ use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
-use Symfony\Component\Console\Style\SymfonyStyle;
 use Symfony\Component\Console\Output\OutputInterface;
+use Symfony\Component\Console\Style\SymfonyStyle;
 use Zhortein\MultiTenantBundle\Entity\TenantInterface;
 
 #[AsCommand(
@@ -41,6 +41,7 @@ final class CreateTenantCommand extends Command
         $repo = $this->em->getRepository($this->tenantEntityClass);
         if ($repo->findOneBy(['slug' => $slug])) {
             $io->error("Un tenant avec le slug '{$slug}' existe déjà.");
+
             return Command::FAILURE;
         }
 

@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Zhortein\MultiTenantBundle\Command;
 
 use Doctrine\ORM\EntityManagerInterface;
@@ -8,10 +10,14 @@ use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
+use Zhortein\MultiTenantBundle\Entity\TenantInterface;
 
+/**
+ * Command to list all tenants in the system.
+ */
 #[AsCommand(
     name: 'tenant:list',
-    description: 'Affiche tous les tenants'
+    description: 'Lists all tenants in the system'
 )]
 final class ListTenantsCommand extends Command
 {
@@ -26,23 +32,30 @@ final class ListTenantsCommand extends Command
     {
         $io = new SymfonyStyle($input, $output);
 
-        $tenants = $this->em->getRepository($this->tenantEntityClass)->findAll();
+        $repository = $this->em->getRepository($this->tenantEntityClass);
+
+        /** @var TenantInterface[] $tenants */
+        $tenants = $repository->findAll();
 
         if (empty($tenants)) {
-            $io->warning('Aucun tenant trouvé.');
+            $io->warning('No tenants found.');
+
             return Command::SUCCESS;
         }
 
         $rows = [];
         foreach ($tenants as $tenant) {
             $rows[] = [
-                method_exists($tenant, 'getId') ? $tenant->getId() : '-',
-                method_exists($tenant, 'getSlug') ? $tenant->getSlug() : '-',
-                method_exists($tenant, 'getName') ? $tenant->getName() : '',
+                $tenant->getId(),
+                $tenant->getSlug(),
+                method_exists($tenant, 'getName') ? $tenant->getName() : 'N/A',
+                $tenant->getMailerDsn() ?? 'N/A',
+                $tenant->getMessengerDsn() ?? 'N/A',
             ];
         }
 
-        $io->table(['ID', 'Slug', 'Nom'], $rows);
+        $io->table(['ID', 'Slug', 'Name', 'Mailer DSN', 'Messenger DSN'], $rows);
+        $io->success(sprintf('Found %d tenant(s).', count($tenants)));
 
         return Command::SUCCESS;
     }

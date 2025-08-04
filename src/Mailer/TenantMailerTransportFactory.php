@@ -11,7 +11,7 @@ use Zhortein\MultiTenantBundle\Entity\TenantInterface;
 final class TenantMailerTransportFactory extends AbstractTransportFactory
 {
     public function __construct(
-        private readonly TenantContext $tenantContext
+        private readonly TenantContext $tenantContext,
     ) {
     }
 
@@ -24,10 +24,11 @@ final class TenantMailerTransportFactory extends AbstractTransportFactory
 
         $tenantDsn = $tenant->getMailerDsn();
         if (!$tenantDsn) {
-            throw new \RuntimeException("No mailer DSN configured for tenant.");
+            throw new \RuntimeException('No mailer DSN configured for tenant.');
         }
 
         $resolved = Dsn::fromString($tenantDsn);
+
         return $this->doCreate($resolved);
     }
 

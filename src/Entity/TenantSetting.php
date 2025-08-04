@@ -1,12 +1,21 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Zhortein\MultiTenantBundle\Entity;
 
 use Doctrine\ORM\Mapping as ORM;
 use Zhortein\MultiTenantBundle\Doctrine\TenantOwnedEntityInterface;
 use Zhortein\MultiTenantBundle\Repository\TenantSettingRepository;
 
+/**
+ * Represents a tenant-specific setting.
+ *
+ * This entity stores key-value pairs for tenant configuration,
+ * ensuring each tenant can have its own settings.
+ */
 #[ORM\Entity(repositoryClass: TenantSettingRepository::class)]
+#[ORM\Table(name: 'tenant_settings')]
 #[ORM\UniqueConstraint(name: 'tenant_setting_unique', columns: ['tenant_id', 'setting_key'])]
 class TenantSetting implements TenantOwnedEntityInterface
 {

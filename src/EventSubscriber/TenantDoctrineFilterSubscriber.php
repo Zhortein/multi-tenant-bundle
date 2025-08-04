@@ -3,7 +3,6 @@
 namespace Zhortein\MultiTenantBundle\EventSubscriber;
 
 use Doctrine\ORM\EntityManagerInterface;
-use Doctrine\Persistence\Event\ManagerEventArgs;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Symfony\Component\HttpKernel\Event\RequestEvent;
 use Symfony\Component\HttpKernel\KernelEvents;
@@ -13,8 +12,9 @@ final class TenantDoctrineFilterSubscriber implements EventSubscriberInterface
 {
     public function __construct(
         private readonly TenantContext $tenantContext,
-        private readonly EntityManagerInterface $em
-    ) {}
+        private readonly EntityManagerInterface $em,
+    ) {
+    }
 
     public static function getSubscribedEvents(): array
     {

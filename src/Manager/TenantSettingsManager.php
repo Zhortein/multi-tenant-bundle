@@ -1,23 +1,37 @@
 <?php
+
+declare(strict_types=1);
+
 namespace Zhortein\MultiTenantBundle\Manager;
 
 use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
 use Zhortein\MultiTenantBundle\Context\TenantContextInterface;
-use Zhortein\MultiTenantBundle\Entity\TenantSetting;
 use Zhortein\MultiTenantBundle\Repository\TenantSettingRepository;
 
+/**
+ * Manages tenant-specific settings with caching support.
+ *
+ * This service provides access to tenant settings with fallback to default values
+ * and caching for performance optimization.
+ */
 final class TenantSettingsManager
 {
     public function __construct(
         private readonly TenantContextInterface $tenantContext,
         private readonly TenantSettingRepository $settingRepository,
         private readonly CacheItemPoolInterface $cache,
-        private readonly ParameterBagInterface $parameterBag
-    ) {}
+        private readonly ParameterBagInterface $parameterBag,
+    ) {
+    }
 
     /**
-     * Récupère une valeur de setting.
+     * Retrieves a setting value with optional default fallback.
+     *
+     * @param string $key     The setting key
+     * @param mixed  $default Default value if setting is not found
+     *
+     * @return mixed The setting value or default
      */
     public function get(string $key, mixed $default = null): mixed
     {
@@ -27,13 +41,19 @@ final class TenantSettingsManager
     }
 
     /**
-     * Récupère une valeur obligatoire.
+     * Retrieves a required setting value, throws exception if not found.
+     *
+     * @param string $key The setting key
+     *
+     * @return mixed The setting value
+     *
+     * @throws \RuntimeException If the setting is not found
      */
     public function getRequired(string $key): mixed
     {
         $value = $this->get($key);
 
-        if ($value === null) {
+        if (null === $value) {
             throw new \RuntimeException("Tenant setting '$key' is required but not set.");
         }
 
@@ -41,12 +61,21 @@ final class TenantSettingsManager
     }
 
     /**
-     * Retourne tous les paramètres du tenant courant.
+     * Returns all settings for the current tenant.
+     *
+     * @return array<string, mixed> Array of setting key-value pairs
+     *
+     * @throws \RuntimeException If no tenant is set in context
      */
     public function all(): array
     {
         $tenant = $this->tenantContext->getTenant();
-        $cacheKey = 'zhortein_tenant_settings_' . $tenant->getId();
+
+        if (null === $tenant) {
+            throw new \RuntimeException('No tenant set in context');
+        }
+
+        $cacheKey = 'zhortein_tenant_settings_'.$tenant->getId();
 
         $item = $this->cache->getItem($cacheKey);
 
@@ -63,5 +92,22 @@ final class TenantSettingsManager
         }
 
         return $item->get();
+    }
+
+    /**
+     * Clears the cache for the current tenant's settings.
+     *
+     * @throws \RuntimeException If no tenant is set in context
+     */
+    public function clearCache(): void
+    {
+        $tenant = $this->tenantContext->getTenant();
+
+        if (null === $tenant) {
+            throw new \RuntimeException('No tenant set in context');
+        }
+
+        $cacheKey = 'zhortein_tenant_settings_'.$tenant->getId();
+        $this->cache->deleteItem($cacheKey);
     }
 }

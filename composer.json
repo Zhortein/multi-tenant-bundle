@@ -5,7 +5,6 @@
   "keywords": ["symfony", "symfony-ux", "bundle", "tenant", "multitenant", "multi tenant", "multi tenancy", "multi-tenant", "multi_tenancy", "subdomain", "domains", "hosting", "web hosting", "website", "websites", "sites", "site", "url", "urls", "routing", "router"],
   "homepage": "https://www.david-renard.fr",
   "license": "MIT",
-  "version": "1.0.0",
   "authors": [
     {
       "name": "David Renard",

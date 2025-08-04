@@ -6,6 +6,7 @@ namespace Zhortein\MultiTenantBundle\Attribute;
 final class AsTenantAware
 {
     public function __construct(
-        public readonly string $filter = 'tenant_filter'
-    ) {}
+        public readonly string $filter = 'tenant_filter',
+    ) {
+    }
 }

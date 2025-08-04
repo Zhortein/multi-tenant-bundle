@@ -11,10 +11,11 @@ final class TenantMailerHelper
     public function __construct(
         private readonly MailerInterface $mailer,
         private readonly TenantSettingsManager $settings,
-    ) {}
+    ) {
+    }
 
     /**
-     * Crée un email enrichi tenant-aware (from/reply-to dynamiques)
+     * Crée un email enrichi tenant-aware (from/reply-to dynamiques).
      */
     public function createEmail(): TemplatedEmail
     {

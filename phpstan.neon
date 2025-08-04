@@ -1,0 +1,21 @@
+parameters:
+    level: max
+    paths:
+        - src
+        - tests
+    excludePaths:
+        - tests/Fixtures (?)
+
+    ignoreErrors:
+        # Allow dynamic property access in tests
+        - '#Access to an undefined property [a-zA-Z0-9\\_]+::\$[a-zA-Z0-9_]+#'
+        # Allow mock objects in tests
+        - '#Call to method [a-zA-Z0-9_]+\(\) on an unknown class PHPUnit\\Framework\\MockObject\\MockObject#'
+        # Allow test fixtures
+        - '#Class .* not found\.#'
+    reportUnmatchedIgnoredErrors: false
+
+includes:
+    - vendor/phpstan/phpstan-doctrine/extension.neon
+    - vendor/phpstan/phpstan-symfony/extension.neon
+    - phpstan-baseline.neon

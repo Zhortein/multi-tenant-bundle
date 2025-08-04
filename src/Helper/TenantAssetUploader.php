@@ -8,8 +8,9 @@ use Zhortein\MultiTenantBundle\Storage\TenantFileStorageInterface;
 final class TenantAssetUploader
 {
     public function __construct(
-        private readonly TenantFileStorageInterface $storage
-    ) {}
+        private readonly TenantFileStorageInterface $storage,
+    ) {
+    }
 
     /**
      * Upload a file for the current tenant.
@@ -21,8 +22,8 @@ final class TenantAssetUploader
      */
     public function upload(File $file, ?string $directory = null): string
     {
-        $filename = uniqid('', true) . '_' . preg_replace('/[^a-zA-Z0-9_.-]/', '_', $file->getFilename());
-        $path = ($directory ? trim($directory, '/') . '/' : '') . $filename;
+        $filename = uniqid('', true).'_'.preg_replace('/[^a-zA-Z0-9_.-]/', '_', $file->getFilename());
+        $path = ($directory ? trim($directory, '/').'/' : '').$filename;
 
         return $this->storage->upload($file, $path);
     }

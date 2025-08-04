@@ -7,7 +7,7 @@ use Zhortein\MultiTenantBundle\Entity\TenantInterface;
 /**
  * Holds the tenant context for the current request lifecycle.
  */
-final class TenantContext
+final class TenantContext implements TenantContextInterface
 {
     private ?TenantInterface $tenant = null;
 
@@ -23,7 +23,7 @@ final class TenantContext
 
     public function hasTenant(): bool
     {
-        return $this->tenant !== null;
+        return null !== $this->tenant;
     }
 
     public function clear(): void

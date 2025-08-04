@@ -14,5 +14,4 @@ interface TenantInterface
     public function getMailerDsn(): ?string;
 
     public function getMessengerDsn(): ?string;
-
 }

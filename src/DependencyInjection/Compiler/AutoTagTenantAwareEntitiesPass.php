@@ -2,7 +2,6 @@
 
 namespace Zhortein\MultiTenantBundle\DependencyInjection\Compiler;
 
-use Doctrine\ORM\Mapping\ClassMetadata;
 use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\Finder\Finder;
@@ -57,6 +56,6 @@ final class AutoTagTenantAwareEntitiesPass implements CompilerPassInterface
             return null;
         }
 
-        return $namespace . '\\' . $m[1];
+        return $namespace.'\\'.$m[1];
     }
 }

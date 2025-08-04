@@ -8,8 +8,9 @@ use Zhortein\MultiTenantBundle\Entity\TenantInterface;
 final class TenantResolvedEvent extends Event
 {
     public function __construct(
-        private readonly TenantInterface $tenant
-    ) {}
+        private readonly TenantInterface $tenant,
+    ) {
+    }
 
     public function getTenant(): TenantInterface
     {

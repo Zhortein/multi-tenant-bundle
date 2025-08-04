@@ -1,20 +1,36 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Zhortein\MultiTenantBundle\DependencyInjection;
 
 use Symfony\Component\Config\FileLocator;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
-use Symfony\Component\DependencyInjection\Definition;
 use Symfony\Component\DependencyInjection\Extension\Extension;
 use Symfony\Component\DependencyInjection\Loader\YamlFileLoader;
 use Symfony\Component\DependencyInjection\Reference;
+use Zhortein\MultiTenantBundle\Command\ClearTenantSettingsCacheCommand;
 use Zhortein\MultiTenantBundle\Command\CreateTenantCommand;
 use Zhortein\MultiTenantBundle\Command\ListTenantsCommand;
+use Zhortein\MultiTenantBundle\Context\TenantContext;
+use Zhortein\MultiTenantBundle\Context\TenantContextInterface;
+use Zhortein\MultiTenantBundle\Doctrine\DefaultConnectionResolver;
+use Zhortein\MultiTenantBundle\Doctrine\TenantConnectionResolverInterface;
+use Zhortein\MultiTenantBundle\EventListener\TenantDoctrineFilterListener;
+use Zhortein\MultiTenantBundle\EventListener\TenantRequestListener;
 use Zhortein\MultiTenantBundle\Manager\TenantSettingsManager;
-use Zhortein\MultiTenantBundle\Storage\LocalStorage;
-use Zhortein\MultiTenantBundle\Storage\TenantFileStorageInterface;
-use Zhortein\MultiTenantBundle\Resolver\TenantConfigurationResolver;
+use Zhortein\MultiTenantBundle\Registry\DoctrineTenantRegistry;
+use Zhortein\MultiTenantBundle\Registry\TenantRegistryInterface;
+use Zhortein\MultiTenantBundle\Resolver\PathTenantResolver;
+use Zhortein\MultiTenantBundle\Resolver\SubdomainTenantResolver;
+use Zhortein\MultiTenantBundle\Resolver\TenantResolverInterface;
 
+/**
+ * Extension class for the multi-tenant bundle.
+ *
+ * This class handles the configuration and registration of all bundle services,
+ * including tenant resolvers, context managers, event listeners, and commands.
+ */
 final class ZhorteinMultiTenantExtension extends Extension
 {
     public function load(array $configs, ContainerBuilder $container): void
@@ -22,86 +38,183 @@ final class ZhorteinMultiTenantExtension extends Extension
         $configuration = new Configuration();
         $config = $this->processConfiguration($configuration, $configs);
 
-        // Set up file storage
-        if ($config['storage']['default'] === 'local') {
-            $definition = new Definition(LocalStorage::class);
-            $definition->setArgument(0, $config['storage']['options']['local']['base_path'] ?? '%kernel.project_dir%/var/tenants');
-            $definition->setArgument(1, $config['storage']['options']['local']['base_url'] ?? '');
+        // Set configuration parameters
+        $this->setConfigurationParameters($container, $config);
 
-            $container->setDefinition(TenantFileStorageInterface::class, $definition);
+        // Register core services
+        $this->registerCoreServices($container, $config);
 
-            $container->registerForAutoconfiguration(TenantFileStorageInterface::class)
-                ->addTag('zhortein.tenant_file_storage');
-        }
+        // Register tenant resolver
+        $this->registerTenantResolver($container, $config);
 
-        // @todo Plus tard, tu pourras rendre ça configurable dans le YAML du bundle.
-        $container->setParameter('zhortein_multi_tenant.entity_paths', [
-            $container->getParameter('kernel.project_dir') . '/src/Entity',
-        ]);
+        // Register event listeners
+        $this->registerEventListeners($container, $config);
 
-        if ($config['mailer']['enabled']) {
-            $container->setParameter('zhortein_multi_tenant.mailer.enabled', true);
-        }
+        // Register commands
+        $this->registerCommands($container, $config);
 
-        if ($config['messenger']['enabled']) {
-            $container->setParameter('zhortein_multi_tenant.messenger.enabled', true);
-        }
+        // Load service definitions from YAML
+        $this->loadServiceDefinitions($container);
+    }
 
-        // Enable asset uploader helper
-        if (($config['helpers']['asset_uploader'] ?? true) === true) {
-            $container->register(\Zhortein\MultiTenantBundle\Helper\TenantAssetUploader::class)
-                ->setAutowired(true)
-                ->setAutoconfigured(true)
-                ->addTag('zhortein.tenant_helper');
-        }
+    /**
+     * Sets configuration parameters in the container.
+     *
+     * @param ContainerBuilder     $container The container builder
+     * @param array<string, mixed> $config    The processed configuration
+     */
+    private function setConfigurationParameters(ContainerBuilder $container, array $config): void
+    {
+        $container->setParameter('zhortein_multi_tenant.tenant_entity', $config['tenant_entity']);
+        $container->setParameter('zhortein_multi_tenant.resolver_type', $config['resolver']);
+        $container->setParameter('zhortein_multi_tenant.default_tenant', $config['default_tenant']);
+        $container->setParameter('zhortein_multi_tenant.require_tenant', $config['require_tenant']);
+        $container->setParameter('zhortein_multi_tenant.subdomain.base_domain', $config['subdomain']['base_domain']);
+        $container->setParameter('zhortein_multi_tenant.subdomain.excluded_subdomains', $config['subdomain']['excluded_subdomains']);
+        $container->setParameter('zhortein_multi_tenant.database.strategy', $config['database']['strategy']);
+        $container->setParameter('zhortein_multi_tenant.database.enable_filter', $config['database']['enable_filter']);
+        $container->setParameter('zhortein_multi_tenant.cache.pool', $config['cache']['pool']);
+        $container->setParameter('zhortein_multi_tenant.cache.ttl', $config['cache']['ttl']);
+        $container->setParameter('zhortein_multi_tenant.mailer.enabled', $config['mailer']['enabled']);
+        $container->setParameter('zhortein_multi_tenant.messenger.enabled', $config['messenger']['enabled']);
+    }
 
-        // Enable mailer helper
-        if (($config['helpers']['mailer_helper'] ?? true) === true) {
-            $container->register(\Zhortein\MultiTenantBundle\Helper\TenantMailerHelper::class)
-                ->setAutowired(true)
-                ->setAutoconfigured(true)
-                ->addTag('zhortein.tenant_helper');
-        }
+    /**
+     * Registers core services.
+     *
+     * @param ContainerBuilder     $container The container builder
+     * @param array<string, mixed> $config    The processed configuration
+     */
+    private function registerCoreServices(ContainerBuilder $container, array $config): void
+    {
+        // Register tenant context
+        $container->register(TenantContext::class)
+            ->setAutowired(true)
+            ->setAutoconfigured(true);
 
-        // Enable messenger configurator
-        if (($config['helpers']['messenger_configurator'] ?? true) === true) {
-            $container->register(\Zhortein\MultiTenantBundle\Messenger\TenantMessengerConfigurator::class)
-                ->setAutowired(true)
-                ->setAutoconfigured(true)
-                ->addTag('zhortein.tenant_helper');
-        }
+        $container->setAlias(TenantContextInterface::class, TenantContext::class);
 
-        // Inject tenant entity + resolver class via params
-        $container->setParameter('zhortein_multi_tenant.entity_class', $config['tenant_entity']);
-        $container->setParameter('zhortein_multi_tenant.resolver', $config['resolver']);
-
-        $container->register(CreateTenantCommand::class)
+        // Register tenant registry
+        $container->register(DoctrineTenantRegistry::class)
             ->setAutowired(true)
             ->setAutoconfigured(true)
-            ->addArgument(new Reference('doctrine.orm.entity_manager'))
-            ->addArgument('%zhortein_multi_tenant.entity_class%')
-            ->addTag('console.command');
+            ->setArgument('$tenantEntityClass', '%zhortein_multi_tenant.tenant_entity%');
 
-        $container->register(ListTenantsCommand::class)
-            ->setAutowired(true)
-            ->setAutoconfigured(true)
-            ->addArgument(new Reference('doctrine.orm.entity_manager'))
-            ->addArgument('%zhortein_multi_tenant.entity_class%')
-            ->addTag('console.command');
+        $container->setAlias(TenantRegistryInterface::class, DoctrineTenantRegistry::class);
 
+        // Register tenant settings manager
         $container->register(TenantSettingsManager::class)
             ->setAutowired(true)
             ->setAutoconfigured(true)
-            ->addTag('zhortein.tenant_helper');
+            ->setArgument('$cache', new Reference($config['cache']['pool']))
+            ->setArgument('$cacheTtl', $config['cache']['ttl']);
 
-        $container->register(TenantConfigurationResolver::class)
+        // Register connection resolver
+        $container->register(DefaultConnectionResolver::class)
+            ->setAutowired(true)
+            ->setAutoconfigured(true);
+
+        $container->setAlias(TenantConnectionResolverInterface::class, DefaultConnectionResolver::class);
+    }
+
+    /**
+     * Registers the appropriate tenant resolver based on configuration.
+     *
+     * @param ContainerBuilder     $container The container builder
+     * @param array<string, mixed> $config    The processed configuration
+     */
+    private function registerTenantResolver(ContainerBuilder $container, array $config): void
+    {
+        switch ($config['resolver']) {
+            case 'path':
+                $container->register(PathTenantResolver::class)
+                    ->setAutowired(true)
+                    ->setAutoconfigured(true);
+
+                $container->setAlias(TenantResolverInterface::class, PathTenantResolver::class);
+                break;
+
+            case 'subdomain':
+                $container->register(SubdomainTenantResolver::class)
+                    ->setAutowired(true)
+                    ->setAutoconfigured(true)
+                    ->setArgument('$baseDomain', $config['subdomain']['base_domain'])
+                    ->setArgument('$excludedSubdomains', $config['subdomain']['excluded_subdomains']);
+
+                $container->setAlias(TenantResolverInterface::class, SubdomainTenantResolver::class);
+                break;
+
+            case 'custom':
+                // For custom resolvers, the user must register their own implementation
+                // and alias it to TenantResolverInterface
+                break;
+        }
+    }
+
+    /**
+     * Registers event listeners based on configuration.
+     *
+     * @param ContainerBuilder     $container The container builder
+     * @param array<string, mixed> $config    The processed configuration
+     */
+    private function registerEventListeners(ContainerBuilder $container, array $config): void
+    {
+        if ($config['listeners']['request_listener']) {
+            $container->register(TenantRequestListener::class)
+                ->setAutowired(true)
+                ->setAutoconfigured(true);
+        }
+
+        if ($config['listeners']['doctrine_filter_listener'] && $config['database']['enable_filter']) {
+            $container->register(TenantDoctrineFilterListener::class)
+                ->setAutowired(true)
+                ->setAutoconfigured(true);
+        }
+    }
+
+    /**
+     * Registers console commands.
+     *
+     * @param ContainerBuilder     $container The container builder
+     * @param array<string, mixed> $config    The processed configuration
+     */
+    private function registerCommands(ContainerBuilder $container, array $config): void
+    {
+        // List tenants command
+        $container->register(ListTenantsCommand::class)
             ->setAutowired(true)
             ->setAutoconfigured(true)
-            ->addTag('zhortein.tenant_helper');
+            ->setArgument('$tenantEntityClass', '%zhortein_multi_tenant.tenant_entity%')
+            ->addTag('console.command');
 
-        // Load YAML service definitions
-        $loader = new YamlFileLoader($container, new FileLocator(__DIR__ . '/../Resources/config'));
-        $loader->load('services.yaml');
+        // Create tenant command
+        $container->register(CreateTenantCommand::class)
+            ->setAutowired(true)
+            ->setAutoconfigured(true)
+            ->setArgument('$tenantEntityClass', '%zhortein_multi_tenant.tenant_entity%')
+            ->addTag('console.command');
 
+        // Clear tenant settings cache command
+        $container->register(ClearTenantSettingsCacheCommand::class)
+            ->setAutowired(true)
+            ->setAutoconfigured(true)
+            ->setArgument('$cache', new Reference($config['cache']['pool']))
+            ->addTag('console.command');
+    }
+
+    /**
+     * Loads service definitions from YAML files.
+     *
+     * @param ContainerBuilder $container The container builder
+     */
+    private function loadServiceDefinitions(ContainerBuilder $container): void
+    {
+        $loader = new YamlFileLoader($container, new FileLocator(__DIR__.'/../Resources/config'));
+
+        try {
+            $loader->load('services.yaml');
+        } catch (\Exception $exception) {
+            // Services file is optional, continue without it
+        }
     }
 }
