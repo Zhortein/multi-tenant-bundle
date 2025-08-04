@@ -10,41 +10,46 @@ use Zhortein\MultiTenantBundle\Manager\TenantSettingsManager;
  * Configures messenger settings based on tenant context.
  *
  * This service provides tenant-specific messenger configuration
- * by retrieving settings from the tenant settings manager.
+ * by retrieving settings from the tenant settings manager with
+ * fallback support from bundle configuration.
  */
 class TenantMessengerConfigurator
 {
     public function __construct(
         private readonly TenantSettingsManager $settingsManager,
+        private readonly string $fallbackDsn = 'sync://',
+        private readonly string $fallbackBus = 'messenger.bus.default',
     ) {
     }
 
     /**
      * Gets the messenger transport DSN for the current tenant.
      *
-     * @param string $default Default DSN if tenant setting is not found
+     * @param string|null $default Default DSN if tenant setting is not found
      *
-     * @return string The messenger transport DSN
+     * @return string The messenger transport DSN, fallback, or default value
      */
-    public function getTransportDsn(string $default = 'sync://'): string
+    public function getTransportDsn(?string $default = null): string
     {
-        $value = $this->settingsManager->get('messenger_transport_dsn', $default);
+        $fallback = $default ?? $this->fallbackDsn;
+        $value = $this->settingsManager->get('messenger_transport_dsn', $fallback);
 
-        return is_string($value) ? $value : $default;
+        return is_string($value) ? $value : $fallback;
     }
 
     /**
      * Gets the messenger bus name for the current tenant.
      *
-     * @param string $default Default bus name if tenant setting is not found
+     * @param string|null $default Default bus name if tenant setting is not found
      *
-     * @return string The messenger bus name
+     * @return string The messenger bus name, fallback, or default value
      */
-    public function getBusName(string $default = 'messenger.bus.default'): string
+    public function getBusName(?string $default = null): string
     {
-        $value = $this->settingsManager->get('messenger_bus', $default);
+        $fallback = $default ?? $this->fallbackBus;
+        $value = $this->settingsManager->get('messenger_bus', $fallback);
 
-        return is_string($value) ? $value : $default;
+        return is_string($value) ? $value : $fallback;
     }
 
     /**

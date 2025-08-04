@@ -10,12 +10,16 @@ use Zhortein\MultiTenantBundle\Manager\TenantSettingsManager;
  * Configures mailer settings based on tenant context.
  *
  * This service provides tenant-specific mailer configuration
- * by retrieving settings from the tenant settings manager.
+ * by retrieving settings from the tenant settings manager with
+ * fallback support from bundle configuration.
  */
 class TenantMailerConfigurator
 {
     public function __construct(
         private readonly TenantSettingsManager $settingsManager,
+        private readonly ?string $fallbackDsn = null,
+        private readonly ?string $fallbackFrom = null,
+        private readonly ?string $fallbackSender = null,
     ) {
     }
 
@@ -24,13 +28,13 @@ class TenantMailerConfigurator
      *
      * @param string|null $default Default DSN if tenant setting is not found
      *
-     * @return string|null The mailer DSN or default value
+     * @return string|null The mailer DSN, fallback, or default value
      */
     public function getMailerDsn(?string $default = null): ?string
     {
-        $value = $this->settingsManager->get('mailer_dsn', $default);
+        $value = $this->settingsManager->get('mailer_dsn', $this->fallbackDsn ?? $default);
 
-        return is_string($value) ? $value : $default;
+        return is_string($value) ? $value : ($this->fallbackDsn ?? $default);
     }
 
     /**
@@ -38,13 +42,13 @@ class TenantMailerConfigurator
      *
      * @param string|null $default Default sender name if tenant setting is not found
      *
-     * @return string|null The sender name or default value
+     * @return string|null The sender name, fallback, or default value
      */
     public function getSenderName(?string $default = null): ?string
     {
-        $value = $this->settingsManager->get('email_sender', $default);
+        $value = $this->settingsManager->get('email_sender', $this->fallbackSender ?? $default);
 
-        return is_string($value) ? $value : $default;
+        return is_string($value) ? $value : ($this->fallbackSender ?? $default);
     }
 
     /**
@@ -52,13 +56,13 @@ class TenantMailerConfigurator
      *
      * @param string|null $default Default from address if tenant setting is not found
      *
-     * @return string|null The from address or default value
+     * @return string|null The from address, fallback, or default value
      */
     public function getFromAddress(?string $default = null): ?string
     {
-        $value = $this->settingsManager->get('email_from', $default);
+        $value = $this->settingsManager->get('email_from', $this->fallbackFrom ?? $default);
 
-        return is_string($value) ? $value : $default;
+        return is_string($value) ? $value : ($this->fallbackFrom ?? $default);
     }
 
     /**
