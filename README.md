@@ -15,8 +15,6 @@ A comprehensive Symfony 7+ bundle for building multi-tenant applications with Po
 - 📧 **Tenant-Aware Services**: Mailer, Messenger, and file storage integration
 - 🎯 **Event-Driven**: Database switching events and automatic tenant context resolution
 - 🛠️ **Advanced Commands**: Schema management, migrations, and fixtures for tenants
-- 🔄 **Container Scoping**: Tenant-scoped services in the dependency injection container
-- 🏭 **Entity Manager Factory**: Create tenant-specific entity managers programmatically
 - 🧪 **Fully Tested**: Comprehensive test suite with PHPUnit 12
 - 📊 **PHPStan Level Max**: Static analysis at maximum level
 
@@ -94,34 +92,13 @@ Create `config/packages/zhortein_multi_tenant.yaml`:
 ```yaml
 zhortein_multi_tenant:
     tenant_entity: 'App\Entity\Tenant'
-    resolver: 'subdomain'  # 'path', 'subdomain', 'header', or 'custom'
-    
-    # Subdomain resolver configuration
-    subdomain:
-        base_domain: 'example.com'
-        excluded_subdomains: ['www', 'api', 'admin']
-    
-    # Header resolver configuration
-    header:
-        name: 'X-Tenant-Slug'  # HTTP header name
-    
+    resolver:
+        type: 'subdomain'
+        options:
+            base_domain: 'example.com'
     database:
-        strategy: 'shared'  # or 'separate'
+        strategy: 'shared_db'
         enable_filter: true
-    
-    # Advanced features
-    events:
-        dispatch_database_switch: true
-    
-    fixtures:
-        enabled: true
-    
-    container:
-        enable_tenant_scope: false
-    
-    cache:
-        pool: 'cache.app'
-        ttl: 3600
 ```
 
 ### 3. Create Tenant-Aware Entities
@@ -132,99 +109,28 @@ zhortein_multi_tenant:
 namespace App\Entity;
 
 use Doctrine\ORM\Mapping as ORM;
-use Zhortein\MultiTenantBundle\Doctrine\TenantOwnedEntityInterface;
-use Zhortein\MultiTenantBundle\Entity\TenantInterface;
+use Zhortein\MultiTenantBundle\Attribute\AsTenantAware;
+use Zhortein\MultiTenantBundle\Entity\TenantAwareEntityTrait;
 
 #[ORM\Entity]
-class Article implements TenantOwnedEntityInterface
+#[AsTenantAware]
+class Product
 {
+    use TenantAwareEntityTrait;
+
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column(type: 'integer')]
     private ?int $id = null;
 
-    #[ORM\ManyToOne(targetEntity: Tenant::class)]
-    #[ORM\JoinColumn(nullable: false)]
-    private TenantInterface $tenant;
-
     #[ORM\Column(type: 'string', length: 255)]
-    private string $title;
+    private string $name;
 
-    // Implement TenantOwnedEntityInterface methods...
-    
-    public function getTenant(): ?TenantInterface
-    {
-        return $this->tenant;
-    }
-
-    public function setTenant(TenantInterface $tenant): void
-    {
-        $this->tenant = $tenant;
-    }
-
-    // ... other methods
+    // ... other properties and methods
 }
 ```
 
-### 4. Register Doctrine Filter
-
-Add to your `config/packages/doctrine.yaml`:
-
-```yaml
-doctrine:
-    orm:
-        filters:
-            tenant:
-                class: Zhortein\MultiTenantBundle\Doctrine\TenantDoctrineFilter
-                enabled: true
-```
-
-## Configuration Reference
-
-```yaml
-zhortein_multi_tenant:
-    # Tenant entity class (required)
-    tenant_entity: 'App\Entity\Tenant'
-    
-    # Tenant resolution strategy
-    resolver: 'path'  # 'path', 'subdomain', or 'custom'
-    
-    # Default tenant slug (optional)
-    default_tenant: null
-    
-    # Require tenant for all requests
-    require_tenant: false
-    
-    # Subdomain resolver configuration
-    subdomain:
-        base_domain: 'localhost'
-        excluded_subdomains: ['www', 'api', 'admin', 'mail', 'ftp']
-    
-    # Database configuration
-    database:
-        strategy: 'shared'  # 'shared' or 'separate'
-        enable_filter: true
-    
-    # Cache configuration
-    cache:
-        pool: 'cache.app'
-        ttl: 3600
-    
-    # Service integrations
-    mailer:
-        enabled: true
-    messenger:
-        enabled: true
-    
-    # Event listeners
-    listeners:
-        request_listener: true
-        doctrine_filter_listener: true
-```
-
-## Usage Examples
-
-### Accessing Current Tenant
+### 4. Use in Controllers
 
 ```php
 <?php
@@ -240,333 +146,68 @@ class DashboardController extends AbstractController
     {
         $tenant = $tenantContext->getTenant();
         
-        if (!$tenant) {
-            throw $this->createNotFoundException('No tenant found');
-        }
+        // All database queries are automatically filtered by tenant
+        $products = $this->entityManager
+            ->getRepository(Product::class)
+            ->findAll(); // Only returns current tenant's products
         
         return $this->render('dashboard/index.html.twig', [
             'tenant' => $tenant,
+            'products' => $products,
         ]);
     }
 }
 ```
 
-### Managing Tenant Settings
-
-```php
-<?php
-
-namespace App\Service;
-
-use Zhortein\MultiTenantBundle\Manager\TenantSettingsManager;
-use Zhortein\MultiTenantBundle\Context\TenantContextInterface;
-
-class TenantConfigService
-{
-    public function __construct(
-        private TenantSettingsManager $settingsManager,
-        private TenantContextInterface $tenantContext,
-    ) {}
-
-    public function getThemeColor(): string
-    {
-        return $this->settingsManager->get('theme_color', '#007bff');
-    }
-
-    public function updateThemeColor(string $color): void
-    {
-        $this->settingsManager->set('theme_color', $color);
-    }
-}
-```
-
-### Custom Tenant Resolver
-
-```php
-<?php
-
-namespace App\Resolver;
-
-use Symfony\Component\HttpFoundation\Request;
-use Zhortein\MultiTenantBundle\Entity\TenantInterface;
-use Zhortein\MultiTenantBundle\Registry\TenantRegistryInterface;
-use Zhortein\MultiTenantBundle\Resolver\TenantResolverInterface;
-
-class HeaderTenantResolver implements TenantResolverInterface
-{
-    public function __construct(
-        private TenantRegistryInterface $tenantRegistry,
-    ) {}
-
-    public function resolve(Request $request): ?TenantInterface
-    {
-        $tenantSlug = $request->headers->get('X-Tenant-Slug');
-        
-        if (!$tenantSlug) {
-            return null;
-        }
-
-        try {
-            return $this->tenantRegistry->getBySlug($tenantSlug);
-        } catch (\Exception) {
-            return null;
-        }
-    }
-}
-```
-
-Register your custom resolver:
-
-```yaml
-# config/services.yaml
-services:
-    App\Resolver\HeaderTenantResolver:
-        tags:
-            - { name: 'zhortein.tenant_resolver' }
-
-# config/packages/zhortein_multi_tenant.yaml
-zhortein_multi_tenant:
-    resolver: 'custom'
-```
-
-## Console Commands
-
-### Basic Tenant Management
-
-```bash
-# List all tenants
-php bin/console tenant:list
-
-# Create a new tenant
-php bin/console tenant:create
-
-# Clear tenant settings cache
-php bin/console tenant:settings:clear-cache tenant-slug
-php bin/console tenant:settings:clear-cache --all
-```
-
-### Database Schema Management
-
-```bash
-# Create database schema for all tenants
-php bin/console tenant:schema:create
-
-# Create schema for specific tenant
-php bin/console tenant:schema:create --tenant=acme
-
-# Drop schema for all tenants (with confirmation)
-php bin/console tenant:schema:drop
-
-# Drop schema with force flag
-php bin/console tenant:schema:drop --force
-
-# Dump SQL instead of executing
-php bin/console tenant:schema:create --dump-sql
-```
-
-### Migration Management
-
-```bash
-# Run migrations for all tenants
-php bin/console tenant:migrate
-
-# Run migrations for specific tenant
-php bin/console tenant:migrate --tenant=acme
-
-# Dry run (show SQL without executing)
-php bin/console tenant:migrate --dry-run
-
-# Allow execution even if no migrations found
-php bin/console tenant:migrate --allow-no-migration
-```
-
-### Fixtures Management
-
-```bash
-# Load fixtures for all tenants
-php bin/console tenant:fixtures:load
-
-# Load fixtures for specific tenant
-php bin/console tenant:fixtures:load --tenant=acme
-
-# Append fixtures instead of purging
-php bin/console tenant:fixtures:load --append
-
-# Load specific fixture groups
-php bin/console tenant:fixtures:load --group=demo --group=test
-
-# Exclude tables from purging
-php bin/console tenant:fixtures:load --purge-exclusions=audit_log
-```
-
-## Advanced Features
-
-### 📨 Tenant-Aware Mailer
-
-Configure tenant-specific email settings:
-
-```php
-// Each tenant can have its own SMTP configuration
-$settingsManager->set('mailer_dsn', 'smtp://tenant-smtp.example.com:587');
-$settingsManager->set('email_from', 'noreply@tenant.com');
-$settingsManager->set('email_sender', 'Tenant Name');
-```
-
-### 📬 Tenant-Aware Messenger
-
-Configure tenant-specific message transports:
-
-```yaml
-# config/packages/messenger.yaml
-framework:
-    messenger:
-        transports:
-            tenant_async: 'tenant://default'  # Uses tenant-specific transport
-```
-
-### 🗂️ Tenant-Aware Storage
-
-Isolate file storage per tenant:
-
-```php
-use Zhortein\MultiTenantBundle\Storage\TenantFileStorageInterface;
-
-class DocumentService
-{
-    public function __construct(
-        private TenantFileStorageInterface $storage
-    ) {}
-
-    public function uploadDocument(UploadedFile $file): string
-    {
-        // Automatically stored in tenant-specific directory
-        return $this->storage->uploadFile($file, 'documents/' . $file->getClientOriginalName());
-    }
-}
-```
-
-### 🗄️ Automatic Database Filtering
-
-Entities are automatically filtered by tenant:
-
-```php
-use Zhortein\MultiTenantBundle\Doctrine\TenantOwnedEntityInterface;
-use Zhortein\MultiTenantBundle\Doctrine\TenantOwnedEntityTrait;
-
-#[ORM\Entity]
-class Product implements TenantOwnedEntityInterface
-{
-    use TenantOwnedEntityTrait; // Automatically adds tenant relationship
-}
-```
-
-### 🛠️ Advanced Console Commands
-
-```bash
-# Schema management
-php bin/console tenant:schema:create --tenant=acme
-php bin/console tenant:schema:drop --force
-
-# Tenant-specific migrations
-php bin/console tenant:migrate --tenant=acme --dry-run
-
-# Tenant-specific fixtures
-php bin/console tenant:fixtures:load --tenant=acme --group=demo
-```
-
 ## 📚 Documentation
 
 ### 🚀 Getting Started
-- [Installation & Setup](docs/installation.md) - Install and configure the bundle
-- [Configuration Reference](docs/configuration.md) - Complete configuration options
-- [Database Strategies](docs/database-strategies.md) - Shared DB vs Multi-DB approaches
+- [Installation & Setup](docs/installation.md) - Complete installation guide
+- [Configuration Reference](docs/configuration.md) - All configuration options
+- [Database Strategies](docs/database-strategies.md) - Shared DB vs Multi-DB
 
 ### 🏗️ Core Concepts
-- [Tenant Context](docs/tenant-context.md) - How tenant resolution and access works
-- [Tenant Resolution](docs/tenant-resolution.md) - Subdomain, path, header, and custom resolvers
-- [Doctrine Tenant Filter](docs/doctrine-tenant-filter.md) - Automatic database filtering
-- [Tenant Settings](docs/tenant-settings.md) - Configuration system with fallback rules
+- [Tenant Context](docs/tenant-context.md) - Tenant resolution and access
+- [Tenant Resolution](docs/tenant-resolution.md) - Resolution strategies
+- [Doctrine Tenant Filter](docs/doctrine-tenant-filter.md) - Automatic filtering
+- [Tenant Settings](docs/tenant-settings.md) - Configuration system
 
 ### 🔧 Service Integration
-- [Mailer](docs/mailer.md) - Tenant-aware email configuration and sending
-- [Messenger](docs/messenger.md) - Tenant-aware message queues and processing
-- [Storage](docs/storage.md) - Tenant-specific file storage mechanisms
+- [Mailer](docs/mailer.md) - Tenant-aware email
+- [Messenger](docs/messenger.md) - Tenant-aware queues
+- [Storage](docs/storage.md) - File storage isolation
 
 ### 🗄️ Database Management
-- [Migrations](docs/migrations.md) - Running migrations for each tenant
-- [Fixtures](docs/fixtures.md) - Creating and loading fixtures per tenant
+- [Migrations](docs/migrations.md) - Database migrations
+- [Fixtures](docs/fixtures.md) - Test data loading
 
 ### 🛠️ Development Tools
-- [CLI Commands](docs/cli.md) - Console commands with examples
-- [Testing](docs/testing.md) - Unit and functional testing for multi-tenant apps
-- [FAQ](docs/faq.md) - Frequently asked questions and troubleshooting
+- [CLI Commands](docs/cli.md) - Console commands
+- [Testing](docs/testing.md) - Testing strategies
+- [FAQ](docs/faq.md) - Common questions
 
 ### 📖 Examples
-- [Basic Usage Examples](docs/examples/basic-usage.md) - Practical code examples
-- [Mailer Usage Examples](docs/examples/mailer-usage.md) - Email configuration examples
-- [Messenger Usage Examples](docs/examples/messenger-usage.md) - Message queue examples
-- [Storage Usage Examples](docs/examples/storage-usage.md) - File storage examples
-- [Database Usage Examples](docs/examples/database-usage.md) - Entity and repository examples
+- [Basic Usage](docs/examples/basic-usage.md) - Code examples
+- [Service Integration](docs/examples/) - Practical implementations
 
 ## Testing
 
-The bundle includes a comprehensive test suite:
+Run the test suite:
 
 ```bash
 # Run all tests
-make test
+vendor/bin/phpunit
 
-# Run specific test suite
-vendor/bin/phpunit tests/Unit
-vendor/bin/phpunit tests/Integration
-vendor/bin/phpunit tests/Functional
+# Run with coverage
+vendor/bin/phpunit --coverage-html coverage/
 ```
 
 ## Static Analysis
 
-Run PHPStan at maximum level:
-
 ```bash
-make phpstan
+# PHPStan at maximum level
+vendor/bin/phpstan analyse
 ```
-
-## Code Style
-
-Fix code style with PHP-CS-Fixer:
-
-```bash
-make csfixer
-```
-
-## Architecture
-
-### Core Components
-
-- **TenantContext**: Manages the current tenant state
-- **TenantRegistry**: Provides access to tenant entities
-- **TenantResolver**: Resolves tenant from HTTP requests
-- **TenantSettingsManager**: Manages tenant-specific settings
-- **TenantDoctrineFilter**: Automatically filters database queries
-
-### Event Flow
-
-1. **Request Event**: `TenantRequestListener` resolves tenant from request
-2. **Doctrine Filter**: `TenantDoctrineFilterListener` configures database filtering
-3. **Application Logic**: Controllers and services access tenant context
-4. **Response**: Tenant-specific data is returned
-
-## Performance Considerations
-
-- **Caching**: Tenant settings are cached to reduce database queries
-- **Database Filtering**: Automatic query filtering at the database level
-- **Lazy Loading**: Tenant context is resolved only when needed
-- **Connection Pooling**: Support for separate database connections per tenant
-
-## Security
-
-- **Tenant Isolation**: Automatic data isolation between tenants
-- **Input Validation**: All tenant identifiers are validated
-- **Access Control**: Built-in protection against tenant data leakage
 
 ## Contributing
 
@@ -576,16 +217,18 @@ make csfixer
 4. Ensure all tests pass and code meets quality standards
 5. Submit a pull request
 
+See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines.
+
 ## License
 
 This bundle is released under the MIT License. See the [LICENSE](LICENSE) file for details.
 
 ## Support
 
-- **Documentation**: [Full documentation](docs/)
+- **Documentation**: [Complete documentation](docs/)
 - **Issues**: [GitHub Issues](https://github.com/zhortein/multi-tenant-bundle/issues)
 - **Discussions**: [GitHub Discussions](https://github.com/zhortein/multi-tenant-bundle/discussions)
 
 ## Changelog
 
-See [CHANGELOG.md](CHANGELOG.md) for a list of changes and upgrade instructions.
+See [CHANGELOG.md](CHANGELOG.md) for version history and upgrade instructions.
