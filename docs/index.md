@@ -8,6 +8,7 @@ Welcome to the comprehensive documentation for the Zhortein Multi-Tenant Bundle,
 - [Installation](installation.md) - Install and enable the bundle
 - [Configuration](configuration.md) - Complete configuration reference
 - [Database Strategies](database-strategies.md) - Shared DB vs Multi-DB approaches
+- [Project Overview](project-overview.md) - Architecture and implementation details
 
 ### Core Concepts
 - [Tenant Context](tenant-context.md) - How tenant resolution and access works
