@@ -1,0 +1,57 @@
+services:
+
+  doctrine.dbal.connection_factory:
+    class: Zhortein\MultiTenantBundle\Doctrine\TenantAwareConnectionFactory
+    public: false
+    arguments:
+      - '@Zhortein\MultiTenantBundle\Context\TenantContext'
+      - '@Zhortein\MultiTenantBundle\Doctrine\TenantConnectionResolverInterface'
+      - '@doctrine.dbal.configuration'
+
+  Zhortein\MultiTenantBundle\:
+    resource: '../../src/*'
+    exclude: '../../src/{DependencyInjection,Entity,Tests}'
+    autowire: true
+    autoconfigure: true
+
+  Zhortein\MultiTenantBundle\EventSubscriber\TenantDoctrineFilterSubscriber:
+    tags:
+      - { name: kernel.event_subscriber }
+
+  Zhortein\MultiTenantBundle\Manager\TenantSettingsManager: ~
+
+  Zhortein\MultiTenantBundle\Doctrine\:
+    resource: '../../Doctrine/'
+    autowire: true
+    autoconfigure: true
+
+  Zhortein\MultiTenantBundle\EventSubscriber\TenantDoctrineSubscriber:
+    tags: [kernel.event_subscriber]
+
+  Zhortein\MultiTenantBundle\Registry\DoctrineTenantRegistry:
+    arguments:
+      $tenantEntityClass: '%zhortein_multi_tenant.entity_class%'
+    tags: ['zhortein.tenant_registry']
+    autowire: true
+    autoconfigure: true
+    public: true
+
+  Zhortein\MultiTenantBundle\Registry\TenantRegistryInterface: '@Zhortein\MultiTenantBundle\Registry\DoctrineTenantRegistry'
+
+  Zhortein\MultiTenantBundle\Registry\InMemoryTenantRegistry:
+    arguments:
+      $tenants: [] # à surcharger dans les tests
+    tags: ['zhortein.tenant_registry']
+
+  Zhortein\MultiTenantBundle\Mailer\TenantMailerTransportFactory:
+    autowire: true
+    autoconfigure: true
+    tags:
+      - { name: 'mailer.transport_factory' }
+
+  Zhortein\MultiTenantBundle\Messenger\TenantMessengerTransportFactory:
+    autowire: true
+    autoconfigure: true
+    arguments:
+      $factories: !tagged_iterator messenger.transport_factory
+    tags: ['messenger.transport_factory']

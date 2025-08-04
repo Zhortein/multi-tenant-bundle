@@ -1,0 +1,55 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Zhortein\MultiTenantBundle\Registry;
+
+use Doctrine\ORM\EntityManagerInterface;
+use Zhortein\MultiTenantBundle\Entity\TenantInterface;
+
+/**
+ * Doctrine-based tenant registry.
+ *
+ * Loads tenants from the database using Doctrine ORM.
+ */
+final class DoctrineTenantRegistry implements TenantRegistryInterface
+{
+    public function __construct(
+        private readonly EntityManagerInterface $em,
+        private readonly string $tenantEntityClass,
+    ) {
+    }
+
+    public function getAll(): array
+    {
+        $repository = $this->em->getRepository($this->tenantEntityClass);
+
+        /** @var TenantInterface[] $tenants */
+        $tenants = $repository->findAll();
+
+        return $tenants;
+    }
+
+    public function getBySlug(string $slug): TenantInterface
+    {
+        $repository = $this->em->getRepository($this->tenantEntityClass);
+        $tenant = $repository->findOneBy(['slug' => $slug]);
+
+        if (!$tenant instanceof TenantInterface) {
+            throw new \RuntimeException("Tenant with slug '{$slug}' not found.");
+        }
+
+        return $tenant;
+    }
+
+    public function hasSlug(string $slug): bool
+    {
+        try {
+            $this->getBySlug($slug);
+
+            return true;
+        } catch (\RuntimeException) {
+            return false;
+        }
+    }
+}
