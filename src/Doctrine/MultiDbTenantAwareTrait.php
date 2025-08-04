@@ -23,7 +23,7 @@ trait MultiDbTenantAwareTrait
 
     /**
      * Gets the current tenant context.
-     * 
+     *
      * In multi-db mode, this is resolved from the tenant context service
      * rather than from a database relationship.
      */
@@ -34,7 +34,7 @@ trait MultiDbTenantAwareTrait
 
     /**
      * Sets the tenant context (for internal use).
-     * 
+     *
      * This method is used internally by the bundle to provide
      * tenant context to entities in multi-db mode.
      */

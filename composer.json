@@ -1,10 +1,15 @@
 {
   "name": "zhortein/multi-tenant-bundle",
   "type": "symfony-bundle",
-  "description": "A Symfony 7+ bundle for clean and flexible multi-tenancy.",
-  "keywords": ["symfony", "symfony-ux", "bundle", "tenant", "multitenant", "multi tenant", "multi tenancy", "multi-tenant", "multi_tenancy", "subdomain", "domains", "hosting", "web hosting", "website", "websites", "sites", "site", "url", "urls", "routing", "router"],
-  "homepage": "https://www.david-renard.fr",
+  "description": "A comprehensive Symfony 7+ bundle for building multi-tenant applications with PostgreSQL 16 support, featuring multiple resolution strategies, tenant-aware services, and automatic database filtering.",
+  "keywords": ["symfony", "symfony-bundle", "multi-tenant", "multitenant", "tenant", "multi-tenancy", "subdomain", "domain", "dns", "postgresql", "doctrine", "orm", "mailer", "messenger", "storage", "saas", "hosting"],
+  "homepage": "https://github.com/zhortein/multi-tenant-bundle",
   "license": "MIT",
+  "support": {
+    "issues": "https://github.com/zhortein/multi-tenant-bundle/issues",
+    "source": "https://github.com/zhortein/multi-tenant-bundle",
+    "docs": "https://github.com/zhortein/multi-tenant-bundle/tree/main/docs"
+  },
   "authors": [
     {
       "name": "David Renard",

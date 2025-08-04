@@ -26,9 +26,6 @@ final class TenantAwareMailer implements MailerInterface
     ) {
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function send(RawMessage $message, ?Envelope $envelope = null): void
     {
         // Configure tenant-specific settings for Email messages
@@ -48,10 +45,10 @@ final class TenantAwareMailer implements MailerInterface
      * @param array<string, mixed> $context      Template context variables
      * @param string|null          $fromOverride Override from address
      *
-     * @throws \RuntimeException When Twig is not available
-     * @throws \Twig\Error\LoaderError When template is not found
+     * @throws \RuntimeException        When Twig is not available
+     * @throws \Twig\Error\LoaderError  When template is not found
      * @throws \Twig\Error\RuntimeError When template rendering fails
-     * @throws \Twig\Error\SyntaxError When template has syntax errors
+     * @throws \Twig\Error\SyntaxError  When template has syntax errors
      */
     public function sendTemplatedEmail(
         string $to,
@@ -60,38 +57,38 @@ final class TenantAwareMailer implements MailerInterface
         array $context = [],
         ?string $fromOverride = null,
     ): void {
-        if ($this->twig === null) {
+        if (null === $this->twig) {
             throw new \RuntimeException('Twig is required for templated emails. Please install symfony/twig-bundle.');
         }
 
         $tenant = $this->tenantContext->getTenant();
-        
+
         // Enhance context with tenant variables
         $enhancedContext = $this->enhanceContextWithTenantData($context);
-        
+
         // Try tenant-specific template first, fallback to default
         $templatePath = $this->resolveTemplatePath($template);
-        
+
         // Render the email content
         $htmlContent = $this->twig->render($templatePath, $enhancedContext);
-        
+
         // Create and configure email
         $email = (new Email())
             ->to($to)
             ->subject($subject)
             ->html($htmlContent);
-            
+
         // Override from address if specified
-        if ($fromOverride !== null) {
+        if (null !== $fromOverride) {
             $email->from($fromOverride);
         }
-        
+
         // Add tenant-specific headers
-        if ($tenant !== null) {
+        if (null !== $tenant) {
             $email->getHeaders()->addTextHeader('X-Tenant-ID', $tenant->getSlug());
             $email->getHeaders()->addTextHeader('X-Tenant-Name', $tenant->getName());
         }
-        
+
         $this->send($email);
     }
 
@@ -104,12 +101,12 @@ final class TenantAwareMailer implements MailerInterface
         if (empty($email->getFrom())) {
             $fromAddress = $this->configurator->getFromAddress();
             $senderName = $this->configurator->getSenderName();
-            
-            if ($fromAddress !== null) {
-                $from = $senderName !== null 
+
+            if (null !== $fromAddress) {
+                $from = null !== $senderName
                     ? new Address($fromAddress, $senderName)
                     : new Address($fromAddress);
-                    
+
                 $email->from($from);
             }
         }
@@ -117,18 +114,18 @@ final class TenantAwareMailer implements MailerInterface
         // Set reply-to if not already set and tenant has configuration
         if (empty($email->getReplyTo())) {
             $replyToAddress = $this->configurator->getReplyToAddress();
-            if ($replyToAddress !== null) {
+            if (null !== $replyToAddress) {
                 $email->replyTo($replyToAddress);
             }
         }
-        
+
         // Add BCC if configured
         $bccAddress = $this->configurator->getBccAddress();
-        if ($bccAddress !== null && empty($email->getBcc())) {
+        if (null !== $bccAddress && empty($email->getBcc())) {
             $email->bcc($bccAddress);
         }
     }
-    
+
     /**
      * Enhances template context with tenant-specific data.
      *
@@ -139,11 +136,11 @@ final class TenantAwareMailer implements MailerInterface
     private function enhanceContextWithTenantData(array $context): array
     {
         $tenant = $this->tenantContext->getTenant();
-        
-        if ($tenant === null) {
+
+        if (null === $tenant) {
             return $context;
         }
-        
+
         // Add tenant data to context
         $context['tenant'] = [
             'name' => $tenant->getName(),
@@ -152,10 +149,10 @@ final class TenantAwareMailer implements MailerInterface
             'primaryColor' => $this->configurator->getPrimaryColor(),
             'websiteUrl' => $this->configurator->getWebsiteUrl(),
         ];
-        
+
         return $context;
     }
-    
+
     /**
      * Resolves the template path, trying tenant-specific template first.
      *
@@ -165,21 +162,22 @@ final class TenantAwareMailer implements MailerInterface
      */
     private function resolveTemplatePath(string $template): string
     {
-        if ($this->twig === null) {
+        if (null === $this->twig) {
             return $template;
         }
-        
+
         $tenant = $this->tenantContext->getTenant();
-        
-        if ($tenant === null) {
+
+        if (null === $tenant) {
             return $template;
         }
-        
+
         // Try tenant-specific template first
         $tenantTemplate = sprintf('emails/tenant/%s/%s', $tenant->getSlug(), $template);
-        
+
         try {
             $this->twig->getLoader()->getSourceContext($tenantTemplate);
+
             return $tenantTemplate;
         } catch (\Twig\Error\LoaderError) {
             // Fallback to default template

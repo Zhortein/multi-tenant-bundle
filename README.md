@@ -8,7 +8,7 @@ A comprehensive Symfony 7+ bundle for building multi-tenant applications with Po
 
 ## Features
 
-- 🏢 **Multiple Tenant Resolution Strategies**: Subdomain, path-based, header-based, or custom resolvers
+- 🏢 **Multiple Tenant Resolution Strategies**: Subdomain, path-based, header-based, domain-based, DNS TXT, hybrid, or custom resolvers
 - 🗄️ **Database Strategies**: Shared database with filtering or separate databases per tenant
 - ⚡ **Performance Optimized**: Built-in caching for tenant settings and configurations
 - 🔧 **Doctrine Integration**: Automatic tenant filtering with Doctrine ORM
@@ -169,6 +169,8 @@ class DashboardController extends AbstractController
 ### 🏗️ Core Concepts
 - [Tenant Context](docs/tenant-context.md) - Tenant resolution and access
 - [Tenant Resolution](docs/tenant-resolution.md) - Resolution strategies
+- [DNS TXT Resolver](docs/dns-txt-resolver.md) - DNS-based tenant resolution
+- [Domain Resolvers](docs/domain-resolvers.md) - Domain and hybrid resolvers
 - [Doctrine Tenant Filter](docs/doctrine-tenant-filter.md) - Automatic filtering
 - [Tenant Settings](docs/tenant-settings.md) - Configuration system
 
@@ -194,21 +196,36 @@ class DashboardController extends AbstractController
 
 ## Testing
 
-Run the test suite:
+Run the test suite using the Makefile:
 
 ```bash
 # Run all tests
-vendor/bin/phpunit
+make test
+
+# Run unit tests only
+make test-unit
+
+# Run integration tests only
+make test-integration
 
 # Run with coverage
-vendor/bin/phpunit --coverage-html coverage/
+make test-coverage
 ```
 
-## Static Analysis
+## Code Quality
 
 ```bash
 # PHPStan at maximum level
-vendor/bin/phpstan analyse
+make phpstan
+
+# PHP-CS-Fixer code style check
+make csfixer-check
+
+# Fix code style
+make csfixer
+
+# Run all quality checks
+make dev-check
 ```
 
 ## Contributing

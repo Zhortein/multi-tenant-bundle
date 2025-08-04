@@ -18,7 +18,7 @@ final class TenantScope
     public const SCOPE_NAME = 'tenant';
 
     private ?TenantInterface $currentTenant = null;
-    
+
     /**
      * @var array<string, object>
      */
@@ -29,35 +29,32 @@ final class TenantScope
     ) {
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function get(string $id, callable $factory): mixed
     {
         $tenant = $this->tenantContext->getTenant();
 
-        if ($tenant === null) {
+        if (null === $tenant) {
             throw new \RuntimeException('No tenant is currently set in the context.');
         }
 
         $tenantId = $tenant->getId();
 
         // If tenant changed, clear services for previous tenant
-        if ($this->currentTenant === null || $this->currentTenant->getId() !== $tenantId) {
+        if (null === $this->currentTenant || $this->currentTenant->getId() !== $tenantId) {
             $this->services = [];
             $this->currentTenant = $tenant;
         }
 
         // Return existing service if already created for this tenant
-        /** @phpstan-ignore-next-line */
+        /* @phpstan-ignore-next-line */
         if (isset($this->services[$tenantId][$id])) {
-            /** @phpstan-ignore-next-line */
+            /* @phpstan-ignore-next-line */
             return $this->services[$tenantId][$id];
         }
 
         // Create new service for this tenant
         $service = $factory();
-        /** @phpstan-ignore-next-line */
+        /* @phpstan-ignore-next-line */
         $this->services[$tenantId][$id] = $service;
 
         return $service;
@@ -70,7 +67,7 @@ final class TenantScope
     {
         $tenant = $this->tenantContext->getTenant();
 
-        if ($tenant !== null) {
+        if (null !== $tenant) {
             $tenantId = $tenant->getId();
             unset($this->services[$tenantId]);
         }

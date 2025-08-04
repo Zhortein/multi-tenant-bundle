@@ -79,17 +79,19 @@ EOT
         $purgeWithTruncate = $input->getOption('purge-with-truncate');
 
         try {
-            if ($this->fixturesLoader === null) {
+            if (null === $this->fixturesLoader) {
                 $io->error('Fixtures loader is not available. Please install doctrine/doctrine-fixtures-bundle.');
+
                 return Command::FAILURE;
             }
 
-            $tenants = ($tenantSlug !== null && is_string($tenantSlug))
+            $tenants = (null !== $tenantSlug && is_string($tenantSlug))
                 ? [$this->tenantRegistry->getBySlug($tenantSlug)]
                 : $this->tenantRegistry->getAll();
 
             if (empty($tenants)) {
                 $io->warning('No tenants found to load fixtures for.');
+
                 return Command::SUCCESS;
             }
 
@@ -99,6 +101,7 @@ EOT
 
             if (empty($fixtures)) {
                 $io->error('No fixtures found to load.');
+
                 return Command::FAILURE;
             }
 
@@ -123,17 +126,18 @@ EOT
                 $purgerClass = 'Doctrine\\Common\\DataFixtures\\Purger\\ORMPurger';
                 if (!class_exists($purgerClass)) {
                     $io->error('ORMPurger class not found. Please install doctrine/doctrine-fixtures-bundle.');
+
                     return Command::FAILURE;
                 }
-                
+
                 /** @phpstan-ignore-next-line */
                 $purger = new $purgerClass($this->entityManager);
                 $purgeMode = $purgeWithTruncate ? 2 : 1; // PURGE_MODE_TRUNCATE : PURGE_MODE_DELETE
-                /** @phpstan-ignore-next-line */
+                /* @phpstan-ignore-next-line */
                 $purger->setPurgeMode($purgeMode);
 
                 if (!empty($purgeExclusions)) {
-                    /** @phpstan-ignore-next-line */
+                    /* @phpstan-ignore-next-line */
                     $purger->setExclusions($purgeExclusions);
                 }
 
@@ -141,27 +145,30 @@ EOT
                 $executorClass = 'Doctrine\\Common\\DataFixtures\\Executor\\ORMExecutor';
                 if (!class_exists($executorClass)) {
                     $io->error('ORMExecutor class not found. Please install doctrine/doctrine-fixtures-bundle.');
+
                     return Command::FAILURE;
                 }
                 /** @phpstan-ignore-next-line */
                 $executor = new $executorClass($this->entityManager, $purger);
 
                 // Execute fixtures
-                /** @phpstan-ignore-next-line */
+                /* @phpstan-ignore-next-line */
                 $executor->execute($fixtures, $append);
 
                 $io->success(sprintf(
                     'Successfully loaded %d fixtures for tenant %s',
-                    /** @phpstan-ignore-next-line */
+                    /* @phpstan-ignore-next-line */
                     count($fixtures),
                     $tenant->getSlug()
                 ));
             }
 
             $io->success('Tenant fixtures loading completed successfully.');
+
             return Command::SUCCESS;
         } catch (\Exception $e) {
             $io->error(sprintf('Fixtures loading failed: %s', $e->getMessage()));
+
             return Command::FAILURE;
         } finally {
             // Clear tenant context
@@ -183,6 +190,7 @@ EOT
         );
 
         $result = $io->askQuestion($question);
+
         return is_bool($result) ? $result : false;
     }
 }

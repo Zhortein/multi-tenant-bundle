@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Zhortein\MultiTenantBundle\Tests\Unit\Doctrine;
 
 use Doctrine\ORM\Configuration;
-use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\TestCase;
 use Zhortein\MultiTenantBundle\Doctrine\TenantConnectionResolverInterface;
 use Zhortein\MultiTenantBundle\Doctrine\TenantEntityManagerFactory;
@@ -24,7 +23,7 @@ final class TenantEntityManagerFactoryTest extends TestCase
     {
         $this->connectionResolver = $this->createMock(TenantConnectionResolverInterface::class);
         $this->ormConfiguration = $this->createMock(Configuration::class);
-        
+
         // Mock the metadata driver to avoid the missing driver exception
         $metadataDriver = $this->createMock(\Doctrine\Persistence\Mapping\Driver\MappingDriver::class);
         $this->ormConfiguration->method('getMetadataDriverImpl')->willReturn($metadataDriver);

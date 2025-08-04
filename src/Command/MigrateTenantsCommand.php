@@ -73,14 +73,14 @@ EOT
         $allowNoMigration = $input->getOption('allow-no-migration');
 
         try {
-            if ($this->databaseStrategy === 'shared_db') {
+            if ('shared_db' === $this->databaseStrategy) {
                 return $this->executeSharedDbMigrations($io, $dryRun, $allowNoMigration);
             }
 
             return $this->executeMultiDbMigrations($io, $tenantSlug, $dryRun, $allowNoMigration);
-
         } catch (\Exception $e) {
             $io->error(sprintf('Migration failed: %s', $e->getMessage()));
+
             return Command::FAILURE;
         }
     }
@@ -100,12 +100,14 @@ EOT
         $migrator = $dependencyFactory->getMigrator();
         $availableMigrations = $dependencyFactory->getMigrationRepository()->getMigrations();
 
-        if ($availableMigrations->count() === 0) {
+        if (0 === $availableMigrations->count()) {
             if ($allowNoMigration) {
                 $io->success('No migrations to execute.');
+
                 return Command::SUCCESS;
             }
             $io->warning('No migrations found.');
+
             return Command::SUCCESS;
         }
 
@@ -128,12 +130,13 @@ EOT
      */
     private function executeMultiDbMigrations(SymfonyStyle $io, ?string $tenantSlug, bool $dryRun, bool $allowNoMigration): int
     {
-        $tenants = ($tenantSlug !== null && is_string($tenantSlug))
+        $tenants = (null !== $tenantSlug && is_string($tenantSlug))
             ? [$this->tenantRegistry->getBySlug($tenantSlug)]
             : $this->tenantRegistry->getAll();
 
         if (empty($tenants)) {
             $io->warning('No tenants found to migrate.');
+
             return Command::SUCCESS;
         }
 
@@ -158,13 +161,14 @@ EOT
             $migrator = $dependencyFactory->getMigrator();
             $migrations = $dependencyFactory->getMigrationRepository()->getMigrations();
 
-            if ($migrations->count() === 0) {
+            if (0 === $migrations->count()) {
                 if ($allowNoMigration) {
                     $io->note(sprintf('No migrations found for tenant %s', $tenant->getSlug()));
                     continue;
                 }
 
                 $io->error(sprintf('No migrations found for tenant %s', $tenant->getSlug()));
+
                 return Command::FAILURE;
             }
 
@@ -174,12 +178,12 @@ EOT
                 $planCalculator = $dependencyFactory->getMigrationPlanCalculator();
                 /** @phpstan-ignore-next-line */
                 $plan = $planCalculator->getPlanToMigrateUp();
-                
+
                 if ($plan->count() > 0) {
                     $io->text('SQL that would be executed:');
-                    /** @phpstan-ignore-next-line */
+                    /* @phpstan-ignore-next-line */
                     foreach ($plan->getItems() as $item) {
-                        /** @phpstan-ignore-next-line */
+                        /* @phpstan-ignore-next-line */
                         $io->text(sprintf('-- Migration: %s', $item->getVersion()));
                         // Note: Actual SQL queries would require executing the migration
                         $io->text('-- SQL queries would be shown here in a real implementation');
@@ -192,14 +196,14 @@ EOT
                 $planCalculator = $dependencyFactory->getMigrationPlanCalculator();
                 /** @phpstan-ignore-next-line */
                 $plan = $planCalculator->getPlanToMigrateUp();
-                
-                /** @phpstan-ignore-next-line */
+
+                /* @phpstan-ignore-next-line */
                 if ($plan->count() > 0) {
                     /** @phpstan-ignore-next-line */
                     $result = $migrator->migrate($plan, $dryRun);
                     $io->success(sprintf(
                         'Successfully executed %d migrations for tenant %s',
-                        /** @phpstan-ignore-next-line */
+                        /* @phpstan-ignore-next-line */
                         $plan->count(),
                         $tenant->getSlug()
                     ));
@@ -209,19 +213,20 @@ EOT
             }
         }
 
-            $io->success('Tenant migrations completed successfully.');
-            return Command::SUCCESS;
-        }
+        $io->success('Tenant migrations completed successfully.');
 
-        /**
-         * Creates a default dependency factory for shared database migrations.
-         */
-        private function createDefaultDependencyFactory(): DependencyFactory
-        {
-            return DependencyFactory::fromConfiguration(
-                new ExistingConfiguration($this->migrationConfiguration)
-            );
-        }
+        return Command::SUCCESS;
+    }
+
+    /**
+     * Creates a default dependency factory for shared database migrations.
+     */
+    private function createDefaultDependencyFactory(): DependencyFactory
+    {
+        return DependencyFactory::fromConfiguration(
+            new ExistingConfiguration($this->migrationConfiguration)
+        );
+    }
 
     /**
      * Creates a tenant-specific dependency factory for migrations.
@@ -237,9 +242,9 @@ EOT
         // Create configuration for this tenant
         $configuration = new Configuration();
         $configuration->addMigrationsDirectory(
-            /** @phpstan-ignore-next-line */
+            /* @phpstan-ignore-next-line */
             $this->migrationConfiguration->getMigrationsNamespace(),
-            /** @phpstan-ignore-next-line */
+            /* @phpstan-ignore-next-line */
             $this->migrationConfiguration->getMigrationsDirectory()
         );
         $configuration->setAllOrNothing($this->migrationConfiguration->isAllOrNothing());

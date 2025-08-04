@@ -23,14 +23,11 @@ final class HeaderTenantResolver implements TenantResolverInterface
     ) {
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function resolveTenant(Request $request): ?TenantInterface
     {
         $tenantSlug = $request->headers->get($this->headerName);
 
-        if ($tenantSlug === null || $tenantSlug === '') {
+        if (null === $tenantSlug || '' === $tenantSlug) {
             return null;
         }
 

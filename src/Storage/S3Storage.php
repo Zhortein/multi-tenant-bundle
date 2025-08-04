@@ -29,82 +29,62 @@ final class S3Storage implements TenantFileStorageInterface
     ) {
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function upload(File $file, string $path): string
     {
         $tenantPath = $this->getTenantPath($path);
-        
+
         // This is a simplified implementation
         // In production, use AWS SDK or Flysystem
         $this->uploadToS3($file->getPathname(), $tenantPath);
-        
+
         return $tenantPath;
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function uploadFile(UploadedFile $file, string $path): string
     {
         $tenantPath = $this->getTenantPath($path);
-        
+
         // This is a simplified implementation
         // In production, use AWS SDK or Flysystem
         $this->uploadToS3($file->getPathname(), $tenantPath);
-        
+
         return $tenantPath;
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function delete(string $path): void
     {
         $tenantPath = $this->getTenantPath($path);
-        
+
         // This is a simplified implementation
         // In production, use AWS SDK or Flysystem
         $this->deleteFromS3($tenantPath);
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function exists(string $path): bool
     {
         $tenantPath = $this->getTenantPath($path);
-        
+
         // This is a simplified implementation
         // In production, use AWS SDK or Flysystem
         return $this->existsInS3($tenantPath);
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function getUrl(string $path): string
     {
         $tenantPath = $this->getTenantPath($path);
+
         return rtrim($this->baseUrl, '/').'/'.ltrim($tenantPath, '/');
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function getPath(string $path): string
     {
         return $this->getTenantPath($path);
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function listFiles(string $directory = ''): array
     {
         $tenantDirectory = $this->getTenantPath($directory);
-        
+
         // This is a simplified implementation
         // In production, use AWS SDK or Flysystem
         return $this->listFromS3($tenantDirectory);
@@ -117,7 +97,7 @@ final class S3Storage implements TenantFileStorageInterface
     {
         $tenant = $this->tenantContext->getTenant();
         $tenantSlug = $tenant?->getSlug() ?? 'default';
-        
+
         return $tenantSlug.'/'.ltrim($path, '/');
     }
 
@@ -136,7 +116,7 @@ final class S3Storage implements TenantFileStorageInterface
         //     'Key' => $s3Path,
         //     'SourceFile' => $localPath,
         // ]);
-        
+
         throw new \RuntimeException('S3 upload not implemented. Please use AWS SDK or Flysystem.');
     }
 

@@ -68,12 +68,13 @@ EOT
         $dumpSql = $input->getOption('dump-sql');
 
         try {
-            $tenants = ($tenantSlug !== null && is_string($tenantSlug))
+            $tenants = (null !== $tenantSlug && is_string($tenantSlug))
                 ? [$this->tenantRegistry->getBySlug($tenantSlug)]
                 : $this->tenantRegistry->getAll();
 
             if (empty($tenants)) {
                 $io->warning('No tenants found to create schema for.');
+
                 return Command::SUCCESS;
             }
 
@@ -84,6 +85,7 @@ EOT
 
             if (empty($metadatas)) {
                 $io->error('No entity metadata found.');
+
                 return Command::FAILURE;
             }
 
@@ -128,6 +130,7 @@ EOT
             return Command::SUCCESS;
         } catch (\Exception $e) {
             $io->error(sprintf('Schema creation failed: %s', $e->getMessage()));
+
             return Command::FAILURE;
         } finally {
             // Clear tenant context

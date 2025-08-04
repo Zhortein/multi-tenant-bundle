@@ -19,20 +19,21 @@ use Zhortein\MultiTenantBundle\Command\MigrateTenantsCommand;
 use Zhortein\MultiTenantBundle\Context\TenantContext;
 use Zhortein\MultiTenantBundle\Context\TenantContextInterface;
 use Zhortein\MultiTenantBundle\Doctrine\DefaultConnectionResolver;
+use Zhortein\MultiTenantBundle\Doctrine\EventAwareConnectionResolver;
 use Zhortein\MultiTenantBundle\Doctrine\TenantConnectionResolverInterface;
+use Zhortein\MultiTenantBundle\Doctrine\TenantEntityManagerFactory;
 use Zhortein\MultiTenantBundle\EventListener\TenantDoctrineFilterListener;
 use Zhortein\MultiTenantBundle\EventListener\TenantRequestListener;
 use Zhortein\MultiTenantBundle\Manager\TenantSettingsManager;
 use Zhortein\MultiTenantBundle\Registry\DoctrineTenantRegistry;
 use Zhortein\MultiTenantBundle\Registry\TenantRegistryInterface;
-use Zhortein\MultiTenantBundle\Doctrine\EventAwareConnectionResolver;
-use Zhortein\MultiTenantBundle\Doctrine\TenantEntityManagerFactory;
-use Zhortein\MultiTenantBundle\DependencyInjection\TenantScope;
+use Zhortein\MultiTenantBundle\Resolver\DnsTxtTenantResolver;
+use Zhortein\MultiTenantBundle\Resolver\DomainBasedTenantResolver;
 use Zhortein\MultiTenantBundle\Resolver\HeaderTenantResolver;
+use Zhortein\MultiTenantBundle\Resolver\HybridDomainSubdomainResolver;
 use Zhortein\MultiTenantBundle\Resolver\PathTenantResolver;
 use Zhortein\MultiTenantBundle\Resolver\SubdomainTenantResolver;
 use Zhortein\MultiTenantBundle\Resolver\TenantResolverInterface;
-use Zhortein\MultiTenantBundle\Messenger\TenantMessengerTransportResolver;
 
 /**
  * Extension class for the multi-tenant bundle.
@@ -84,6 +85,12 @@ final class ZhorteinMultiTenantExtension extends Extension
         $container->setParameter('zhortein_multi_tenant.subdomain.base_domain', $config['subdomain']['base_domain']);
         $container->setParameter('zhortein_multi_tenant.subdomain.excluded_subdomains', $config['subdomain']['excluded_subdomains']);
         $container->setParameter('zhortein_multi_tenant.header.name', $config['header']['name']);
+        $container->setParameter('zhortein_multi_tenant.domain.domain_mapping', $config['domain']['domain_mapping']);
+        $container->setParameter('zhortein_multi_tenant.hybrid.domain_mapping', $config['hybrid']['domain_mapping']);
+        $container->setParameter('zhortein_multi_tenant.hybrid.subdomain_mapping', $config['hybrid']['subdomain_mapping']);
+        $container->setParameter('zhortein_multi_tenant.hybrid.excluded_subdomains', $config['hybrid']['excluded_subdomains']);
+        $container->setParameter('zhortein_multi_tenant.dns_txt.timeout', $config['dns_txt']['timeout']);
+        $container->setParameter('zhortein_multi_tenant.dns_txt.enable_cache', $config['dns_txt']['enable_cache']);
         $container->setParameter('zhortein_multi_tenant.database.strategy', $config['database']['strategy']);
         $container->setParameter('zhortein_multi_tenant.database.enable_filter', $config['database']['enable_filter']);
         $container->setParameter('zhortein_multi_tenant.cache.pool', $config['cache']['pool']);
@@ -192,6 +199,36 @@ final class ZhorteinMultiTenantExtension extends Extension
                     ->setArgument('$headerName', $config['header']['name']);
 
                 $container->setAlias(TenantResolverInterface::class, HeaderTenantResolver::class);
+                break;
+
+            case 'domain':
+                $container->register(DomainBasedTenantResolver::class)
+                    ->setAutowired(true)
+                    ->setAutoconfigured(true)
+                    ->setArgument('$domainMapping', $config['domain']['domain_mapping']);
+
+                $container->setAlias(TenantResolverInterface::class, DomainBasedTenantResolver::class);
+                break;
+
+            case 'hybrid':
+                $container->register(HybridDomainSubdomainResolver::class)
+                    ->setAutowired(true)
+                    ->setAutoconfigured(true)
+                    ->setArgument('$domainMapping', $config['hybrid']['domain_mapping'])
+                    ->setArgument('$subdomainMapping', $config['hybrid']['subdomain_mapping'])
+                    ->setArgument('$excludedSubdomains', $config['hybrid']['excluded_subdomains']);
+
+                $container->setAlias(TenantResolverInterface::class, HybridDomainSubdomainResolver::class);
+                break;
+
+            case 'dns_txt':
+                $container->register(DnsTxtTenantResolver::class)
+                    ->setAutowired(true)
+                    ->setAutoconfigured(true)
+                    ->setArgument('$dnsTimeout', $config['dns_txt']['timeout'])
+                    ->setArgument('$enableCache', $config['dns_txt']['enable_cache']);
+
+                $container->setAlias(TenantResolverInterface::class, DnsTxtTenantResolver::class);
                 break;
 
             case 'custom':
@@ -374,13 +411,13 @@ final class ZhorteinMultiTenantExtension extends Extension
     {
         $storageType = $config['storage']['type'];
 
-        if ($storageType === 'local') {
+        if ('local' === $storageType) {
             $container->register('zhortein_multi_tenant.storage', 'Zhortein\MultiTenantBundle\Storage\LocalStorage')
                 ->setAutowired(true)
                 ->setAutoconfigured(true)
                 ->setArgument('$basePath', $config['storage']['local']['base_path'])
                 ->setArgument('$baseUrl', $config['storage']['local']['base_url']);
-        } elseif ($storageType === 's3') {
+        } elseif ('s3' === $storageType) {
             $container->register('zhortein_multi_tenant.storage', 'Zhortein\MultiTenantBundle\Storage\S3Storage')
                 ->setAutowired(true)
                 ->setAutoconfigured(true)

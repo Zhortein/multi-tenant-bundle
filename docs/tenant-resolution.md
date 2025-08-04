@@ -184,7 +184,155 @@ class ApiController extends AbstractController
 }
 ```
 
-### 4. Custom Resolver
+### 4. DNS TXT Resolver
+
+Resolves tenants based on DNS TXT records.
+
+**Configuration:**
+
+```yaml
+# config/packages/zhortein_multi_tenant.yaml
+zhortein_multi_tenant:
+    resolver: 'dns_txt'
+    dns_txt:
+        timeout: 5          # DNS query timeout in seconds
+        enable_cache: true  # Enable DNS result caching
+```
+
+**DNS Setup:**
+
+The resolver queries DNS TXT records with the pattern `_tenant.<domain>`:
+
+```bind
+; BIND DNS configuration
+_tenant.acme.com.     IN TXT "acme"
+_tenant.bio.org.      IN TXT "bio"
+_tenant.startup.io.   IN TXT "startup"
+```
+
+**Examples:**
+- `https://acme.com/dashboard` → DNS query: `_tenant.acme.com` → tenant slug: `acme`
+- `https://bio.org/products` → DNS query: `_tenant.bio.org` → tenant slug: `bio`
+- `https://client1.saas.com/app` → DNS query: `_tenant.client1.saas.com` → tenant slug: `client1`
+
+**Cloudflare DNS Setup:**
+
+```bash
+# Using Cloudflare API
+curl -X POST "https://api.cloudflare.com/client/v4/zones/{zone_id}/dns_records" \
+  -H "Authorization: Bearer {api_token}" \
+  -H "Content-Type: application/json" \
+  --data '{
+    "type": "TXT",
+    "name": "_tenant.acme",
+    "content": "acme",
+    "ttl": 300
+  }'
+```
+
+**Service Usage:**
+
+```php
+<?php
+
+namespace App\Service;
+
+use Zhortein\MultiTenantBundle\Resolver\DnsTxtTenantResolver;
+
+class DnsValidationService
+{
+    public function __construct(
+        private DnsTxtTenantResolver $dnsResolver
+    ) {}
+
+    public function validateDnsSetup(string $domain): array
+    {
+        return [
+            'domain' => $domain,
+            'dns_query' => $this->dnsResolver->getDnsQueryForHost($domain),
+            'has_record' => $this->dnsResolver->hasDnsTxtRecord($domain),
+            'tenant_id' => $this->dnsResolver->getTenantIdentifierFromDns($domain),
+        ];
+    }
+}
+```
+
+**Use Cases:**
+- Multi-domain setups with DNS control
+- Dynamic tenant assignment without code changes
+- Distributed systems with DNS-based configuration
+- White-label solutions with custom domains
+
+**Advantages:**
+- Decentralized configuration (stored in DNS)
+- Dynamic updates without application restarts
+- Excellent caching performance
+- Works across different domains
+
+**Considerations:**
+- Requires DNS control and management
+- DNS propagation delays (up to 48 hours)
+- Additional DNS query overhead
+- Dependency on DNS infrastructure reliability
+
+For detailed DNS setup instructions and advanced configuration, see the [DNS TXT Resolver Documentation](dns-txt-resolver.md).
+
+### 5. Domain-Based Resolver
+
+Resolves tenants based on exact domain mapping.
+
+**Configuration:**
+
+```yaml
+# config/packages/zhortein_multi_tenant.yaml
+zhortein_multi_tenant:
+    resolver: 'domain'
+    domain:
+        domain_mapping:
+            tenant-one.com: tenant_one
+            acme.org: acme
+            bio-corp.net: bio
+```
+
+**Examples:**
+- `https://tenant-one.com/dashboard` → tenant slug: `tenant_one`
+- `https://acme.org/products` → tenant slug: `acme`
+- `https://unknown-domain.com/page` → no tenant (not mapped)
+
+For detailed configuration and examples, see the [Domain Resolvers Documentation](domain-resolvers.md).
+
+### 6. Hybrid Domain-Subdomain Resolver
+
+Combines domain mapping with subdomain pattern matching.
+
+**Configuration:**
+
+```yaml
+# config/packages/zhortein_multi_tenant.yaml
+zhortein_multi_tenant:
+    resolver: 'hybrid'
+    hybrid:
+        domain_mapping:
+            acme-client.com: acme
+            bio-portal.org: bio
+        subdomain_mapping:
+            '*.myplatform.com': use_subdomain_as_slug
+            '*.shared-platform.net': shared_tenant
+        excluded_subdomains:
+            - www
+            - api
+            - admin
+```
+
+**Examples:**
+- `https://acme-client.com/app` → tenant slug: `acme` (domain mapping)
+- `https://tenant1.myplatform.com/dashboard` → tenant slug: `tenant1` (subdomain pattern)
+- `https://anything.shared-platform.net/page` → tenant slug: `shared_tenant` (fixed strategy)
+- `https://www.myplatform.com/home` → no tenant (excluded subdomain)
+
+For detailed configuration and examples, see the [Domain Resolvers Documentation](domain-resolvers.md).
+
+### 7. Custom Resolver
 
 Create custom resolvers for specific business logic.
 

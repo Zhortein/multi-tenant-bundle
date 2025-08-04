@@ -73,7 +73,8 @@ final class TenantScopeTest extends TestCase
             ->method('getTenant')
             ->willReturnCallback(function () use ($tenant1, $tenant2) {
                 static $callCount = 0;
-                $callCount++;
+                ++$callCount;
+
                 return $callCount <= 2 ? $tenant1 : $tenant2;
             });
 

@@ -64,9 +64,10 @@ class TenantMessengerTransportResolverTest extends TestCase
 
                 // Check that TenantStamp was added
                 $tenantStamp = $envelope->last(TenantStamp::class);
+
                 return $tenantStamp
-                    && $tenantStamp->getTenantSlug() === 'acme'
-                    && $tenantStamp->getTenantName() === 'Acme Corporation';
+                    && 'acme' === $tenantStamp->getTenantSlug()
+                    && 'Acme Corporation' === $tenantStamp->getTenantName();
             }), $this->stack)
             ->willReturn($envelope);
 
@@ -103,9 +104,10 @@ class TenantMessengerTransportResolverTest extends TestCase
 
                 // Check that TenantStamp was still added
                 $tenantStamp = $envelope->last(TenantStamp::class);
+
                 return $tenantStamp
-                    && $tenantStamp->getTenantSlug() === 'unknown'
-                    && $tenantStamp->getTenantName() === 'Unknown Tenant';
+                    && 'unknown' === $tenantStamp->getTenantSlug()
+                    && 'Unknown Tenant' === $tenantStamp->getTenantName();
             }), $this->stack)
             ->willReturn($envelope);
 
@@ -138,6 +140,7 @@ class TenantMessengerTransportResolverTest extends TestCase
 
                 // Check that no tenant stamp was added
                 $tenantStamp = $envelope->last(TenantStamp::class);
+
                 return !$tenantStamp;
             }), $this->stack)
             ->willReturn($envelope);
@@ -176,9 +179,10 @@ class TenantMessengerTransportResolverTest extends TestCase
 
                 // Check that tenant stamp was still added
                 $tenantStamp = $envelope->last(TenantStamp::class);
+
                 return $tenantStamp
-                    && $tenantStamp->getTenantSlug() === 'acme'
-                    && $tenantStamp->getTenantName() === 'Acme Corporation';
+                    && 'acme' === $tenantStamp->getTenantSlug()
+                    && 'Acme Corporation' === $tenantStamp->getTenantName();
             }), $this->stack)
             ->willReturn($envelope);
 
@@ -222,6 +226,7 @@ class TenantMessengerTransportResolverTest extends TestCase
 
                 // Check that NO tenant stamp was added (headers disabled)
                 $tenantStamp = $envelope->last(TenantStamp::class);
+
                 return !$tenantStamp;
             }), $this->stack)
             ->willReturn($envelope);

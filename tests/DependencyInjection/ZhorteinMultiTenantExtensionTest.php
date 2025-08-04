@@ -155,6 +155,29 @@ class ZhorteinMultiTenantExtensionTest extends TestCase
         $this->assertFalse($this->container->getParameter('zhortein_multi_tenant.messenger.enabled'));
     }
 
+    public function testLoadWithDnsTxtResolver(): void
+    {
+        // Arrange
+        $config = [
+            'zhortein_multi_tenant' => [
+                'resolver' => 'dns_txt',
+                'dns_txt' => [
+                    'timeout' => 10,
+                    'enable_cache' => false,
+                ],
+            ],
+        ];
+
+        // Act
+        $this->extension->load($config, $this->container);
+
+        // Assert
+        $this->assertTrue($this->container->hasParameter('zhortein_multi_tenant.dns_txt.timeout'));
+        $this->assertSame(10, $this->container->getParameter('zhortein_multi_tenant.dns_txt.timeout'));
+        $this->assertTrue($this->container->hasParameter('zhortein_multi_tenant.dns_txt.enable_cache'));
+        $this->assertFalse($this->container->getParameter('zhortein_multi_tenant.dns_txt.enable_cache'));
+    }
+
     public function testGetAlias(): void
     {
         // Act & Assert

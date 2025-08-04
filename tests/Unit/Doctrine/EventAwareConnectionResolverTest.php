@@ -121,7 +121,7 @@ final class EventAwareConnectionResolverTest extends TestCase
                 $this->callback(function (TenantDatabaseSwitchEvent $event) use ($tenant, $connectionParams) {
                     return $event->getTenant() === $tenant
                         && $event->getConnectionParameters() === $connectionParams
-                        && $event->getPreviousTenant() === null;
+                        && null === $event->getPreviousTenant();
                 }),
                 $this->logicalOr(
                     TenantDatabaseSwitchEvent::BEFORE_SWITCH,

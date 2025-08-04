@@ -13,6 +13,8 @@ Welcome to the comprehensive documentation for the Zhortein Multi-Tenant Bundle,
 ### Core Concepts
 - [Tenant Context](tenant-context.md) - How tenant resolution and access works
 - [Tenant Resolution](tenant-resolution.md) - Subdomain, path, header, and custom resolvers
+- [DNS TXT Resolver](dns-txt-resolver.md) - DNS-based tenant resolution with TXT records
+- [Domain Resolvers](domain-resolvers.md) - Domain-based and hybrid resolvers
 - [Doctrine Tenant Filter](doctrine-tenant-filter.md) - Automatic database filtering
 - [Tenant Settings](tenant-settings.md) - Configuration system with fallback rules
 
@@ -32,6 +34,8 @@ Welcome to the comprehensive documentation for the Zhortein Multi-Tenant Bundle,
 
 ### Examples
 - [Basic Usage Examples](examples/basic-usage.md) - Practical code examples
+- [DNS TXT Resolver Usage](examples/dns-txt-resolver-usage.md) - DNS-based resolution examples
+- [Domain Resolver Usage](examples/domain-resolver-usage.md) - Domain and hybrid resolver examples
 - [Mailer Usage Examples](examples/mailer-usage.md) - Email configuration examples
 - [Messenger Usage Examples](examples/messenger-usage.md) - Message queue examples
 - [Storage Usage Examples](examples/storage-usage.md) - File storage examples
@@ -43,7 +47,7 @@ The Zhortein Multi-Tenant Bundle provides a comprehensive, production-ready solu
 
 ### Key Features
 
-- **🏢 Multiple Resolution Strategies**: Path-based, subdomain-based, and custom resolvers
+- **🏢 Multiple Resolution Strategies**: Path-based, subdomain-based, header-based, domain-based, DNS TXT, hybrid, and custom resolvers
 - **🗄️ Database Strategies**: Shared database with filtering or separate databases per tenant
 - **⚡ Performance Optimized**: Built-in caching for tenant settings and configurations
 - **🔧 Doctrine Integration**: Automatic tenant filtering with Doctrine ORM

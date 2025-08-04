@@ -24,17 +24,11 @@ final class EventAwareConnectionResolver implements TenantConnectionResolverInte
     ) {
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function resolveParameters(TenantInterface $tenant): array
     {
         return $this->innerResolver->resolveParameters($tenant);
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function switchToTenantConnection(TenantInterface $tenant): void
     {
         $previousTenant = $this->tenantContext->getTenant();

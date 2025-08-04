@@ -77,12 +77,13 @@ EOT
         $fullDatabase = $input->getOption('full-database');
 
         try {
-            $tenants = ($tenantSlug !== null && is_string($tenantSlug))
+            $tenants = (null !== $tenantSlug && is_string($tenantSlug))
                 ? [$this->tenantRegistry->getBySlug($tenantSlug)]
                 : $this->tenantRegistry->getAll();
 
             if (empty($tenants)) {
                 $io->warning('No tenants found to drop schema for.');
+
                 return Command::SUCCESS;
             }
 
@@ -98,6 +99,7 @@ EOT
 
                 if (!$io->askQuestion($question)) {
                     $io->note('Operation cancelled.');
+
                     return Command::SUCCESS;
                 }
             }
@@ -156,6 +158,7 @@ EOT
             return Command::SUCCESS;
         } catch (\Exception $e) {
             $io->error(sprintf('Schema drop failed: %s', $e->getMessage()));
+
             return Command::FAILURE;
         } finally {
             // Clear tenant context

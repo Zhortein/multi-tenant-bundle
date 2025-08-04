@@ -27,9 +27,6 @@ final class LocalStorage implements TenantFileStorageInterface
         $this->fs = new Filesystem();
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function upload(File $file, string $path): string
     {
         $targetPath = $this->getPath($path);
@@ -40,9 +37,6 @@ final class LocalStorage implements TenantFileStorageInterface
         return $this->getTenantRelativePath($path);
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function uploadFile(UploadedFile $file, string $path): string
     {
         $targetPath = $this->getPath($path);
@@ -53,48 +47,35 @@ final class LocalStorage implements TenantFileStorageInterface
         return $this->getTenantRelativePath($path);
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function delete(string $path): void
     {
         $targetPath = $this->getPath($path);
         $this->fs->remove($targetPath);
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function exists(string $path): bool
     {
         return file_exists($this->getPath($path));
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function getUrl(string $path): string
     {
         $tenantPath = $this->getTenantRelativePath($path);
+
         return rtrim($this->baseUrl, '/').'/'.ltrim($tenantPath, '/');
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function getPath(string $path): string
     {
         $tenantPath = $this->getTenantRelativePath($path);
+
         return rtrim($this->basePath, '/').'/'.ltrim($tenantPath, '/');
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function listFiles(string $directory = ''): array
     {
         $fullDirectory = $this->getPath($directory);
-        
+
         if (!is_dir($fullDirectory)) {
             return [];
         }
@@ -122,7 +103,7 @@ final class LocalStorage implements TenantFileStorageInterface
     {
         $tenant = $this->tenantContext->getTenant();
         $tenantSlug = $tenant?->getSlug() ?? 'default';
-        
+
         return $tenantSlug.'/'.ltrim($path, '/');
     }
 }

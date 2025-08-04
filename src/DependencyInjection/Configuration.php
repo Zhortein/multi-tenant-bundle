@@ -29,7 +29,7 @@ final class Configuration implements ConfigurationInterface
 
                 // Tenant resolver configuration
                 ->enumNode('resolver')
-                    ->values(['path', 'subdomain', 'header', 'custom'])
+                    ->values(['path', 'subdomain', 'header', 'domain', 'hybrid', 'dns_txt', 'custom'])
                     ->defaultValue('path')
                     ->info('The tenant resolution strategy to use')
                 ->end()
@@ -69,6 +69,60 @@ final class Configuration implements ConfigurationInterface
                         ->scalarNode('name')
                             ->defaultValue('X-Tenant-Slug')
                             ->info('HTTP header name to use for tenant resolution')
+                        ->end()
+                    ->end()
+                ->end()
+
+                // Domain resolver configuration
+                ->arrayNode('domain')
+                    ->addDefaultsIfNotSet()
+                    ->children()
+                        ->arrayNode('domain_mapping')
+                            ->useAttributeAsKey('domain')
+                            ->scalarPrototype()->end()
+                            ->defaultValue([])
+                            ->info('Mapping of full domains to tenant slugs (e.g., tenant-one.com: tenant_one)')
+                        ->end()
+                    ->end()
+                ->end()
+
+                // Hybrid resolver configuration
+                ->arrayNode('hybrid')
+                    ->addDefaultsIfNotSet()
+                    ->children()
+                        ->arrayNode('domain_mapping')
+                            ->useAttributeAsKey('domain')
+                            ->scalarPrototype()->end()
+                            ->defaultValue([])
+                            ->info('Mapping of full domains to tenant slugs (e.g., acme-client.com: acme)')
+                        ->end()
+                        ->arrayNode('subdomain_mapping')
+                            ->useAttributeAsKey('pattern')
+                            ->scalarPrototype()->end()
+                            ->defaultValue([])
+                            ->info('Mapping of domain patterns to resolution strategies (e.g., *.myplatform.com: use_subdomain_as_slug)')
+                        ->end()
+                        ->arrayNode('excluded_subdomains')
+                            ->scalarPrototype()->end()
+                            ->defaultValue(['www', 'api', 'admin', 'mail', 'ftp', 'cdn', 'static'])
+                            ->info('Subdomains to exclude from tenant resolution')
+                        ->end()
+                    ->end()
+                ->end()
+
+                // DNS TXT resolver configuration
+                ->arrayNode('dns_txt')
+                    ->addDefaultsIfNotSet()
+                    ->children()
+                        ->integerNode('timeout')
+                            ->defaultValue(5)
+                            ->min(1)
+                            ->max(30)
+                            ->info('DNS query timeout in seconds')
+                        ->end()
+                        ->booleanNode('enable_cache')
+                            ->defaultTrue()
+                            ->info('Whether to enable DNS result caching for performance')
                         ->end()
                     ->end()
                 ->end()
@@ -168,8 +222,6 @@ final class Configuration implements ConfigurationInterface
                         ->end()
                     ->end()
                 ->end()
-
-
 
                 // Fixtures configuration
                 ->arrayNode('fixtures')

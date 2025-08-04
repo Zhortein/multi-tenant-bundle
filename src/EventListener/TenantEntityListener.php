@@ -35,13 +35,13 @@ final class TenantEntityListener
         }
 
         // Skip if tenant is already set
-        if ($entity->getTenant() !== null) {
+        if (null !== $entity->getTenant()) {
             return;
         }
 
         // Get current tenant from context
         $tenant = $this->tenantContext->getTenant();
-        if ($tenant === null) {
+        if (null === $tenant) {
             return;
         }
 

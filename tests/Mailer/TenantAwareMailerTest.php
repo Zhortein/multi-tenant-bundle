@@ -66,17 +66,17 @@ class TenantAwareMailerTest extends TestCase
                 $bcc = $sentEmail->getBcc();
                 $headers = $sentEmail->getHeaders();
 
-                return count($from) === 1
-                    && $from[0]->getAddress() === 'noreply@acme.com'
-                    && $from[0]->getName() === 'Acme Corporation'
-                    && count($replyTo) === 1
-                    && $replyTo[0]->getAddress() === 'support@acme.com'
-                    && count($bcc) === 1
-                    && $bcc[0]->getAddress() === 'admin@acme.com'
+                return 1 === count($from)
+                    && 'noreply@acme.com' === $from[0]->getAddress()
+                    && 'Acme Corporation' === $from[0]->getName()
+                    && 1 === count($replyTo)
+                    && 'support@acme.com' === $replyTo[0]->getAddress()
+                    && 1 === count($bcc)
+                    && 'admin@acme.com' === $bcc[0]->getAddress()
                     && $headers->has('X-Tenant-ID')
-                    && $headers->get('X-Tenant-ID')->getBody() === 'acme'
+                    && 'acme' === $headers->get('X-Tenant-ID')->getBody()
                     && $headers->has('X-Tenant-Name')
-                    && $headers->get('X-Tenant-Name')->getBody() === 'Acme Corporation';
+                    && 'Acme Corporation' === $headers->get('X-Tenant-Name')->getBody();
             }));
 
         // Act
@@ -109,13 +109,13 @@ class TenantAwareMailerTest extends TestCase
                 'emails/welcome.html.twig',
                 $this->callback(function (array $context) {
                     return isset($context['tenant'])
-                        && $context['tenant']['slug'] === 'acme'
-                        && $context['tenant']['name'] === 'Acme Corporation'
-                        && $context['tenant']['logoUrl'] === 'https://acme.com/logo.png'
-                        && $context['tenant']['primaryColor'] === '#ff6b35'
-                        && $context['tenant']['websiteUrl'] === 'https://acme.com'
+                        && 'acme' === $context['tenant']['slug']
+                        && 'Acme Corporation' === $context['tenant']['name']
+                        && 'https://acme.com/logo.png' === $context['tenant']['logoUrl']
+                        && '#ff6b35' === $context['tenant']['primaryColor']
+                        && 'https://acme.com' === $context['tenant']['websiteUrl']
                         && isset($context['user'])
-                        && $context['user']['name'] === 'John Doe';
+                        && 'John Doe' === $context['user']['name'];
                 })
             )
             ->willReturn('<html><body>Welcome John!</body></html>');
@@ -155,7 +155,8 @@ class TenantAwareMailerTest extends TestCase
             ->method('send')
             ->with($this->callback(function (Email $email) {
                 $from = $email->getFrom();
-                return count($from) === 1 && $from[0]->getAddress() === 'system@example.com';
+
+                return 1 === count($from) && 'system@example.com' === $from[0]->getAddress();
             }));
 
         // Act
@@ -208,9 +209,9 @@ class TenantAwareMailerTest extends TestCase
                 $from = $sentEmail->getFrom();
                 $headers = $sentEmail->getHeaders();
 
-                return count($from) === 1
-                    && $from[0]->getAddress() === 'noreply@example.com'
-                    && $from[0]->getName() === 'Default App'
+                return 1 === count($from)
+                    && 'noreply@example.com' === $from[0]->getAddress()
+                    && 'Default App' === $from[0]->getName()
                     && !$headers->has('X-Tenant-ID')
                     && !$headers->has('X-Tenant-Name');
             }));

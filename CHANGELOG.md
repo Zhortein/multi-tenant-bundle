@@ -10,7 +10,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - **Core Multi-Tenancy Features**
   - Tenant context management with `TenantContext` and `TenantContextInterface`
-  - Multiple tenant resolution strategies: path-based, subdomain-based, and custom resolvers
+  - Multiple tenant resolution strategies: path-based, subdomain-based, header-based, domain-based, DNS TXT, hybrid, and custom resolvers
+  - DNS TXT resolver for DNS-based tenant resolution with configurable timeout and caching
+  - Domain-based and hybrid resolvers for flexible domain mapping
   - Automatic tenant resolution via `TenantRequestListener`
   - Tenant registry with Doctrine and in-memory implementations
 

@@ -97,7 +97,7 @@ class TenantMessengerConfiguratorTest extends TestCase
         // Arrange
         $tenant = $this->createMock(TenantInterface::class);
         $this->tenantContext->method('getTenant')->willReturn($tenant);
-        
+
         // First call for specific transport setting
         $this->settingsManager->expects($this->at(0))
             ->method('get')
@@ -116,13 +116,13 @@ class TenantMessengerConfiguratorTest extends TestCase
         // Arrange
         $tenant = $this->createMock(TenantInterface::class);
         $this->tenantContext->method('getTenant')->willReturn($tenant);
-        
+
         // First call for specific transport setting (returns null)
         $this->settingsManager->expects($this->at(0))
             ->method('get')
             ->with('messenger_delay_email', null)
             ->willReturn(null);
-            
+
         // Second call for default delay setting
         $this->settingsManager->expects($this->at(1))
             ->method('get')

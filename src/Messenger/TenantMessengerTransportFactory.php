@@ -30,14 +30,11 @@ final class TenantMessengerTransportFactory implements TransportFactoryInterface
     ) {
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function createTransport(string $dsn, array $options, SerializerInterface $serializer): TransportInterface
     {
         // Get tenant-specific DSN or use fallback
         $tenantDsn = $this->messengerConfigurator->getTransportDsn($this->fallbackDsn ?? 'sync://');
-        
+
         // Apply tenant-specific delay if configured
         $delay = $this->messengerConfigurator->getDelay();
         if ($delay > 0) {
@@ -68,9 +65,6 @@ final class TenantMessengerTransportFactory implements TransportFactoryInterface
         throw new \RuntimeException('No messenger transport factory available for tenant transport.');
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function supports(string $dsn, array $options): bool
     {
         return str_starts_with($dsn, 'tenant://');

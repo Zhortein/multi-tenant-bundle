@@ -6,7 +6,6 @@ namespace Zhortein\MultiTenantBundle\Tests\Unit\Mailer;
 
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Mailer\MailerInterface;
-use Symfony\Component\Mime\Address;
 use Symfony\Component\Mime\Email;
 use Zhortein\MultiTenantBundle\Mailer\TenantAwareMailer;
 use Zhortein\MultiTenantBundle\Mailer\TenantMailerConfigurator;
@@ -55,12 +54,12 @@ final class TenantAwareMailerTest extends TestCase
             ->with($this->callback(function (Email $email) {
                 $from = $email->getFrom();
                 $replyTo = $email->getReplyTo();
-                
-                return count($from) === 1
-                    && $from[0]->getAddress() === 'tenant@example.com'
-                    && $from[0]->getName() === 'Tenant Name'
-                    && count($replyTo) === 1
-                    && $replyTo[0]->getAddress() === 'reply@example.com';
+
+                return 1 === count($from)
+                    && 'tenant@example.com' === $from[0]->getAddress()
+                    && 'Tenant Name' === $from[0]->getName()
+                    && 1 === count($replyTo)
+                    && 'reply@example.com' === $replyTo[0]->getAddress();
             }));
 
         $this->tenantAwareMailer->send($email);
@@ -85,10 +84,11 @@ final class TenantAwareMailerTest extends TestCase
             ->with($this->callback(function (Email $email) {
                 $from = $email->getFrom();
                 $replyTo = $email->getReplyTo();
-                return count($from) === 1 
-                    && $from[0]->getAddress() === 'existing@example.com'
-                    && count($replyTo) === 1
-                    && $replyTo[0]->getAddress() === 'reply@example.com';
+
+                return 1 === count($from)
+                    && 'existing@example.com' === $from[0]->getAddress()
+                    && 1 === count($replyTo)
+                    && 'reply@example.com' === $replyTo[0]->getAddress();
             }));
 
         $this->tenantAwareMailer->send($email);

@@ -26,7 +26,7 @@ final class LocalStorageTest extends TestCase
         $this->tenantContext = $this->createMock(TenantContextInterface::class);
         $this->tenant = $this->createMock(TenantInterface::class);
         $this->tempDir = sys_get_temp_dir().'/tenant_storage_test_'.uniqid();
-        
+
         $this->storage = new LocalStorage(
             $this->tenantContext,
             $this->tempDir,
@@ -65,7 +65,7 @@ final class LocalStorageTest extends TestCase
         // Create a temporary file
         $tempFile = tempnam(sys_get_temp_dir(), 'test');
         file_put_contents($tempFile, 'uploaded content');
-        
+
         $uploadedFile = new UploadedFile(
             $tempFile,
             'original.txt',
@@ -121,7 +121,7 @@ final class LocalStorageTest extends TestCase
         $this->storage->upload(new File($tempFile2), 'docs/file2.txt');
 
         $files = $this->storage->listFiles('docs');
-        
+
         $this->assertCount(2, $files);
         $this->assertContains('docs/file1.txt', $files);
         $this->assertContains('docs/file2.txt', $files);
@@ -135,7 +135,7 @@ final class LocalStorageTest extends TestCase
         // Create a new storage instance with null tenant context
         $tenantContext = $this->createMock(TenantContextInterface::class);
         $tenantContext->method('getTenant')->willReturn(null);
-        
+
         $storage = new LocalStorage(
             $tenantContext,
             $this->tempDir,

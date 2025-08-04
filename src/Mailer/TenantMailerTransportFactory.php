@@ -8,8 +8,8 @@ use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Mailer\Transport\AbstractTransportFactory;
 use Symfony\Component\Mailer\Transport\Dsn;
-use Symfony\Component\Mailer\Transport\TransportInterface;
 use Symfony\Component\Mailer\Transport\TransportFactoryInterface;
+use Symfony\Component\Mailer\Transport\TransportInterface;
 use Zhortein\MultiTenantBundle\Context\TenantContextInterface;
 
 /**
@@ -31,21 +31,19 @@ final class TenantMailerTransportFactory extends AbstractTransportFactory
         parent::__construct($dispatcher, null, $logger);
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function create(Dsn $dsn): TransportInterface
     {
         // Try to get tenant-specific DSN
         $tenantDsn = $this->mailerConfigurator->getMailerDsn($this->globalDsn);
-        
-        if ($tenantDsn === null) {
+
+        if (null === $tenantDsn) {
             // No tenant context or DSN, use fallback factory
             return $this->fallbackFactory->create($dsn);
         }
 
         try {
             $resolvedDsn = Dsn::fromString($tenantDsn);
+
             return $this->fallbackFactory->create($resolvedDsn);
         } catch (\Exception $e) {
             // Log error and fallback to global DSN
@@ -53,22 +51,16 @@ final class TenantMailerTransportFactory extends AbstractTransportFactory
                 'tenant_dsn' => $tenantDsn,
                 'error' => $e->getMessage(),
             ]);
-            
+
             return $this->fallbackFactory->create($dsn);
         }
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function supports(Dsn $dsn): bool
     {
         return 'tenant' === $dsn->getScheme();
     }
 
-    /**
-     * {@inheritdoc}
-     */
     protected function getSupportedSchemes(): array
     {
         return ['tenant'];
