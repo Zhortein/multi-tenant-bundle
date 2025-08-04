@@ -14,10 +14,6 @@ services:
     autowire: true
     autoconfigure: true
 
-  Zhortein\MultiTenantBundle\Listener\RequestListener:
-    tags:
-      - { name: kernel.event_listener, event: kernel.request, method: onKernelRequest, priority: 100 }
-
   Zhortein\MultiTenantBundle\EventSubscriber\TenantDoctrineFilterSubscriber:
     tags:
       - { name: kernel.event_subscriber }

@@ -12,7 +12,7 @@ use Zhortein\MultiTenantBundle\Manager\TenantSettingsManager;
  * This service provides tenant-specific mailer configuration
  * by retrieving settings from the tenant settings manager.
  */
-final class TenantMailerConfigurator
+class TenantMailerConfigurator
 {
     public function __construct(
         private readonly TenantSettingsManager $settingsManager,

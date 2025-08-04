@@ -19,6 +19,9 @@ class TenantDatabaseSwitchEvent extends Event
     public const BEFORE_SWITCH = 'tenant.database.before_switch';
     public const AFTER_SWITCH = 'tenant.database.after_switch';
 
+    /**
+     * @param array<string, mixed> $connectionParameters
+     */
     public function __construct(
         private readonly TenantInterface $tenant,
         private readonly array $connectionParameters,
@@ -31,6 +34,9 @@ class TenantDatabaseSwitchEvent extends Event
         return $this->tenant;
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     public function getConnectionParameters(): array
     {
         return $this->connectionParameters;

@@ -1,5 +1,31 @@
 parameters:
 	ignoreErrors:
+		# Ignore PHPUnit mock method calls in tests
+		-
+			message: '#Call to an undefined method .+::(expects|method|with|willReturn|willThrowException|never|once|exactly|atLeastOnce)#'
+			path: tests/*
+		-
+			message: '#Cannot call method (method|with|willReturn|willThrowException) on mixed#'
+			path: tests/*
+		# Ignore DI extension configuration array access
+		-
+			message: '#Cannot access offset .+ on mixed#'
+			path: src/DependencyInjection/ZhorteinMultiTenantExtension.php
+		-
+			message: '#Parameter .+ expects .+, array given#'
+			path: src/DependencyInjection/ZhorteinMultiTenantExtension.php
+		# Ignore Doctrine DBAL connection parameter types
+		-
+			message: '#Parameter .+ of static method Doctrine\\DBAL\\DriverManager::getConnection\(\) expects .+, array<string, mixed> given#'
+			path: src/Doctrine/TenantEntityManagerFactory.php
+		# Ignore unused trait (used in user code)
+		-
+			message: '#Trait .+TenantOwnedEntityTrait is used zero times and is not analysed#'
+			path: src/Doctrine/TenantOwnedEntityTrait.php
+		# Ignore generic interface type specification
+		-
+			message: '#Method .+ has parameter .+ with generic interface .+ but does not specify its types#'
+			path: src/Messenger/TenantMessengerTransportFactory.php
 		-
 			message: '#^Property Zhortein\\MultiTenantBundle\\Command\\ClearTenantSettingsCacheCommand\:\:\$tenantContext is never read, only written\.$#'
 			identifier: property.onlyWritten

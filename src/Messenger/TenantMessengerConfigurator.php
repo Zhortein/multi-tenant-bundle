@@ -12,7 +12,7 @@ use Zhortein\MultiTenantBundle\Manager\TenantSettingsManager;
  * This service provides tenant-specific messenger configuration
  * by retrieving settings from the tenant settings manager.
  */
-final class TenantMessengerConfigurator
+class TenantMessengerConfigurator
 {
     public function __construct(
         private readonly TenantSettingsManager $settingsManager,

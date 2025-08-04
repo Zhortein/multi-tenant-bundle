@@ -182,6 +182,7 @@ EOT
             false
         );
 
-        return $io->askQuestion($question);
+        $result = $io->askQuestion($question);
+        return is_bool($result) ? $result : false;
     }
 }

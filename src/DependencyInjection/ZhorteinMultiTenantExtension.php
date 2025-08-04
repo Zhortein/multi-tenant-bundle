@@ -61,6 +61,9 @@ final class ZhorteinMultiTenantExtension extends Extension
         // Register commands
         $this->registerCommands($container, $config);
 
+        // Register tenant-aware services
+        $this->registerTenantAwareServices($container, $config);
+
         // Load service definitions from YAML
         $this->loadServiceDefinitions($container);
     }
@@ -269,6 +272,114 @@ final class ZhorteinMultiTenantExtension extends Extension
                 ->setAutoconfigured(true)
                 ->addTag('console.command');
         }
+    }
+
+    /**
+     * Registers tenant-aware services.
+     *
+     * @param ContainerBuilder     $container The container builder
+     * @param array<string, mixed> $config    The processed configuration
+     */
+    private function registerTenantAwareServices(ContainerBuilder $container, array $config): void
+    {
+        // Register mailer services
+        if ($config['mailer']['enabled']) {
+            $this->registerMailerServices($container, $config);
+        }
+
+        // Register messenger services
+        if ($config['messenger']['enabled']) {
+            $this->registerMessengerServices($container, $config);
+        }
+
+        // Register storage services
+        if ($config['storage']['enabled']) {
+            $this->registerStorageServices($container, $config);
+        }
+
+        // Register entity listener
+        $this->registerEntityListener($container);
+    }
+
+    /**
+     * Registers mailer services.
+     *
+     * @param ContainerBuilder     $container The container builder
+     * @param array<string, mixed> $config    The processed configuration
+     */
+    private function registerMailerServices(ContainerBuilder $container, array $config): void
+    {
+        $container->register('zhortein_multi_tenant.mailer.configurator', 'Zhortein\MultiTenantBundle\Mailer\TenantMailerConfigurator')
+            ->setAutowired(true)
+            ->setAutoconfigured(true);
+
+        $container->register('zhortein_multi_tenant.mailer.transport_factory', 'Zhortein\MultiTenantBundle\Mailer\TenantMailerTransportFactory')
+            ->setAutowired(true)
+            ->setAutoconfigured(true)
+            ->addTag('mailer.transport_factory');
+
+        $container->register('zhortein_multi_tenant.mailer.tenant_aware', 'Zhortein\MultiTenantBundle\Mailer\TenantAwareMailer')
+            ->setAutowired(true)
+            ->setAutoconfigured(true);
+    }
+
+    /**
+     * Registers messenger services.
+     *
+     * @param ContainerBuilder     $container The container builder
+     * @param array<string, mixed> $config    The processed configuration
+     */
+    private function registerMessengerServices(ContainerBuilder $container, array $config): void
+    {
+        $container->register('zhortein_multi_tenant.messenger.configurator', 'Zhortein\MultiTenantBundle\Messenger\TenantMessengerConfigurator')
+            ->setAutowired(true)
+            ->setAutoconfigured(true);
+
+        $container->register('zhortein_multi_tenant.messenger.transport_factory', 'Zhortein\MultiTenantBundle\Messenger\TenantMessengerTransportFactory')
+            ->setAutowired(true)
+            ->setAutoconfigured(true)
+            ->addTag('messenger.transport_factory');
+    }
+
+    /**
+     * Registers storage services.
+     *
+     * @param ContainerBuilder     $container The container builder
+     * @param array<string, mixed> $config    The processed configuration
+     */
+    private function registerStorageServices(ContainerBuilder $container, array $config): void
+    {
+        $storageType = $config['storage']['type'];
+
+        if ($storageType === 'local') {
+            $container->register('zhortein_multi_tenant.storage', 'Zhortein\MultiTenantBundle\Storage\LocalStorage')
+                ->setAutowired(true)
+                ->setAutoconfigured(true)
+                ->setArgument('$basePath', $config['storage']['local']['base_path'])
+                ->setArgument('$baseUrl', $config['storage']['local']['base_url']);
+        } elseif ($storageType === 's3') {
+            $container->register('zhortein_multi_tenant.storage', 'Zhortein\MultiTenantBundle\Storage\S3Storage')
+                ->setAutowired(true)
+                ->setAutoconfigured(true)
+                ->setArgument('$bucket', $config['storage']['s3']['bucket'])
+                ->setArgument('$region', $config['storage']['s3']['region'])
+                ->setArgument('$baseUrl', $config['storage']['s3']['base_url']);
+        }
+
+        // Register the interface alias
+        $container->setAlias('Zhortein\MultiTenantBundle\Storage\TenantFileStorageInterface', 'zhortein_multi_tenant.storage');
+    }
+
+    /**
+     * Registers the tenant entity listener.
+     *
+     * @param ContainerBuilder $container The container builder
+     */
+    private function registerEntityListener(ContainerBuilder $container): void
+    {
+        $container->register('zhortein_multi_tenant.entity_listener', 'Zhortein\MultiTenantBundle\EventListener\TenantEntityListener')
+            ->setAutowired(true)
+            ->setAutoconfigured(true);
     }
 
     /**

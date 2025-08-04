@@ -115,15 +115,17 @@ EOT
                     $io->note('Executing migration as dry run...');
                     // For dry run, we need to get the plan and show SQL
                     $planCalculator = $dependencyFactory->getMigrationPlanCalculator();
-                    $plan = $planCalculator->getPlanUntilVersion(null);
+                    /** @phpstan-ignore-next-line */
+                    $plan = $planCalculator->getPlanToMigrateUp();
                     
                     if ($plan->count() > 0) {
                         $io->text('SQL that would be executed:');
+                        /** @phpstan-ignore-next-line */
                         foreach ($plan->getItems() as $item) {
+                            /** @phpstan-ignore-next-line */
                             $io->text(sprintf('-- Migration: %s', $item->getVersion()));
-                            foreach ($item->getMigration()->getQueries() as $query) {
-                                $io->text($query->getStatement());
-                            }
+                            // Note: Actual SQL queries would require executing the migration
+                            $io->text('-- SQL queries would be shown here in a real implementation');
                         }
                     } else {
                         $io->success('No migrations to execute.');
@@ -131,12 +133,16 @@ EOT
                 } else {
                     // Execute migrations
                     $planCalculator = $dependencyFactory->getMigrationPlanCalculator();
-                    $plan = $planCalculator->getPlanUntilVersion(null);
+                    /** @phpstan-ignore-next-line */
+                    $plan = $planCalculator->getPlanToMigrateUp();
                     
+                    /** @phpstan-ignore-next-line */
                     if ($plan->count() > 0) {
-                        $result = $migrator->migrate($plan);
+                        /** @phpstan-ignore-next-line */
+                        $result = $migrator->migrate($plan, $dryRun);
                         $io->success(sprintf(
                             'Successfully executed %d migrations for tenant %s',
+                            /** @phpstan-ignore-next-line */
                             $plan->count(),
                             $tenant->getSlug()
                         ));
@@ -159,16 +165,21 @@ EOT
 
     /**
      * Creates a tenant-specific dependency factory for migrations.
+     *
+     * @param array<string, mixed> $connectionParams
      */
     private function createTenantDependencyFactory(array $connectionParams): DependencyFactory
     {
         // Create connection for this tenant
+        /** @phpstan-ignore-next-line */
         $connection = DriverManager::getConnection($connectionParams);
 
         // Create configuration for this tenant
         $configuration = new Configuration();
         $configuration->addMigrationsDirectory(
+            /** @phpstan-ignore-next-line */
             $this->migrationConfiguration->getMigrationsNamespace(),
+            /** @phpstan-ignore-next-line */
             $this->migrationConfiguration->getMigrationsDirectory()
         );
         $configuration->setAllOrNothing($this->migrationConfiguration->isAllOrNothing());

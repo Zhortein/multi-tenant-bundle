@@ -401,7 +401,91 @@ php bin/console tenant:fixtures:load --purge-exclusions=audit_log
 
 ## Advanced Features
 
-For advanced features like header-based resolution, database events, tenant-scoped services, and custom connection resolvers, see the [Advanced Features Documentation](docs/advanced-features.md).
+### 📨 Tenant-Aware Mailer
+
+Configure tenant-specific email settings:
+
+```php
+// Each tenant can have its own SMTP configuration
+$settingsManager->set('mailer_dsn', 'smtp://tenant-smtp.example.com:587');
+$settingsManager->set('email_from', 'noreply@tenant.com');
+$settingsManager->set('email_sender', 'Tenant Name');
+```
+
+### 📬 Tenant-Aware Messenger
+
+Configure tenant-specific message transports:
+
+```yaml
+# config/packages/messenger.yaml
+framework:
+    messenger:
+        transports:
+            tenant_async: 'tenant://default'  # Uses tenant-specific transport
+```
+
+### 🗂️ Tenant-Aware Storage
+
+Isolate file storage per tenant:
+
+```php
+use Zhortein\MultiTenantBundle\Storage\TenantFileStorageInterface;
+
+class DocumentService
+{
+    public function __construct(
+        private TenantFileStorageInterface $storage
+    ) {}
+
+    public function uploadDocument(UploadedFile $file): string
+    {
+        // Automatically stored in tenant-specific directory
+        return $this->storage->uploadFile($file, 'documents/' . $file->getClientOriginalName());
+    }
+}
+```
+
+### 🗄️ Automatic Database Filtering
+
+Entities are automatically filtered by tenant:
+
+```php
+use Zhortein\MultiTenantBundle\Doctrine\TenantOwnedEntityInterface;
+use Zhortein\MultiTenantBundle\Doctrine\TenantOwnedEntityTrait;
+
+#[ORM\Entity]
+class Product implements TenantOwnedEntityInterface
+{
+    use TenantOwnedEntityTrait; // Automatically adds tenant relationship
+}
+```
+
+### 🛠️ Advanced Console Commands
+
+```bash
+# Schema management
+php bin/console tenant:schema:create --tenant=acme
+php bin/console tenant:schema:drop --force
+
+# Tenant-specific migrations
+php bin/console tenant:migrate --tenant=acme --dry-run
+
+# Tenant-specific fixtures
+php bin/console tenant:fixtures:load --tenant=acme --group=demo
+```
+
+## 📚 Documentation
+
+### Core Documentation
+- [Configuration Guide](docs/configuration.md) - Complete configuration reference
+- [Tenant-Aware Services](docs/tenant-aware-services.md) - Mailer, Messenger, Storage services
+- [Advanced Features](docs/advanced-features.md) - Custom resolvers, events, middleware
+
+### Usage Examples
+- [Mailer Usage](docs/examples/mailer-usage.md) - Tenant-specific email configuration and sending
+- [Messenger Usage](docs/examples/messenger-usage.md) - Tenant-aware message queues and processing
+- [Storage Usage](docs/examples/storage-usage.md) - File storage with tenant isolation
+- [Database Usage](docs/examples/database-usage.md) - Entity setup, repositories, and migrations
 
 ## Testing
 

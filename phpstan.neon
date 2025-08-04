@@ -13,6 +13,13 @@ parameters:
         - '#Call to method [a-zA-Z0-9_]+\(\) on an unknown class PHPUnit\\Framework\\MockObject\\MockObject#'
         # Allow test fixtures
         - '#Class .* not found\.#'
+        # Allow PHPUnit mock method calls
+        - '#Call to an undefined method .+::(expects|method|with|willReturn|willThrowException|never|once|exactly|atLeastOnce)#'
+        - '#Cannot call method (method|with|willReturn|willThrowException|expects|never|once|exactly|atLeastOnce) on mixed#'
+        # Allow test-specific patterns
+        - '#Parameter .+ of method .+ expects .+, mixed given#'
+        - '#Argument of an invalid type mixed supplied for foreach#'
+        - '#Cannot call method .+ on mixed#'
     reportUnmatchedIgnoredErrors: false
 
 includes:

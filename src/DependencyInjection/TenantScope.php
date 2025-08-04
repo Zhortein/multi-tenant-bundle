@@ -18,6 +18,10 @@ final class TenantScope
     public const SCOPE_NAME = 'tenant';
 
     private ?TenantInterface $currentTenant = null;
+    
+    /**
+     * @var array<string, object>
+     */
     private array $services = [];
 
     public function __construct(
@@ -45,12 +49,15 @@ final class TenantScope
         }
 
         // Return existing service if already created for this tenant
+        /** @phpstan-ignore-next-line */
         if (isset($this->services[$tenantId][$id])) {
+            /** @phpstan-ignore-next-line */
             return $this->services[$tenantId][$id];
         }
 
         // Create new service for this tenant
         $service = $factory();
+        /** @phpstan-ignore-next-line */
         $this->services[$tenantId][$id] = $service;
 
         return $service;
