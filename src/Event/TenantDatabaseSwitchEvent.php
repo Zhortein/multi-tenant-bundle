@@ -1,0 +1,43 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Zhortein\MultiTenantBundle\Event;
+
+use Symfony\Contracts\EventDispatcher\Event;
+use Zhortein\MultiTenantBundle\Entity\TenantInterface;
+
+/**
+ * Event dispatched when switching to a tenant's database.
+ *
+ * This event is fired before and after switching database connections
+ * for a specific tenant, allowing listeners to perform additional setup
+ * or cleanup operations.
+ */
+class TenantDatabaseSwitchEvent extends Event
+{
+    public const BEFORE_SWITCH = 'tenant.database.before_switch';
+    public const AFTER_SWITCH = 'tenant.database.after_switch';
+
+    public function __construct(
+        private readonly TenantInterface $tenant,
+        private readonly array $connectionParameters,
+        private readonly ?TenantInterface $previousTenant = null,
+    ) {
+    }
+
+    public function getTenant(): TenantInterface
+    {
+        return $this->tenant;
+    }
+
+    public function getConnectionParameters(): array
+    {
+        return $this->connectionParameters;
+    }
+
+    public function getPreviousTenant(): ?TenantInterface
+    {
+        return $this->previousTenant;
+    }
+}

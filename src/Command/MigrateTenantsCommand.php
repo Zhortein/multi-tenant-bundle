@@ -1,24 +1,41 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Zhortein\MultiTenantBundle\Command;
 
+use Doctrine\DBAL\DriverManager;
+use Doctrine\Migrations\Configuration\Configuration;
+use Doctrine\Migrations\Configuration\Connection\ExistingConnection;
+use Doctrine\Migrations\Configuration\Migration\ExistingConfiguration;
 use Doctrine\Migrations\DependencyFactory;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
-use Zhortein\MultiTenantBundle\Context\TenantContext;
+use Symfony\Component\Console\Style\SymfonyStyle;
+use Zhortein\MultiTenantBundle\Context\TenantContextInterface;
 use Zhortein\MultiTenantBundle\Doctrine\TenantConnectionResolverInterface;
 use Zhortein\MultiTenantBundle\Registry\TenantRegistryInterface;
 
-#[AsCommand(name: 'tenant:migrate', description: 'Execute Doctrine migrations for all tenants')]
+/**
+ * Command to execute Doctrine migrations for tenants.
+ *
+ * This command allows running migrations for all tenants or a specific tenant
+ * when using separate database strategy.
+ */
+#[AsCommand(
+    name: 'tenant:migrate',
+    description: 'Execute Doctrine migrations for tenants'
+)]
 class MigrateTenantsCommand extends Command
 {
     public function __construct(
         private readonly TenantRegistryInterface $tenantRegistry,
-        private readonly TenantContext $tenantContext,
-        private readonly TenantConnectionResolverInterface $resolver,
+        private readonly TenantContextInterface $tenantContext,
+        private readonly TenantConnectionResolverInterface $connectionResolver,
+        private readonly Configuration $migrationConfiguration,
     ) {
         parent::__construct();
     }
@@ -26,47 +43,140 @@ class MigrateTenantsCommand extends Command
     protected function configure(): void
     {
         $this
-            ->addOption('only', null, InputOption::VALUE_OPTIONAL, 'Run migrations for a specific tenant slug');
+            ->addOption('tenant', 't', InputOption::VALUE_OPTIONAL, 'Run migrations for a specific tenant slug')
+            ->addOption('dry-run', null, InputOption::VALUE_NONE, 'Execute the migration as a dry run')
+            ->addOption('allow-no-migration', null, InputOption::VALUE_NONE, 'Don\'t throw an exception if no migration is available')
+            ->setHelp(
+                <<<'EOT'
+The <info>%command.name%</info> command executes Doctrine migrations for tenants:
+
+    <info>%command.full_name%</info>
+
+You can optionally specify a tenant to migrate:
+
+    <info>%command.full_name% --tenant=acme</info>
+
+You can also execute the migration as a dry run:
+
+    <info>%command.full_name% --dry-run</info>
+EOT
+            );
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        $only = $input->getOption('only');
-        $tenants = $only
-            ? [$this->tenantRegistry->getBySlug($only)]
-            : $this->tenantRegistry->getAll();
+        $io = new SymfonyStyle($input, $output);
+        $tenantSlug = $input->getOption('tenant');
+        $dryRun = $input->getOption('dry-run');
+        $allowNoMigration = $input->getOption('allow-no-migration');
 
-        foreach ($tenants as $tenant) {
-            $this->tenantContext->setTenant($tenant);
+        try {
+            $tenants = ($tenantSlug !== null && is_string($tenantSlug))
+                ? [$this->tenantRegistry->getBySlug($tenantSlug)]
+                : $this->tenantRegistry->getAll();
 
-            $params = $this->resolver->resolveParameters($tenant);
-            $output->writeln("\n🔧 <info>Running migrations for tenant:</info> <comment>{$tenant->getSlug()}</comment>");
+            if (empty($tenants)) {
+                $io->warning('No tenants found to migrate.');
+                return Command::SUCCESS;
+            }
 
-            // Clone DependencyFactory avec les bons paramètres
-            $dependencyFactory = $this->createTenantDependencyFactory($params);
+            $io->title('Tenant Migrations');
 
-            $migrator = $dependencyFactory->getMigrator();
-            $migrator->migrate();
+            foreach ($tenants as $tenant) {
+                $io->section(sprintf('Migrating tenant: %s', $tenant->getSlug()));
+
+                // Set tenant context
+                $this->tenantContext->setTenant($tenant);
+
+                // Switch to tenant connection
+                $this->connectionResolver->switchToTenantConnection($tenant);
+
+                // Get connection parameters for this tenant
+                $connectionParams = $this->connectionResolver->resolveParameters($tenant);
+
+                // Create tenant-specific dependency factory
+                $dependencyFactory = $this->createTenantDependencyFactory($connectionParams);
+
+                // Execute migrations
+                $migrator = $dependencyFactory->getMigrator();
+                $migrations = $dependencyFactory->getMigrationRepository()->getMigrations();
+
+                if ($migrations->count() === 0) {
+                    if ($allowNoMigration) {
+                        $io->note(sprintf('No migrations found for tenant %s', $tenant->getSlug()));
+                        continue;
+                    }
+
+                    $io->error(sprintf('No migrations found for tenant %s', $tenant->getSlug()));
+                    return Command::FAILURE;
+                }
+
+                if ($dryRun) {
+                    $io->note('Executing migration as dry run...');
+                    // For dry run, we need to get the plan and show SQL
+                    $planCalculator = $dependencyFactory->getMigrationPlanCalculator();
+                    $plan = $planCalculator->getPlanUntilVersion(null);
+                    
+                    if ($plan->count() > 0) {
+                        $io->text('SQL that would be executed:');
+                        foreach ($plan->getItems() as $item) {
+                            $io->text(sprintf('-- Migration: %s', $item->getVersion()));
+                            foreach ($item->getMigration()->getQueries() as $query) {
+                                $io->text($query->getStatement());
+                            }
+                        }
+                    } else {
+                        $io->success('No migrations to execute.');
+                    }
+                } else {
+                    // Execute migrations
+                    $planCalculator = $dependencyFactory->getMigrationPlanCalculator();
+                    $plan = $planCalculator->getPlanUntilVersion(null);
+                    
+                    if ($plan->count() > 0) {
+                        $result = $migrator->migrate($plan);
+                        $io->success(sprintf(
+                            'Successfully executed %d migrations for tenant %s',
+                            $plan->count(),
+                            $tenant->getSlug()
+                        ));
+                    } else {
+                        $io->note(sprintf('No migrations to execute for tenant %s', $tenant->getSlug()));
+                    }
+                }
+            }
+
+            $io->success('Tenant migrations completed successfully.');
+            return Command::SUCCESS;
+        } catch (\Exception $e) {
+            $io->error(sprintf('Migration failed: %s', $e->getMessage()));
+            return Command::FAILURE;
+        } finally {
+            // Clear tenant context
+            $this->tenantContext->clear();
         }
-
-        return Command::SUCCESS;
     }
 
+    /**
+     * Creates a tenant-specific dependency factory for migrations.
+     */
     private function createTenantDependencyFactory(array $connectionParams): DependencyFactory
     {
-        // ⚠️ À adapter : ici on recrée une mini-factory Doctrine, ou tu peux utiliser un service
-        $configuration = new \Doctrine\Migrations\Configuration\Migration\ConfigurationArray([
-            'connection' => $connectionParams,
-            'migrations_paths' => [
-                'App\Migrations' => 'migrations',
-            ],
-        ]);
+        // Create connection for this tenant
+        $connection = DriverManager::getConnection($connectionParams);
 
-        $config = new \Doctrine\Migrations\Configuration\Migration\Configuration($connectionParams);
-        $config->setMigrationsDirectory('migrations');
-        $config->setMigrationsNamespace('App\Migrations');
-        $config->setAllOrNothing(true);
+        // Create configuration for this tenant
+        $configuration = new Configuration();
+        $configuration->addMigrationsDirectory(
+            $this->migrationConfiguration->getMigrationsNamespace(),
+            $this->migrationConfiguration->getMigrationsDirectory()
+        );
+        $configuration->setAllOrNothing($this->migrationConfiguration->isAllOrNothing());
+        $configuration->setCheckDatabasePlatform($this->migrationConfiguration->isDatabasePlatformChecked());
 
-        return DependencyFactory::fromConnection(new \Doctrine\Migrations\Configuration\Configuration($connectionParams), DriverManager::getConnection($connectionParams));
+        return DependencyFactory::fromConnection(
+            new ExistingConfiguration($configuration),
+            new ExistingConnection($connection)
+        );
     }
 }

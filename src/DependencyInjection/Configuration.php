@@ -29,7 +29,7 @@ final class Configuration implements ConfigurationInterface
 
                 // Tenant resolver configuration
                 ->enumNode('resolver')
-                    ->values(['path', 'subdomain', 'custom'])
+                    ->values(['path', 'subdomain', 'header', 'custom'])
                     ->defaultValue('path')
                     ->info('The tenant resolution strategy to use')
                 ->end()
@@ -58,6 +58,17 @@ final class Configuration implements ConfigurationInterface
                             ->scalarPrototype()->end()
                             ->defaultValue(['www', 'api', 'admin', 'mail', 'ftp'])
                             ->info('Subdomains to exclude from tenant resolution')
+                        ->end()
+                    ->end()
+                ->end()
+
+                // Header resolver configuration
+                ->arrayNode('header')
+                    ->addDefaultsIfNotSet()
+                    ->children()
+                        ->scalarNode('name')
+                            ->defaultValue('X-Tenant-Slug')
+                            ->info('HTTP header name to use for tenant resolution')
                         ->end()
                     ->end()
                 ->end()
@@ -112,6 +123,39 @@ final class Configuration implements ConfigurationInterface
                         ->booleanNode('enabled')
                             ->defaultTrue()
                             ->info('Enable tenant-aware messenger configuration')
+                        ->end()
+                    ->end()
+                ->end()
+
+                // Fixtures configuration
+                ->arrayNode('fixtures')
+                    ->addDefaultsIfNotSet()
+                    ->children()
+                        ->booleanNode('enabled')
+                            ->defaultTrue()
+                            ->info('Enable tenant-aware fixtures loading')
+                        ->end()
+                    ->end()
+                ->end()
+
+                // Events configuration
+                ->arrayNode('events')
+                    ->addDefaultsIfNotSet()
+                    ->children()
+                        ->booleanNode('dispatch_database_switch')
+                            ->defaultTrue()
+                            ->info('Dispatch events when switching tenant databases')
+                        ->end()
+                    ->end()
+                ->end()
+
+                // Container scoping configuration
+                ->arrayNode('container')
+                    ->addDefaultsIfNotSet()
+                    ->children()
+                        ->booleanNode('enable_tenant_scope')
+                            ->defaultFalse()
+                            ->info('Enable tenant-scoped services in the container')
                         ->end()
                     ->end()
                 ->end()

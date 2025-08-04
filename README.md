@@ -8,13 +8,15 @@ A comprehensive Symfony 7+ bundle for building multi-tenant applications with Po
 
 ## Features
 
-- 🏢 **Multiple Tenant Resolution Strategies**: Subdomain, path-based, or custom resolvers
+- 🏢 **Multiple Tenant Resolution Strategies**: Subdomain, path-based, header-based, or custom resolvers
 - 🗄️ **Database Strategies**: Shared database with filtering or separate databases per tenant
 - ⚡ **Performance Optimized**: Built-in caching for tenant settings and configurations
 - 🔧 **Doctrine Integration**: Automatic tenant filtering with Doctrine ORM
-- 📧 **Tenant-Aware Services**: Mailer and Messenger integration
-- 🎯 **Event-Driven**: Automatic tenant context resolution via event listeners
-- 🛠️ **Console Commands**: Management commands for tenant operations
+- 📧 **Tenant-Aware Services**: Mailer, Messenger, and file storage integration
+- 🎯 **Event-Driven**: Database switching events and automatic tenant context resolution
+- 🛠️ **Advanced Commands**: Schema management, migrations, and fixtures for tenants
+- 🔄 **Container Scoping**: Tenant-scoped services in the dependency injection container
+- 🏭 **Entity Manager Factory**: Create tenant-specific entity managers programmatically
 - 🧪 **Fully Tested**: Comprehensive test suite with PHPUnit 12
 - 📊 **PHPStan Level Max**: Static analysis at maximum level
 
@@ -92,15 +94,30 @@ Create `config/packages/zhortein_multi_tenant.yaml`:
 ```yaml
 zhortein_multi_tenant:
     tenant_entity: 'App\Entity\Tenant'
-    resolver: 'subdomain'  # or 'path' or 'custom'
+    resolver: 'subdomain'  # 'path', 'subdomain', 'header', or 'custom'
     
+    # Subdomain resolver configuration
     subdomain:
         base_domain: 'example.com'
         excluded_subdomains: ['www', 'api', 'admin']
     
+    # Header resolver configuration
+    header:
+        name: 'X-Tenant-Slug'  # HTTP header name
+    
     database:
         strategy: 'shared'  # or 'separate'
         enable_filter: true
+    
+    # Advanced features
+    events:
+        dispatch_database_switch: true
+    
+    fixtures:
+        enabled: true
+    
+    container:
+        enable_tenant_scope: false
     
     cache:
         pool: 'cache.app'
@@ -314,27 +331,77 @@ zhortein_multi_tenant:
 
 ## Console Commands
 
-### List All Tenants
+### Basic Tenant Management
 
 ```bash
+# List all tenants
 php bin/console tenant:list
-```
 
-### Create a New Tenant
-
-```bash
+# Create a new tenant
 php bin/console tenant:create
-```
 
-### Clear Tenant Settings Cache
-
-```bash
-# Clear cache for specific tenant
+# Clear tenant settings cache
 php bin/console tenant:settings:clear-cache tenant-slug
-
-# Clear cache for all tenants
 php bin/console tenant:settings:clear-cache --all
 ```
+
+### Database Schema Management
+
+```bash
+# Create database schema for all tenants
+php bin/console tenant:schema:create
+
+# Create schema for specific tenant
+php bin/console tenant:schema:create --tenant=acme
+
+# Drop schema for all tenants (with confirmation)
+php bin/console tenant:schema:drop
+
+# Drop schema with force flag
+php bin/console tenant:schema:drop --force
+
+# Dump SQL instead of executing
+php bin/console tenant:schema:create --dump-sql
+```
+
+### Migration Management
+
+```bash
+# Run migrations for all tenants
+php bin/console tenant:migrate
+
+# Run migrations for specific tenant
+php bin/console tenant:migrate --tenant=acme
+
+# Dry run (show SQL without executing)
+php bin/console tenant:migrate --dry-run
+
+# Allow execution even if no migrations found
+php bin/console tenant:migrate --allow-no-migration
+```
+
+### Fixtures Management
+
+```bash
+# Load fixtures for all tenants
+php bin/console tenant:fixtures:load
+
+# Load fixtures for specific tenant
+php bin/console tenant:fixtures:load --tenant=acme
+
+# Append fixtures instead of purging
+php bin/console tenant:fixtures:load --append
+
+# Load specific fixture groups
+php bin/console tenant:fixtures:load --group=demo --group=test
+
+# Exclude tables from purging
+php bin/console tenant:fixtures:load --purge-exclusions=audit_log
+```
+
+## Advanced Features
+
+For advanced features like header-based resolution, database events, tenant-scoped services, and custom connection resolvers, see the [Advanced Features Documentation](docs/advanced-features.md).
 
 ## Testing
 
