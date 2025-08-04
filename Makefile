@@ -35,7 +35,7 @@ php: ## Open PHP 8.3 shell in container
 
 ## —— 🧪 Testing ———————————————————————————————————————————————————————————————————————————
 test: ## Run all PHPUnit tests
-	$(DOCKER_RUN) vendor/bin/phpunit --configuration phpunit.xml.dist
+	$(DOCKER_RUN) vendor/bin/phpunit --configuration phpunit.xml.dist --no-coverage
 
 test-unit: ## Run unit tests only
 	$(DOCKER_RUN) vendor/bin/phpunit tests/Unit --no-coverage
