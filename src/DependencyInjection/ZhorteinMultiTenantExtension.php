@@ -167,7 +167,8 @@ final class ZhorteinMultiTenantExtension extends Extension
         // Register tenant entity manager factory
         $container->register(TenantEntityManagerFactory::class)
             ->setAutowired(true)
-            ->setAutoconfigured(true);
+            ->setAutoconfigured(true)
+            ->setArgument('$ormConfiguration', new Reference('doctrine.orm.default_configuration'));
 
         // Register tenant scope if enabled
         if ($config['container']['enable_tenant_scope']) {
