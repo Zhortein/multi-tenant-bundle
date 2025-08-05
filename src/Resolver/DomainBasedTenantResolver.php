@@ -26,7 +26,7 @@ final readonly class DomainBasedTenantResolver implements TenantResolverInterfac
      */
     public function __construct(
         private TenantRegistryInterface $tenantRegistry,
-        private array                   $domainMapping = [],
+        private array $domainMapping = [],
     ) {
     }
 

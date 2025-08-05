@@ -26,7 +26,7 @@ final readonly class AsTenantAware
          * Whether to require tenant_id field in shared-db mode.
          * Set to false for entities that should exist in multi-db mode only.
          */
-        public bool   $requireTenantId = true,
+        public bool $requireTenantId = true,
 
         /**
          * Custom tenant field name (default: 'tenant').

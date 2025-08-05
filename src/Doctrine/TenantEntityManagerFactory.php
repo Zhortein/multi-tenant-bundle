@@ -20,7 +20,7 @@ final readonly class TenantEntityManagerFactory
 {
     public function __construct(
         private TenantConnectionResolverInterface $connectionResolver,
-        private Configuration                     $ormConfiguration,
+        private Configuration $ormConfiguration,
     ) {
     }
 
@@ -47,6 +47,7 @@ final readonly class TenantEntityManagerFactory
      * @param array<TenantInterface> $tenants The tenants to create entity managers for
      *
      * @return array<string, EntityManagerInterface> Array of entity managers keyed by tenant slug
+     *
      * @throws \Exception
      */
     public function createForTenants(array $tenants): array

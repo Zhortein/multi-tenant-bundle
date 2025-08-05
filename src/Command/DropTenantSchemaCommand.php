@@ -135,7 +135,7 @@ EOT
                     } else {
                         $io->note(sprintf('No SQL to execute for tenant %s', $tenant->getSlug()));
                     }
-                } else if ($fullDatabase) {
+                } elseif ($fullDatabase) {
                     $schemaTool->dropDatabase();
                     $io->success(sprintf('Successfully dropped database for tenant %s', $tenant->getSlug()));
                 } else {

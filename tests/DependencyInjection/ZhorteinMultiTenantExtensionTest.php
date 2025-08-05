@@ -6,8 +6,8 @@ namespace Zhortein\MultiTenantBundle\Tests\DependencyInjection;
 
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
-use Zhortein\MultiTenantBundle\DependencyInjection\ZhorteinMultiTenantExtension;
 use Symfony\Component\Messenger\MessageBusInterface;
+use Zhortein\MultiTenantBundle\DependencyInjection\ZhorteinMultiTenantExtension;
 
 /**
  * @covers \Zhortein\MultiTenantBundle\DependencyInjection\ZhorteinMultiTenantExtension

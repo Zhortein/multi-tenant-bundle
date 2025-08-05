@@ -51,7 +51,7 @@ final class InMemoryTenantRegistryTest extends TestCase
         $registry = new InMemoryTenantRegistry();
 
         $this->expectException(\RuntimeException::class);
-        $this->expectExceptionMessage("Tenant with slug `non-existent` not found.");
+        $this->expectExceptionMessage('Tenant with slug `non-existent` not found.');
 
         $registry->getBySlug('non-existent');
     }

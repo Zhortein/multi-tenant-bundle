@@ -17,9 +17,9 @@ readonly class TenantMailerConfigurator
 {
     public function __construct(
         private TenantSettingsManager $settingsManager,
-        private ?string               $fallbackDsn = null,
-        private ?string               $fallbackFrom = null,
-        private ?string               $fallbackSender = null,
+        private ?string $fallbackDsn = null,
+        private ?string $fallbackFrom = null,
+        private ?string $fallbackSender = null,
     ) {
     }
 

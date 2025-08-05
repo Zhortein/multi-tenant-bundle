@@ -75,6 +75,7 @@ final class ClearTenantSettingsCacheCommand extends Command
                 }
             } catch (InvalidArgumentException|\Exception $e) {
                 $io->error(sprintf('Error for tenant `%s` : %s', $tenantSlug, $e->getMessage()));
+
                 return Command::FAILURE;
             }
 
@@ -105,7 +106,7 @@ final class ClearTenantSettingsCacheCommand extends Command
             }
         }
 
-        $io->success(sprintf("Cache cleared for %d tenant%s.", $clearedCount, $clearedCount > 1 ? 's' : ''));
+        $io->success(sprintf('Cache cleared for %d tenant%s.', $clearedCount, $clearedCount > 1 ? 's' : ''));
 
         return Command::SUCCESS;
     }

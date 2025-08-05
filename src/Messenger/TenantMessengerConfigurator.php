@@ -18,8 +18,8 @@ readonly class TenantMessengerConfigurator
 {
     public function __construct(
         private TenantSettingsManager $settingsManager,
-        private string                $fallbackDsn = 'sync://',
-        private string                $fallbackBus = 'messenger.bus.default',
+        private string $fallbackDsn = 'sync://',
+        private string $fallbackBus = 'messenger.bus.default',
     ) {
     }
 
@@ -29,6 +29,7 @@ readonly class TenantMessengerConfigurator
      * @param string|null $default Default DSN if tenant setting is not found
      *
      * @return string The messenger transport DSN, fallback, or default value
+     *
      * @throws InvalidArgumentException
      */
     public function getTransportDsn(?string $default = null): string
@@ -45,6 +46,7 @@ readonly class TenantMessengerConfigurator
      * @param string|null $default Default bus name if tenant setting is not found
      *
      * @return string The messenger bus name, fallback, or default value
+     *
      * @throws InvalidArgumentException
      */
     public function getBusName(?string $default = null): string
@@ -59,9 +61,10 @@ readonly class TenantMessengerConfigurator
      * Gets the delay for specific transport for the current tenant.
      *
      * @param string|null $transport The transport name
-     * @param int $default Default delay if tenant setting is not found
+     * @param int         $default   Default delay if tenant setting is not found
      *
      * @return int The delay in milliseconds
+     *
      * @throws InvalidArgumentException
      */
     public function getDelay(?string $transport = null, int $default = 0): int

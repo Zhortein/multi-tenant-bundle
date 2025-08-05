@@ -22,10 +22,10 @@ use Zhortein\MultiTenantBundle\Context\TenantContextInterface;
 final readonly class TenantAwareConnectionFactory
 {
     public function __construct(
-        private TenantContextInterface            $tenantContext,
+        private TenantContextInterface $tenantContext,
         private TenantConnectionResolverInterface $connectionResolver,
         #[Autowire(service: 'doctrine.dbal.configuration')]
-        private Configuration                     $configuration,
+        private Configuration $configuration,
     ) {
     }
 
@@ -33,9 +33,10 @@ final readonly class TenantAwareConnectionFactory
      * Creates a database connection for the current tenant.
      *
      * @param array<string, mixed> $params Base connection parameters
-     * @param string|null $name Connection name (unused but kept for compatibility)
+     * @param string|null          $name   Connection name (unused but kept for compatibility)
      *
      * @return Connection The configured database connection
+     *
      * @throws Exception
      */
     public function createConnection(array $params, ?string $name = null): Connection

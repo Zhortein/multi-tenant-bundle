@@ -10,7 +10,7 @@ use Zhortein\MultiTenantBundle\Manager\TenantSettingsManager;
 final readonly class TenantMailerHelper
 {
     public function __construct(
-        private MailerInterface       $mailer,
+        private MailerInterface $mailer,
         private TenantSettingsManager $settings,
     ) {
     }

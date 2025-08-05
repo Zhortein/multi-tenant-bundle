@@ -23,9 +23,9 @@ final readonly class TenantMessengerTransportFactory implements TransportFactory
      */
     public function __construct(
         private TenantMessengerConfigurator $messengerConfigurator,
-        private iterable                    $factories,
-        private ?string                     $fallbackDsn = 'sync://',
-        private ?LoggerInterface            $logger = null,
+        private iterable $factories,
+        private ?string $fallbackDsn = 'sync://',
+        private ?LoggerInterface $logger = null,
     ) {
     }
 

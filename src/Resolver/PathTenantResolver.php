@@ -17,7 +17,7 @@ final readonly class PathTenantResolver implements TenantResolverInterface
 {
     public function __construct(
         private EntityManagerInterface $em,
-        private string                 $tenantEntityClass,
+        private string $tenantEntityClass,
     ) {
     }
 

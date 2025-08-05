@@ -19,20 +19,21 @@ use Zhortein\MultiTenantBundle\Repository\TenantSettingRepository;
 final readonly class TenantSettingsManager implements TenantSettingsManagerInterface
 {
     public function __construct(
-        private TenantContextInterface  $tenantContext,
+        private TenantContextInterface $tenantContext,
         private TenantSettingRepository $settingRepository,
-        private CacheItemPoolInterface  $cache,
-        private ParameterBagInterface   $parameterBag,
+        private CacheItemPoolInterface $cache,
+        private ParameterBagInterface $parameterBag,
     ) {
     }
 
     /**
      * Retrieves a setting value with optional default fallback.
      *
-     * @param string $key The setting key
-     * @param mixed $default Default value if setting is not found
+     * @param string $key     The setting key
+     * @param mixed  $default Default value if setting is not found
      *
      * @return mixed The setting value or default
+     *
      * @throws InvalidArgumentException
      */
     public function get(string $key, mixed $default = null): mixed

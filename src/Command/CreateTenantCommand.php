@@ -56,7 +56,7 @@ final class CreateTenantCommand extends Command
         $this->em->persist($tenant);
         $this->em->flush();
 
-        $io->success(sprintf("Tenant `%s` créé avec succès (slug: `%s`).", $name, $slug));
+        $io->success(sprintf('Tenant `%s` créé avec succès (slug: `%s`).', $name, $slug));
 
         return Command::SUCCESS;
     }

@@ -23,8 +23,16 @@ use Zhortein\MultiTenantBundle\Doctrine\EventAwareConnectionResolver;
 use Zhortein\MultiTenantBundle\Doctrine\TenantConnectionResolverInterface;
 use Zhortein\MultiTenantBundle\Doctrine\TenantEntityManagerFactory;
 use Zhortein\MultiTenantBundle\EventListener\TenantDoctrineFilterListener;
+use Zhortein\MultiTenantBundle\EventListener\TenantEntityListener;
 use Zhortein\MultiTenantBundle\EventListener\TenantRequestListener;
+use Zhortein\MultiTenantBundle\Mailer\TenantAwareMailer;
+use Zhortein\MultiTenantBundle\Mailer\TenantMailerConfigurator;
+use Zhortein\MultiTenantBundle\Mailer\TenantMailerTransportFactory;
 use Zhortein\MultiTenantBundle\Manager\TenantSettingsManager;
+use Zhortein\MultiTenantBundle\Manager\TenantSettingsManagerInterface;
+use Zhortein\MultiTenantBundle\Messenger\TenantMessengerConfigurator;
+use Zhortein\MultiTenantBundle\Messenger\TenantMessengerTransportFactory;
+use Zhortein\MultiTenantBundle\Messenger\TenantMessengerTransportResolver;
 use Zhortein\MultiTenantBundle\Registry\DoctrineTenantRegistry;
 use Zhortein\MultiTenantBundle\Registry\TenantRegistryInterface;
 use Zhortein\MultiTenantBundle\Resolver\DnsTxtTenantResolver;
@@ -34,17 +42,9 @@ use Zhortein\MultiTenantBundle\Resolver\HybridDomainSubdomainResolver;
 use Zhortein\MultiTenantBundle\Resolver\PathTenantResolver;
 use Zhortein\MultiTenantBundle\Resolver\SubdomainTenantResolver;
 use Zhortein\MultiTenantBundle\Resolver\TenantResolverInterface;
-use Zhortein\MultiTenantBundle\Manager\TenantSettingsManagerInterface;
-use Zhortein\MultiTenantBundle\Mailer\TenantMailerConfigurator;
-use Zhortein\MultiTenantBundle\Mailer\TenantMailerTransportFactory;
-use Zhortein\MultiTenantBundle\Mailer\TenantAwareMailer;
-use Zhortein\MultiTenantBundle\Messenger\TenantMessengerConfigurator;
-use Zhortein\MultiTenantBundle\Messenger\TenantMessengerTransportFactory;
-use Zhortein\MultiTenantBundle\Messenger\TenantMessengerTransportResolver;
 use Zhortein\MultiTenantBundle\Storage\LocalStorage;
-use Zhortein\MultiTenantBundle\Storage\TenantFileStorageInterface;
-use Zhortein\MultiTenantBundle\EventListener\TenantEntityListener;
 use Zhortein\MultiTenantBundle\Storage\S3Storage;
+use Zhortein\MultiTenantBundle\Storage\TenantFileStorageInterface;
 
 /**
  * Extension class for the multi-tenant bundle.
@@ -356,7 +356,7 @@ final class ZhorteinMultiTenantExtension extends Extension
     /**
      * Registers mailer services.
      *
-     * @param ContainerBuilder     $container The container builder
+     * @param ContainerBuilder $container The container builder
      */
     private function registerMailerServices(ContainerBuilder $container): void
     {
@@ -382,7 +382,7 @@ final class ZhorteinMultiTenantExtension extends Extension
     /**
      * Registers messenger services.
      *
-     * @param ContainerBuilder     $container The container builder
+     * @param ContainerBuilder $container The container builder
      */
     private function registerMessengerServices(ContainerBuilder $container): void
     {

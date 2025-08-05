@@ -19,8 +19,8 @@ final readonly class EventAwareConnectionResolver implements TenantConnectionRes
 {
     public function __construct(
         private TenantConnectionResolverInterface $innerResolver,
-        private EventDispatcherInterface          $eventDispatcher,
-        private TenantContextInterface            $tenantContext,
+        private EventDispatcherInterface $eventDispatcher,
+        private TenantContextInterface $tenantContext,
     ) {
     }
 

@@ -26,9 +26,9 @@ final readonly class TenantMessengerTransportResolver implements MiddlewareInter
      */
     public function __construct(
         private TenantContextInterface $tenantContext,
-        private array                  $tenantTransportMap = [],
-        private string                 $defaultTransport = 'async',
-        private bool                   $addTenantHeaders = true,
+        private array $tenantTransportMap = [],
+        private string $defaultTransport = 'async',
+        private bool $addTenantHeaders = true,
     ) {
     }
 

@@ -20,10 +20,10 @@ use Zhortein\MultiTenantBundle\Context\TenantContextInterface;
 final readonly class TenantAwareMailer implements MailerInterface
 {
     public function __construct(
-        private MailerInterface          $mailer,
+        private MailerInterface $mailer,
         private TenantMailerConfigurator $configurator,
-        private TenantContextInterface   $tenantContext,
-        private ?Environment             $twig = null,
+        private TenantContextInterface $tenantContext,
+        private ?Environment $twig = null,
     ) {
     }
 
@@ -40,16 +40,16 @@ final readonly class TenantAwareMailer implements MailerInterface
     /**
      * Sends a templated email with tenant-specific configuration.
      *
-     * @param string $to Recipient email address
-     * @param string $subject Email subject
-     * @param string $template Twig template path
-     * @param array<string, mixed> $context Template context variables
-     * @param string|null $fromOverride Override from address
+     * @param string               $to           Recipient email address
+     * @param string               $subject      Email subject
+     * @param string               $template     Twig template path
+     * @param array<string, mixed> $context      Template context variables
+     * @param string|null          $fromOverride Override from address
      *
-     * @throws \RuntimeException        When Twig is not available
-     * @throws \Twig\Error\LoaderError  When template is not found
-     * @throws \Twig\Error\RuntimeError When template rendering fails
-     * @throws \Twig\Error\SyntaxError  When template has syntax errors
+     * @throws \RuntimeException           When Twig is not available
+     * @throws \Twig\Error\LoaderError     When template is not found
+     * @throws \Twig\Error\RuntimeError    When template rendering fails
+     * @throws \Twig\Error\SyntaxError     When template has syntax errors
      * @throws TransportExceptionInterface
      */
     public function sendTemplatedEmail(

@@ -11,7 +11,7 @@ use Zhortein\MultiTenantBundle\Context\TenantContext;
 final readonly class TenantDoctrineFilterSubscriber implements EventSubscriberInterface
 {
     public function __construct(
-        private TenantContext          $tenantContext,
+        private TenantContext $tenantContext,
         private EntityManagerInterface $em,
     ) {
     }
