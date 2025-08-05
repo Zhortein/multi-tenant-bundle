@@ -13,11 +13,11 @@ use Zhortein\MultiTenantBundle\Entity\TenantInterface;
  *
  * Example: /tenant-slug/some/path -> resolves to tenant with slug "tenant-slug"
  */
-final class PathTenantResolver implements TenantResolverInterface
+final readonly class PathTenantResolver implements TenantResolverInterface
 {
     public function __construct(
-        private readonly EntityManagerInterface $em,
-        private readonly string $tenantEntityClass,
+        private EntityManagerInterface $em,
+        private string                 $tenantEntityClass,
     ) {
     }
 

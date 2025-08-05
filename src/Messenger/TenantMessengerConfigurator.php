@@ -53,7 +53,7 @@ class TenantMessengerConfigurator
     }
 
     /**
-     * Gets the delay for a specific transport for the current tenant.
+     * Gets the delay for specific transport for the current tenant.
      *
      * @param string|null $transport The transport name
      * @param int         $default   Default delay if tenant setting is not found

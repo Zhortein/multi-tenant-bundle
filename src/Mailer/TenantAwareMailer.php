@@ -16,13 +16,13 @@ use Zhortein\MultiTenantBundle\Context\TenantContextInterface;
  * Tenant-aware mailer that automatically configures sender information
  * based on the current tenant context and provides templated email functionality.
  */
-final class TenantAwareMailer implements MailerInterface
+final readonly class TenantAwareMailer implements MailerInterface
 {
     public function __construct(
-        private readonly MailerInterface $mailer,
-        private readonly TenantMailerConfigurator $configurator,
-        private readonly TenantContextInterface $tenantContext,
-        private readonly ?Environment $twig = null,
+        private MailerInterface          $mailer,
+        private TenantMailerConfigurator $configurator,
+        private TenantContextInterface   $tenantContext,
+        private ?Environment             $twig = null,
     ) {
     }
 

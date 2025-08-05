@@ -13,13 +13,13 @@ use Zhortein\MultiTenantBundle\Manager\TenantSettingsManager;
  * by retrieving settings from the tenant settings manager with
  * fallback support from bundle configuration.
  */
-class TenantMailerConfigurator
+readonly class TenantMailerConfigurator
 {
     public function __construct(
-        private readonly TenantSettingsManager $settingsManager,
-        private readonly ?string $fallbackDsn = null,
-        private readonly ?string $fallbackFrom = null,
-        private readonly ?string $fallbackSender = null,
+        private TenantSettingsManager $settingsManager,
+        private ?string               $fallbackDsn = null,
+        private ?string               $fallbackFrom = null,
+        private ?string               $fallbackSender = null,
     ) {
     }
 

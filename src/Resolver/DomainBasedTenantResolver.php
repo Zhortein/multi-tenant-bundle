@@ -18,15 +18,15 @@ use Zhortein\MultiTenantBundle\Registry\TenantRegistryInterface;
  *
  * @phpstan-type DomainMapping array<string, string>
  */
-final class DomainBasedTenantResolver implements TenantResolverInterface
+final readonly class DomainBasedTenantResolver implements TenantResolverInterface
 {
     /**
      * @param TenantRegistryInterface $tenantRegistry The tenant registry
      * @param DomainMapping           $domainMapping  Mapping of domains to tenant slugs
      */
     public function __construct(
-        private readonly TenantRegistryInterface $tenantRegistry,
-        private readonly array $domainMapping = [],
+        private TenantRegistryInterface $tenantRegistry,
+        private array                   $domainMapping = [],
     ) {
     }
 

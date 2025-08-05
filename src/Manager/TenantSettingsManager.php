@@ -15,13 +15,13 @@ use Zhortein\MultiTenantBundle\Repository\TenantSettingRepository;
  * This service provides access to tenant settings with fallback to default values
  * and caching for performance optimization.
  */
-final class TenantSettingsManager implements TenantSettingsManagerInterface
+final readonly class TenantSettingsManager implements TenantSettingsManagerInterface
 {
     public function __construct(
-        private readonly TenantContextInterface $tenantContext,
-        private readonly TenantSettingRepository $settingRepository,
-        private readonly CacheItemPoolInterface $cache,
-        private readonly ParameterBagInterface $parameterBag,
+        private TenantContextInterface  $tenantContext,
+        private TenantSettingRepository $settingRepository,
+        private CacheItemPoolInterface  $cache,
+        private ParameterBagInterface   $parameterBag,
     ) {
     }
 

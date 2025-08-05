@@ -36,6 +36,6 @@ final class TenantDoctrineFilterSubscriber implements EventSubscriberInterface
         }
 
         $tenant = $this->tenantContext->getTenant();
-        $filters->getFilter('tenant_filter')->setParameter('tenant_id', $tenant->getId());
+        $filters->getFilter('tenant_filter')->setParameter('tenant_id', $tenant?->getId());
     }
 }

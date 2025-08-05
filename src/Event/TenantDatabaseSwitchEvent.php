@@ -16,8 +16,8 @@ use Zhortein\MultiTenantBundle\Entity\TenantInterface;
  */
 class TenantDatabaseSwitchEvent extends Event
 {
-    public const BEFORE_SWITCH = 'tenant.database.before_switch';
-    public const AFTER_SWITCH = 'tenant.database.after_switch';
+    public const string BEFORE_SWITCH = 'tenant.database.before_switch';
+    public const string AFTER_SWITCH = 'tenant.database.after_switch';
 
     /**
      * @param array<string, mixed> $connectionParameters

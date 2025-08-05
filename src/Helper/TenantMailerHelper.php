@@ -6,11 +6,11 @@ use Symfony\Bridge\Twig\Mime\TemplatedEmail;
 use Symfony\Component\Mailer\MailerInterface;
 use Zhortein\MultiTenantBundle\Manager\TenantSettingsManager;
 
-final class TenantMailerHelper
+final readonly class TenantMailerHelper
 {
     public function __construct(
-        private readonly MailerInterface $mailer,
-        private readonly TenantSettingsManager $settings,
+        private MailerInterface       $mailer,
+        private TenantSettingsManager $settings,
     ) {
     }
 

@@ -5,10 +5,10 @@ namespace Zhortein\MultiTenantBundle\Helper;
 use Symfony\Component\HttpFoundation\File\File;
 use Zhortein\MultiTenantBundle\Storage\TenantFileStorageInterface;
 
-final class TenantAssetUploader
+final readonly class TenantAssetUploader
 {
     public function __construct(
-        private readonly TenantFileStorageInterface $storage,
+        private TenantFileStorageInterface $storage,
     ) {
     }
 

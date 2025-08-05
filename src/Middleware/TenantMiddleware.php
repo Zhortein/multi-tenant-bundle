@@ -50,7 +50,7 @@ final readonly class TenantMiddleware implements HttpKernelInterface
     private function resolveTenantContext(Request $request): void
     {
         try {
-            $tenant = $this->tenantResolver->resolve($request);
+            $tenant = $this->tenantResolver->resolveTenant($request);
 
             if (null !== $tenant) {
                 $this->tenantContext->setTenant($tenant);

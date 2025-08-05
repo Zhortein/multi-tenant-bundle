@@ -12,11 +12,11 @@ use Zhortein\MultiTenantBundle\Entity\TenantInterface;
  *
  * Loads tenants from the database using Doctrine ORM.
  */
-final class DoctrineTenantRegistry implements TenantRegistryInterface
+final readonly class DoctrineTenantRegistry implements TenantRegistryInterface
 {
     public function __construct(
-        private readonly EntityManagerInterface $em,
-        private readonly string $tenantEntityClass,
+        private EntityManagerInterface $em,
+        private string                 $tenantEntityClass,
     ) {
     }
 

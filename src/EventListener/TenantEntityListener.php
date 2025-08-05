@@ -15,10 +15,10 @@ use Zhortein\MultiTenantBundle\Doctrine\TenantOwnedEntityInterface;
  * on entities that implement TenantOwnedEntityInterface.
  */
 #[AsDoctrineListener(event: Events::prePersist)]
-final class TenantEntityListener
+final readonly class TenantEntityListener
 {
     public function __construct(
-        private readonly TenantContextInterface $tenantContext,
+        private TenantContextInterface $tenantContext,
     ) {
     }
 

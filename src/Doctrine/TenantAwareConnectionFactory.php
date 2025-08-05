@@ -18,13 +18,13 @@ use Zhortein\MultiTenantBundle\Context\TenantContextInterface;
  * based on the current tenant context, allowing for per-tenant
  * database configurations.
  */
-final class TenantAwareConnectionFactory
+final readonly class TenantAwareConnectionFactory
 {
     public function __construct(
-        private readonly TenantContextInterface $tenantContext,
-        private readonly TenantConnectionResolverInterface $connectionResolver,
+        private TenantContextInterface            $tenantContext,
+        private TenantConnectionResolverInterface $connectionResolver,
         #[Autowire(service: 'doctrine.dbal.configuration')]
-        private readonly Configuration $configuration,
+        private Configuration                     $configuration,
     ) {
     }
 

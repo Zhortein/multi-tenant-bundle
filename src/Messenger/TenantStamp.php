@@ -12,11 +12,11 @@ use Symfony\Component\Messenger\Stamp\StampInterface;
  * This stamp allows message handlers to access tenant context
  * even when processing messages asynchronously.
  */
-final class TenantStamp implements StampInterface
+final readonly class TenantStamp implements StampInterface
 {
     public function __construct(
-        private readonly string $tenantSlug,
-        private readonly string $tenantName,
+        private string $tenantSlug,
+        private string $tenantName,
     ) {
     }
 

@@ -16,11 +16,11 @@ use Zhortein\MultiTenantBundle\Doctrine\TenantConnectionResolverInterface;
  * This subscriber handles switching database connections based on the current tenant
  * when using separate databases per tenant strategy.
  */
-final class TenantDoctrineSubscriber implements EventSubscriberInterface
+final readonly class TenantDoctrineSubscriber implements EventSubscriberInterface
 {
     public function __construct(
-        private readonly TenantContextInterface $tenantContext,
-        private readonly TenantConnectionResolverInterface $connectionResolver,
+        private TenantContextInterface            $tenantContext,
+        private TenantConnectionResolverInterface $connectionResolver,
     ) {
     }
 

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Zhortein\MultiTenantBundle\Registry;
 
 use Zhortein\MultiTenantBundle\Entity\TenantInterface;
+use Zhortein\MultiTenantBundle\Exception\TenantNotFoundException;
 
 /**
  * In-memory tenant registry.
@@ -33,7 +34,7 @@ final class InMemoryTenantRegistry implements TenantRegistryInterface
             }
         }
 
-        throw new \Zhortein\MultiTenantBundle\Exception\TenantNotFoundException("Tenant with slug '{$slug}' not found.");
+        throw new TenantNotFoundException("Tenant with slug '{$slug}' not found.");
     }
 
     public function hasSlug(string $slug): bool

@@ -17,7 +17,7 @@ use Zhortein\MultiTenantBundle\Entity\TenantInterface;
 final class SubdomainTenantResolver implements TenantResolverInterface
 {
     /** @var string[] Common subdomains to exclude from tenant resolution */
-    private const EXCLUDED_SUBDOMAINS = ['www', 'api', 'admin', 'mail', 'ftp'];
+    private const array EXCLUDED_SUBDOMAINS = ['www', 'api', 'admin', 'mail', 'ftp'];
 
     public function __construct(
         private readonly EntityManagerInterface $em,

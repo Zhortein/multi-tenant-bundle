@@ -29,10 +29,10 @@ use Zhortein\MultiTenantBundle\Registry\TenantRegistryInterface;
 class DnsTxtTenantResolver implements TenantResolverInterface
 {
     /** @var string The DNS record prefix used for tenant resolution */
-    private const DNS_RECORD_PREFIX = '_tenant.';
+    private const string DNS_RECORD_PREFIX = '_tenant.';
 
     /** @var int Default DNS query timeout in seconds */
-    private const DEFAULT_TIMEOUT = 5;
+    private const int DEFAULT_TIMEOUT = 5;
 
     /**
      * @param TenantRegistryInterface $tenantRegistry The tenant registry for resolving tenant identifiers

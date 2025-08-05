@@ -19,11 +19,11 @@ class TenantDoctrineFilter extends SQLFilter
      * Adds the tenant constraint to the SQL query.
      *
      * @param ClassMetadata<object> $targetEntity     The entity metadata
-     * @param string                $targetTableAlias The table alias in the query
+     * @param string $targetTableAlias The table alias in the query
      *
      * @return string The SQL constraint or empty string if not applicable
      */
-    public function addFilterConstraint(ClassMetadata $targetEntity, $targetTableAlias): string
+    public function addFilterConstraint(ClassMetadata $targetEntity, string $targetTableAlias): string
     {
         // Only apply filter to entities that implement TenantOwnedEntityInterface
         if (!is_subclass_of($targetEntity->getName(), TenantOwnedEntityInterface::class)) {

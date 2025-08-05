@@ -17,15 +17,15 @@ use Zhortein\MultiTenantBundle\Context\TenantContextInterface;
  * Note: This is a basic implementation. For production use, consider
  * using the official AWS SDK or Flysystem with S3 adapter.
  */
-final class S3Storage implements TenantFileStorageInterface
+final readonly class S3Storage implements TenantFileStorageInterface
 {
     public function __construct(
-        private readonly TenantContextInterface $tenantContext,
-        private readonly string $bucket, // @phpstan-ignore-line
-        private readonly string $region, // @phpstan-ignore-line
-        private readonly string $baseUrl,
-        private readonly ?string $accessKey = null, // @phpstan-ignore-line
-        private readonly ?string $secretKey = null, // @phpstan-ignore-line
+        private TenantContextInterface $tenantContext,
+        private string                 $bucket, // @phpstan-ignore-line
+        private string                 $region, // @phpstan-ignore-line
+        private string                 $baseUrl,
+        private ?string                $accessKey = null, // @phpstan-ignore-line
+        private ?string                $secretKey = null, // @phpstan-ignore-line
     ) {
     }
 

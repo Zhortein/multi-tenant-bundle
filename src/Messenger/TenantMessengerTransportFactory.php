@@ -16,17 +16,17 @@ use Zhortein\MultiTenantBundle\Context\TenantContextInterface;
  * This factory creates messenger transports based on tenant-specific DSN settings,
  * with support for various transport types (sync, doctrine, redis, etc.).
  */
-final class TenantMessengerTransportFactory implements TransportFactoryInterface
+final readonly class TenantMessengerTransportFactory implements TransportFactoryInterface
 {
     /**
      * @param iterable<TransportFactoryInterface> $factories
      */
     public function __construct(
-        private readonly TenantContextInterface $tenantContext, // @phpstan-ignore-line
-        private readonly TenantMessengerConfigurator $messengerConfigurator,
-        private readonly iterable $factories,
-        private readonly ?string $fallbackDsn = 'sync://',
-        private readonly ?LoggerInterface $logger = null,
+        private TenantContextInterface      $tenantContext, // @phpstan-ignore-line
+        private TenantMessengerConfigurator $messengerConfigurator,
+        private iterable                    $factories,
+        private ?string                     $fallbackDsn = 'sync://',
+        private ?LoggerInterface            $logger = null,
     ) {
     }
 

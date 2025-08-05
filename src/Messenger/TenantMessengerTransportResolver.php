@@ -16,7 +16,7 @@ use Zhortein\MultiTenantBundle\Context\TenantContextInterface;
  * This middleware automatically adds transport names based on the current tenant
  * and can tag messages with tenant information for proper routing.
  */
-final class TenantMessengerTransportResolver implements MiddlewareInterface
+final readonly class TenantMessengerTransportResolver implements MiddlewareInterface
 {
     /**
      * @param TenantContextInterface $tenantContext      The tenant context service
@@ -25,10 +25,10 @@ final class TenantMessengerTransportResolver implements MiddlewareInterface
      * @param bool                   $addTenantHeaders   Whether to add tenant information to message headers
      */
     public function __construct(
-        private readonly TenantContextInterface $tenantContext,
-        private readonly array $tenantTransportMap = [],
-        private readonly string $defaultTransport = 'async',
-        private readonly bool $addTenantHeaders = true,
+        private TenantContextInterface $tenantContext,
+        private array                  $tenantTransportMap = [],
+        private string                 $defaultTransport = 'async',
+        private bool                   $addTenantHeaders = true,
     ) {
     }
 

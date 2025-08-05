@@ -24,10 +24,10 @@ use Zhortein\MultiTenantBundle\Registry\TenantRegistryInterface;
 final class HybridDomainSubdomainResolver implements TenantResolverInterface
 {
     /** @var string[] Common subdomains to exclude from tenant resolution */
-    private const EXCLUDED_SUBDOMAINS = ['www', 'api', 'admin', 'mail', 'ftp', 'cdn', 'static'];
+    private const array EXCLUDED_SUBDOMAINS = ['www', 'api', 'admin', 'mail', 'ftp', 'cdn', 'static'];
 
     /** @var string Special value indicating subdomain should be used as tenant slug */
-    private const USE_SUBDOMAIN_AS_SLUG = 'use_subdomain_as_slug';
+    private const string USE_SUBDOMAIN_AS_SLUG = 'use_subdomain_as_slug';
 
     /**
      * @param TenantRegistryInterface $tenantRegistry     The tenant registry

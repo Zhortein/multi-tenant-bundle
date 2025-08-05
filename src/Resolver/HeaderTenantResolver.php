@@ -15,11 +15,11 @@ use Zhortein\MultiTenantBundle\Registry\TenantRegistryInterface;
  * This resolver extracts tenant information from HTTP headers,
  * useful for API-based applications or when using custom headers.
  */
-final class HeaderTenantResolver implements TenantResolverInterface
+final readonly class HeaderTenantResolver implements TenantResolverInterface
 {
     public function __construct(
-        private readonly TenantRegistryInterface $tenantRegistry,
-        private readonly string $headerName = 'X-Tenant-Slug',
+        private TenantRegistryInterface $tenantRegistry,
+        private string                  $headerName = 'X-Tenant-Slug',
     ) {
     }
 

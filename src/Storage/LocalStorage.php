@@ -15,14 +15,14 @@ use Zhortein\MultiTenantBundle\Context\TenantContextInterface;
  * This storage implementation creates tenant-specific directories
  * and handles file operations within those isolated spaces.
  */
-final class LocalStorage implements TenantFileStorageInterface
+final readonly class LocalStorage implements TenantFileStorageInterface
 {
-    private readonly Filesystem $fs;
+    private Filesystem $fs;
 
     public function __construct(
-        private readonly TenantContextInterface $tenantContext,
-        private readonly string $basePath,
-        private readonly string $baseUrl = '',
+        private TenantContextInterface $tenantContext,
+        private string                 $basePath,
+        private string                 $baseUrl = '',
     ) {
         $this->fs = new Filesystem();
     }

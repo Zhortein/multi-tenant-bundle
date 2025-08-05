@@ -43,7 +43,7 @@ final readonly class TenantRequestListener
         $request = $event->getRequest();
 
         try {
-            $tenant = $this->tenantResolver->resolve($request);
+            $tenant = $this->tenantResolver->resolveTenant($request);
 
             if (null !== $tenant) {
                 $this->tenantContext->setTenant($tenant);
