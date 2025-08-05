@@ -4,6 +4,7 @@ namespace Zhortein\MultiTenantBundle\DependencyInjection\Compiler;
 
 use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
+use Zhortein\MultiTenantBundle\Doctrine\TenantDoctrineFilter;
 
 final class AddDoctrineFilterCompilerPass implements CompilerPassInterface
 {
@@ -15,7 +16,7 @@ final class AddDoctrineFilterCompilerPass implements CompilerPassInterface
 
         $filters = $container->getParameter('doctrine.orm.entity_manager.filters');
         $filters['tenant_filter'] = [
-            'class' => \Zhortein\MultiTenantBundle\Doctrine\TenantDoctrineFilter::class,
+            'class' => TenantDoctrineFilter::class,
             'enabled' => false,
         ];
 

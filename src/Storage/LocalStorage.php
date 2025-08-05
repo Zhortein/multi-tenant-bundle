@@ -21,8 +21,8 @@ final readonly class LocalStorage implements TenantFileStorageInterface
 
     public function __construct(
         private TenantContextInterface $tenantContext,
-        private string                 $basePath,
-        private string                 $baseUrl = '',
+        private string $basePath,
+        private string $baseUrl = '',
     ) {
         $this->fs = new Filesystem();
     }
@@ -82,7 +82,7 @@ final readonly class LocalStorage implements TenantFileStorageInterface
 
         $files = [];
         $iterator = new \RecursiveIteratorIterator(
-            new \RecursiveDirectoryIterator($fullDirectory, \RecursiveDirectoryIterator::SKIP_DOTS)
+            new \RecursiveDirectoryIterator($fullDirectory, \FilesystemIterator::SKIP_DOTS)
         );
 
         foreach ($iterator as $file) {

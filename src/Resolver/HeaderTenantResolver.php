@@ -19,7 +19,7 @@ final readonly class HeaderTenantResolver implements TenantResolverInterface
 {
     public function __construct(
         private TenantRegistryInterface $tenantRegistry,
-        private string                  $headerName = 'X-Tenant-Slug',
+        private string $headerName = 'X-Tenant-Slug',
     ) {
     }
 

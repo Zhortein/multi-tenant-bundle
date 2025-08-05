@@ -6,6 +6,7 @@ namespace Zhortein\MultiTenantBundle\Tests\DependencyInjection;
 
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
+use Symfony\Component\Messenger\MessageBusInterface;
 use Zhortein\MultiTenantBundle\DependencyInjection\ZhorteinMultiTenantExtension;
 
 /**
@@ -109,7 +110,7 @@ class ZhorteinMultiTenantExtensionTest extends TestCase
         ], $this->container->getParameter('zhortein_multi_tenant.messenger.tenant_transport_map'));
 
         // Check that messenger services are registered (only if Messenger component is available)
-        if (class_exists('Symfony\Component\Messenger\MessageBusInterface')) {
+        if (class_exists(MessageBusInterface::class)) {
             $this->assertTrue($this->container->hasDefinition('zhortein_multi_tenant.messenger.configurator'));
             $this->assertTrue($this->container->hasDefinition('zhortein_multi_tenant.messenger.transport_factory'));
             $this->assertTrue($this->container->hasDefinition('zhortein_multi_tenant.messenger.transport_resolver'));

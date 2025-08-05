@@ -3,13 +3,14 @@
 namespace Zhortein\MultiTenantBundle\Helper;
 
 use Symfony\Bridge\Twig\Mime\TemplatedEmail;
+use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
 use Symfony\Component\Mailer\MailerInterface;
 use Zhortein\MultiTenantBundle\Manager\TenantSettingsManager;
 
 final readonly class TenantMailerHelper
 {
     public function __construct(
-        private MailerInterface       $mailer,
+        private MailerInterface $mailer,
         private TenantSettingsManager $settings,
     ) {
     }
@@ -30,6 +31,9 @@ final readonly class TenantMailerHelper
         return $email;
     }
 
+    /**
+     * @throws TransportExceptionInterface
+     */
     public function send(TemplatedEmail $email): void
     {
         $this->mailer->send($email);

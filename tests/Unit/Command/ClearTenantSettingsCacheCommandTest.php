@@ -31,8 +31,7 @@ final class ClearTenantSettingsCacheCommandTest extends TestCase
 
         $this->command = new ClearTenantSettingsCacheCommand(
             $this->cache,
-            $this->tenantRegistry,
-            $this->tenantContext
+            $this->tenantRegistry
         );
     }
 
@@ -63,7 +62,7 @@ final class ClearTenantSettingsCacheCommandTest extends TestCase
         $exitCode = $commandTester->execute(['tenant-slug' => 'test-tenant']);
 
         $this->assertSame(Command::SUCCESS, $exitCode);
-        $this->assertStringContainsString("Cache cleared for tenant 'test-tenant'.", $commandTester->getDisplay());
+        $this->assertStringContainsString('Cache cleared for tenant `test-tenant`.', $commandTester->getDisplay());
     }
 
     public function testExecuteWithNonExistentTenant(): void
@@ -76,7 +75,7 @@ final class ClearTenantSettingsCacheCommandTest extends TestCase
         $exitCode = $commandTester->execute(['tenant-slug' => 'non-existent']);
 
         $this->assertSame(Command::FAILURE, $exitCode);
-        $this->assertStringContainsString("Tenant 'non-existent' not found.", $commandTester->getDisplay());
+        $this->assertStringContainsString('Tenant `non-existent` not found.', $commandTester->getDisplay());
     }
 
     public function testExecuteWithAllOption(): void
@@ -101,7 +100,7 @@ final class ClearTenantSettingsCacheCommandTest extends TestCase
         $exitCode = $commandTester->execute(['--all' => true]);
 
         $this->assertSame(Command::SUCCESS, $exitCode);
-        $this->assertStringContainsString('Cache cleared for 2 tenant(s).', $commandTester->getDisplay());
+        $this->assertStringContainsString('Cache cleared for 2 tenants.', $commandTester->getDisplay());
     }
 
     public function testExecuteWithAllOptionWhenSomeCacheItemsNotFound(): void
@@ -124,7 +123,7 @@ final class ClearTenantSettingsCacheCommandTest extends TestCase
         $exitCode = $commandTester->execute(['--all' => true]);
 
         $this->assertSame(Command::SUCCESS, $exitCode);
-        $this->assertStringContainsString('Cache cleared for 1 tenant(s).', $commandTester->getDisplay());
+        $this->assertStringContainsString('Cache cleared for 1 tenant.', $commandTester->getDisplay());
     }
 
     public function testExecuteWithSpecificTenantWhenCacheNotFound(): void
@@ -145,7 +144,7 @@ final class ClearTenantSettingsCacheCommandTest extends TestCase
         $exitCode = $commandTester->execute(['tenant-slug' => 'test-tenant']);
 
         $this->assertSame(Command::SUCCESS, $exitCode);
-        $this->assertStringContainsString("No cache found for tenant 'test-tenant'.", $commandTester->getDisplay());
+        $this->assertStringContainsString('No cache found for tenant `test-tenant`.', $commandTester->getDisplay());
     }
 
     public function testCommandConfiguration(): void

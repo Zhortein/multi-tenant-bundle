@@ -34,7 +34,7 @@ final class InMemoryTenantRegistry implements TenantRegistryInterface
             }
         }
 
-        throw new TenantNotFoundException("Tenant with slug '{$slug}' not found.");
+        throw new TenantNotFoundException(sprintf('Tenant with slug `%s` not found.', $slug));
     }
 
     public function hasSlug(string $slug): bool

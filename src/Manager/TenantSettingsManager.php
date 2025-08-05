@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Zhortein\MultiTenantBundle\Manager;
 
 use Psr\Cache\CacheItemPoolInterface;
+use Psr\Cache\InvalidArgumentException;
 use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
 use Zhortein\MultiTenantBundle\Context\TenantContextInterface;
 use Zhortein\MultiTenantBundle\Repository\TenantSettingRepository;
@@ -18,10 +19,10 @@ use Zhortein\MultiTenantBundle\Repository\TenantSettingRepository;
 final readonly class TenantSettingsManager implements TenantSettingsManagerInterface
 {
     public function __construct(
-        private TenantContextInterface  $tenantContext,
+        private TenantContextInterface $tenantContext,
         private TenantSettingRepository $settingRepository,
-        private CacheItemPoolInterface  $cache,
-        private ParameterBagInterface   $parameterBag,
+        private CacheItemPoolInterface $cache,
+        private ParameterBagInterface $parameterBag,
     ) {
     }
 
@@ -32,6 +33,8 @@ final readonly class TenantSettingsManager implements TenantSettingsManagerInter
      * @param mixed  $default Default value if setting is not found
      *
      * @return mixed The setting value or default
+     *
+     * @throws InvalidArgumentException
      */
     public function get(string $key, mixed $default = null): mixed
     {
@@ -47,7 +50,7 @@ final readonly class TenantSettingsManager implements TenantSettingsManagerInter
      *
      * @return mixed The setting value
      *
-     * @throws \RuntimeException If the setting is not found
+     * @throws \RuntimeException|InvalidArgumentException If the setting is not found
      */
     public function getRequired(string $key): mixed
     {
@@ -65,7 +68,7 @@ final readonly class TenantSettingsManager implements TenantSettingsManagerInter
      *
      * @return array<string, mixed> Array of setting key-value pairs
      *
-     * @throws \RuntimeException If no tenant is set in context
+     * @throws \RuntimeException|InvalidArgumentException If no tenant is set in context
      */
     public function all(): array
     {
@@ -97,7 +100,7 @@ final readonly class TenantSettingsManager implements TenantSettingsManagerInter
     /**
      * Clears the cache for the current tenant's settings.
      *
-     * @throws \RuntimeException If no tenant is set in context
+     * @throws \RuntimeException|InvalidArgumentException If no tenant is set in context
      */
     public function clearCache(): void
     {

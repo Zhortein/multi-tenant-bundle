@@ -19,7 +19,7 @@ use Zhortein\MultiTenantBundle\Doctrine\TenantConnectionResolverInterface;
 final readonly class TenantDoctrineSubscriber implements EventSubscriberInterface
 {
     public function __construct(
-        private TenantContextInterface            $tenantContext,
+        private TenantContextInterface $tenantContext,
         private TenantConnectionResolverInterface $connectionResolver,
     ) {
     }

@@ -21,11 +21,11 @@ final readonly class S3Storage implements TenantFileStorageInterface
 {
     public function __construct(
         private TenantContextInterface $tenantContext,
-        private string                 $bucket, // @phpstan-ignore-line
-        private string                 $region, // @phpstan-ignore-line
-        private string                 $baseUrl,
-        private ?string                $accessKey = null, // @phpstan-ignore-line
-        private ?string                $secretKey = null, // @phpstan-ignore-line
+        private string $bucket, // @phpstan-ignore-line
+        private string $region, // @phpstan-ignore-line
+        private string $baseUrl,
+        private ?string $accessKey = null, // @phpstan-ignore-line
+        private ?string $secretKey = null, // @phpstan-ignore-line
     ) {
     }
 

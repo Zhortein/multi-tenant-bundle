@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Zhortein\MultiTenantBundle\Mailer;
 
 use Symfony\Component\Mailer\Envelope;
+use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
 use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\Mime\Address;
 use Symfony\Component\Mime\Email;
@@ -19,10 +20,10 @@ use Zhortein\MultiTenantBundle\Context\TenantContextInterface;
 final readonly class TenantAwareMailer implements MailerInterface
 {
     public function __construct(
-        private MailerInterface          $mailer,
+        private MailerInterface $mailer,
         private TenantMailerConfigurator $configurator,
-        private TenantContextInterface   $tenantContext,
-        private ?Environment             $twig = null,
+        private TenantContextInterface $tenantContext,
+        private ?Environment $twig = null,
     ) {
     }
 
@@ -45,10 +46,11 @@ final readonly class TenantAwareMailer implements MailerInterface
      * @param array<string, mixed> $context      Template context variables
      * @param string|null          $fromOverride Override from address
      *
-     * @throws \RuntimeException        When Twig is not available
-     * @throws \Twig\Error\LoaderError  When template is not found
-     * @throws \Twig\Error\RuntimeError When template rendering fails
-     * @throws \Twig\Error\SyntaxError  When template has syntax errors
+     * @throws \RuntimeException           When Twig is not available
+     * @throws \Twig\Error\LoaderError     When template is not found
+     * @throws \Twig\Error\RuntimeError    When template rendering fails
+     * @throws \Twig\Error\SyntaxError     When template has syntax errors
+     * @throws TransportExceptionInterface
      */
     public function sendTemplatedEmail(
         string $to,

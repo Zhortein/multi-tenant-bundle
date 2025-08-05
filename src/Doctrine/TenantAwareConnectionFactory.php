@@ -7,6 +7,7 @@ namespace Zhortein\MultiTenantBundle\Doctrine;
 use Doctrine\DBAL\Configuration;
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\DriverManager;
+use Doctrine\DBAL\Exception;
 use Doctrine\DBAL\Tools\DsnParser;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Zhortein\MultiTenantBundle\Context\TenantContextInterface;
@@ -21,10 +22,10 @@ use Zhortein\MultiTenantBundle\Context\TenantContextInterface;
 final readonly class TenantAwareConnectionFactory
 {
     public function __construct(
-        private TenantContextInterface            $tenantContext,
+        private TenantContextInterface $tenantContext,
         private TenantConnectionResolverInterface $connectionResolver,
         #[Autowire(service: 'doctrine.dbal.configuration')]
-        private Configuration                     $configuration,
+        private Configuration $configuration,
     ) {
     }
 
@@ -35,6 +36,8 @@ final readonly class TenantAwareConnectionFactory
      * @param string|null          $name   Connection name (unused but kept for compatibility)
      *
      * @return Connection The configured database connection
+     *
+     * @throws Exception
      */
     public function createConnection(array $params, ?string $name = null): Connection
     {
