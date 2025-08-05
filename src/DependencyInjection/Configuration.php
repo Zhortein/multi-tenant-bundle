@@ -100,7 +100,7 @@ final class Configuration implements ConfigurationInterface
                             ->useAttributeAsKey('pattern')
                             ->scalarPrototype()->end()
                             ->defaultValue([])
-                            ->info('Mapping of domain patterns to resolution strategies (e.g., *.myplatform.com: use_subdomain_as_slug)')
+                            ->info('Mapping of domain patterns to resolution strategies (e.g., *.my_platform.com: use_subdomain_as_slug)')
                         ->end()
                         ->arrayNode('excluded_subdomains')
                             ->scalarPrototype()->end()

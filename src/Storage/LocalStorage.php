@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Zhortein\MultiTenantBundle\Storage;
 
+use FilesystemIterator;
+use RecursiveDirectoryIterator;
 use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\HttpFoundation\File\File;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
@@ -82,7 +84,7 @@ final readonly class LocalStorage implements TenantFileStorageInterface
 
         $files = [];
         $iterator = new \RecursiveIteratorIterator(
-            new \RecursiveDirectoryIterator($fullDirectory, \RecursiveDirectoryIterator::SKIP_DOTS)
+            new RecursiveDirectoryIterator($fullDirectory, FilesystemIterator::SKIP_DOTS)
         );
 
         foreach ($iterator as $file) {

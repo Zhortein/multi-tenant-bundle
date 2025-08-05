@@ -34,6 +34,17 @@ use Zhortein\MultiTenantBundle\Resolver\HybridDomainSubdomainResolver;
 use Zhortein\MultiTenantBundle\Resolver\PathTenantResolver;
 use Zhortein\MultiTenantBundle\Resolver\SubdomainTenantResolver;
 use Zhortein\MultiTenantBundle\Resolver\TenantResolverInterface;
+use Zhortein\MultiTenantBundle\Manager\TenantSettingsManagerInterface;
+use Zhortein\MultiTenantBundle\Mailer\TenantMailerConfigurator;
+use Zhortein\MultiTenantBundle\Mailer\TenantMailerTransportFactory;
+use Zhortein\MultiTenantBundle\Mailer\TenantAwareMailer;
+use Zhortein\MultiTenantBundle\Messenger\TenantMessengerConfigurator;
+use Zhortein\MultiTenantBundle\Messenger\TenantMessengerTransportFactory;
+use Zhortein\MultiTenantBundle\Messenger\TenantMessengerTransportResolver;
+use Zhortein\MultiTenantBundle\Storage\LocalStorage;
+use Zhortein\MultiTenantBundle\Storage\TenantFileStorageInterface;
+use Zhortein\MultiTenantBundle\EventListener\TenantEntityListener;
+use Zhortein\MultiTenantBundle\Storage\S3Storage;
 
 /**
  * Extension class for the multi-tenant bundle.
@@ -134,7 +145,7 @@ final class ZhorteinMultiTenantExtension extends Extension
             ->setAutoconfigured(true)
             ->setArgument('$cache', new Reference($config['cache']['pool']));
 
-        $container->setAlias('Zhortein\MultiTenantBundle\Manager\TenantSettingsManagerInterface', TenantSettingsManager::class);
+        $container->setAlias(TenantSettingsManagerInterface::class, TenantSettingsManager::class);
 
         // Register connection resolver
         $container->register(DefaultConnectionResolver::class)
@@ -325,12 +336,12 @@ final class ZhorteinMultiTenantExtension extends Extension
     {
         // Register mailer services
         if ($config['mailer']['enabled']) {
-            $this->registerMailerServices($container, $config);
+            $this->registerMailerServices($container);
         }
 
         // Register messenger services
         if ($config['messenger']['enabled']) {
-            $this->registerMessengerServices($container, $config);
+            $this->registerMessengerServices($container);
         }
 
         // Register storage services
@@ -346,25 +357,24 @@ final class ZhorteinMultiTenantExtension extends Extension
      * Registers mailer services.
      *
      * @param ContainerBuilder     $container The container builder
-     * @param array<string, mixed> $config    The processed configuration
      */
-    private function registerMailerServices(ContainerBuilder $container, array $config): void
+    private function registerMailerServices(ContainerBuilder $container): void
     {
         // Only register mailer services if Symfony Mailer is available
         if (!class_exists('Symfony\Component\Mailer\MailerInterface')) {
             return;
         }
 
-        $container->register('zhortein_multi_tenant.mailer.configurator', 'Zhortein\MultiTenantBundle\Mailer\TenantMailerConfigurator')
+        $container->register('zhortein_multi_tenant.mailer.configurator', TenantMailerConfigurator::class)
             ->setAutowired(true)
             ->setAutoconfigured(true);
 
-        $container->register('zhortein_multi_tenant.mailer.transport_factory', 'Zhortein\MultiTenantBundle\Mailer\TenantMailerTransportFactory')
+        $container->register('zhortein_multi_tenant.mailer.transport_factory', TenantMailerTransportFactory::class)
             ->setAutowired(true)
             ->setAutoconfigured(true)
             ->addTag('mailer.transport_factory');
 
-        $container->register('zhortein_multi_tenant.mailer.tenant_aware', 'Zhortein\MultiTenantBundle\Mailer\TenantAwareMailer')
+        $container->register('zhortein_multi_tenant.mailer.tenant_aware', TenantAwareMailer::class)
             ->setAutowired(true)
             ->setAutoconfigured(true);
     }
@@ -373,26 +383,25 @@ final class ZhorteinMultiTenantExtension extends Extension
      * Registers messenger services.
      *
      * @param ContainerBuilder     $container The container builder
-     * @param array<string, mixed> $config    The processed configuration
      */
-    private function registerMessengerServices(ContainerBuilder $container, array $config): void
+    private function registerMessengerServices(ContainerBuilder $container): void
     {
         // Only register messenger services if Symfony Messenger is available
         if (!class_exists('Symfony\Component\Messenger\MessageBusInterface')) {
             return;
         }
 
-        $container->register('zhortein_multi_tenant.messenger.configurator', 'Zhortein\MultiTenantBundle\Messenger\TenantMessengerConfigurator')
+        $container->register('zhortein_multi_tenant.messenger.configurator', TenantMessengerConfigurator::class)
             ->setAutowired(true)
             ->setAutoconfigured(true);
 
-        $container->register('zhortein_multi_tenant.messenger.transport_factory', 'Zhortein\MultiTenantBundle\Messenger\TenantMessengerTransportFactory')
+        $container->register('zhortein_multi_tenant.messenger.transport_factory', TenantMessengerTransportFactory::class)
             ->setAutowired(true)
             ->setAutoconfigured(true)
             ->addTag('messenger.transport_factory');
 
         // Register transport resolver middleware
-        $container->register('zhortein_multi_tenant.messenger.transport_resolver', 'Zhortein\MultiTenantBundle\Messenger\TenantMessengerTransportResolver')
+        $container->register('zhortein_multi_tenant.messenger.transport_resolver', TenantMessengerTransportResolver::class)
             ->setAutowired(true)
             ->setAutoconfigured(true)
             ->setArgument('$tenantTransportMap', '%zhortein_multi_tenant.messenger.tenant_transport_map%')
@@ -412,13 +421,13 @@ final class ZhorteinMultiTenantExtension extends Extension
         $storageType = $config['storage']['type'];
 
         if ('local' === $storageType) {
-            $container->register('zhortein_multi_tenant.storage', 'Zhortein\MultiTenantBundle\Storage\LocalStorage')
+            $container->register('zhortein_multi_tenant.storage', LocalStorage::class)
                 ->setAutowired(true)
                 ->setAutoconfigured(true)
                 ->setArgument('$basePath', $config['storage']['local']['base_path'])
                 ->setArgument('$baseUrl', $config['storage']['local']['base_url']);
         } elseif ('s3' === $storageType) {
-            $container->register('zhortein_multi_tenant.storage', 'Zhortein\MultiTenantBundle\Storage\S3Storage')
+            $container->register('zhortein_multi_tenant.storage', S3Storage::class)
                 ->setAutowired(true)
                 ->setAutoconfigured(true)
                 ->setArgument('$bucket', $config['storage']['s3']['bucket'])
@@ -427,7 +436,7 @@ final class ZhorteinMultiTenantExtension extends Extension
         }
 
         // Register the interface alias
-        $container->setAlias('Zhortein\MultiTenantBundle\Storage\TenantFileStorageInterface', 'zhortein_multi_tenant.storage');
+        $container->setAlias(TenantFileStorageInterface::class, 'zhortein_multi_tenant.storage');
     }
 
     /**
@@ -437,7 +446,7 @@ final class ZhorteinMultiTenantExtension extends Extension
      */
     private function registerEntityListener(ContainerBuilder $container): void
     {
-        $container->register('zhortein_multi_tenant.entity_listener', 'Zhortein\MultiTenantBundle\EventListener\TenantEntityListener')
+        $container->register('zhortein_multi_tenant.entity_listener', TenantEntityListener::class)
             ->setAutowired(true)
             ->setAutoconfigured(true);
     }
@@ -453,7 +462,7 @@ final class ZhorteinMultiTenantExtension extends Extension
 
         try {
             $loader->load('services.yaml');
-        } catch (\Exception $exception) {
+        } catch (\Exception) {
             // Services file is optional, continue without it
         }
     }

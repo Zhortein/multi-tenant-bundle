@@ -57,12 +57,7 @@ final class HybridDomainSubdomainResolver implements TenantResolverInterface
 
         // Step 1: Try exact domain mapping first
         $tenant = $this->resolveTenantByDomain($normalizedHost);
-        if (null !== $tenant) {
-            return $tenant;
-        }
-
-        // Step 2: Try subdomain pattern matching
-        return $this->resolveTenantBySubdomain($normalizedHost);
+        return $tenant ?? $this->resolveTenantBySubdomain($normalizedHost);
     }
 
     /**

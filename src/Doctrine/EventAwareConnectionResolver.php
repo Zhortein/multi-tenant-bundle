@@ -15,12 +15,12 @@ use Zhortein\MultiTenantBundle\Event\TenantDatabaseSwitchEvent;
  * This resolver extends the default behavior by dispatching events before and after
  * switching database connections, allowing other services to react to tenant changes.
  */
-final class EventAwareConnectionResolver implements TenantConnectionResolverInterface
+final readonly class EventAwareConnectionResolver implements TenantConnectionResolverInterface
 {
     public function __construct(
-        private readonly TenantConnectionResolverInterface $innerResolver,
-        private readonly EventDispatcherInterface $eventDispatcher,
-        private readonly TenantContextInterface $tenantContext,
+        private TenantConnectionResolverInterface $innerResolver,
+        private EventDispatcherInterface          $eventDispatcher,
+        private TenantContextInterface            $tenantContext,
     ) {
     }
 

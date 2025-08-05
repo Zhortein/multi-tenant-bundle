@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Zhortein\MultiTenantBundle\Doctrine;
 
 use Doctrine\ORM\Mapping\ClassMetadata;
+use Doctrine\ORM\Mapping\MappingException;
 use Doctrine\ORM\Query\Filter\SQLFilter;
 
 /**
@@ -18,10 +19,11 @@ class TenantDoctrineFilter extends SQLFilter
     /**
      * Adds the tenant constraint to the SQL query.
      *
-     * @param ClassMetadata<object> $targetEntity     The entity metadata
+     * @param ClassMetadata<object> $targetEntity The entity metadata
      * @param string $targetTableAlias The table alias in the query
      *
      * @return string The SQL constraint or empty string if not applicable
+     * @throws MappingException
      */
     public function addFilterConstraint(ClassMetadata $targetEntity, string $targetTableAlias): string
     {

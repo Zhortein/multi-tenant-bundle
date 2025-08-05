@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Zhortein\MultiTenantBundle\Messenger;
 
+use Psr\Cache\InvalidArgumentException;
 use Zhortein\MultiTenantBundle\Manager\TenantSettingsManager;
 
 /**
@@ -13,12 +14,12 @@ use Zhortein\MultiTenantBundle\Manager\TenantSettingsManager;
  * by retrieving settings from the tenant settings manager with
  * fallback support from bundle configuration.
  */
-class TenantMessengerConfigurator
+readonly class TenantMessengerConfigurator
 {
     public function __construct(
-        private readonly TenantSettingsManager $settingsManager,
-        private readonly string $fallbackDsn = 'sync://',
-        private readonly string $fallbackBus = 'messenger.bus.default',
+        private TenantSettingsManager $settingsManager,
+        private string                $fallbackDsn = 'sync://',
+        private string                $fallbackBus = 'messenger.bus.default',
     ) {
     }
 
@@ -28,6 +29,7 @@ class TenantMessengerConfigurator
      * @param string|null $default Default DSN if tenant setting is not found
      *
      * @return string The messenger transport DSN, fallback, or default value
+     * @throws InvalidArgumentException
      */
     public function getTransportDsn(?string $default = null): string
     {
@@ -43,6 +45,7 @@ class TenantMessengerConfigurator
      * @param string|null $default Default bus name if tenant setting is not found
      *
      * @return string The messenger bus name, fallback, or default value
+     * @throws InvalidArgumentException
      */
     public function getBusName(?string $default = null): string
     {
@@ -56,13 +59,14 @@ class TenantMessengerConfigurator
      * Gets the delay for specific transport for the current tenant.
      *
      * @param string|null $transport The transport name
-     * @param int         $default   Default delay if tenant setting is not found
+     * @param int $default Default delay if tenant setting is not found
      *
      * @return int The delay in milliseconds
+     * @throws InvalidArgumentException
      */
     public function getDelay(?string $transport = null, int $default = 0): int
     {
-        $key = $transport ? "messenger_delay_{$transport}" : 'messenger_delay';
+        $key = $transport ? sprintf('messenger_delay_%s', $transport) : 'messenger_delay';
 
         return (int) $this->settingsManager->get($key, $default);
     }

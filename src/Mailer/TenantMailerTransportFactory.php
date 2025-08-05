@@ -10,7 +10,6 @@ use Symfony\Component\Mailer\Transport\AbstractTransportFactory;
 use Symfony\Component\Mailer\Transport\Dsn;
 use Symfony\Component\Mailer\Transport\TransportFactoryInterface;
 use Symfony\Component\Mailer\Transport\TransportInterface;
-use Zhortein\MultiTenantBundle\Context\TenantContextInterface;
 
 /**
  * Transport factory for tenant-aware mailer configuration.
@@ -21,7 +20,6 @@ use Zhortein\MultiTenantBundle\Context\TenantContextInterface;
 final class TenantMailerTransportFactory extends AbstractTransportFactory
 {
     public function __construct(
-        private readonly TenantContextInterface $tenantContext, // @phpstan-ignore-line
         private readonly TenantMailerConfigurator $mailerConfigurator,
         private readonly TransportFactoryInterface $fallbackFactory,
         private readonly ?string $globalDsn = null,

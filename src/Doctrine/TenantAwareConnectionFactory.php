@@ -7,6 +7,7 @@ namespace Zhortein\MultiTenantBundle\Doctrine;
 use Doctrine\DBAL\Configuration;
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\DriverManager;
+use Doctrine\DBAL\Exception;
 use Doctrine\DBAL\Tools\DsnParser;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Zhortein\MultiTenantBundle\Context\TenantContextInterface;
@@ -32,9 +33,10 @@ final readonly class TenantAwareConnectionFactory
      * Creates a database connection for the current tenant.
      *
      * @param array<string, mixed> $params Base connection parameters
-     * @param string|null          $name   Connection name (unused but kept for compatibility)
+     * @param string|null $name Connection name (unused but kept for compatibility)
      *
      * @return Connection The configured database connection
+     * @throws Exception
      */
     public function createConnection(array $params, ?string $name = null): Connection
     {

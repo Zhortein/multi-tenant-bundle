@@ -36,7 +36,7 @@ final readonly class DoctrineTenantRegistry implements TenantRegistryInterface
         $tenant = $repository->findOneBy(['slug' => $slug]);
 
         if (!$tenant instanceof TenantInterface) {
-            throw new \RuntimeException("Tenant with slug '{$slug}' not found.");
+            throw new \RuntimeException(sprintf("Tenant with slug `%s` not found.", $slug));
         }
 
         return $tenant;

@@ -13,10 +13,10 @@ use Zhortein\MultiTenantBundle\Entity\TenantInterface;
  * and uses tenant-based filtering instead of separate databases.
  * For separate databases per tenant, create a custom implementation.
  */
-final class DefaultConnectionResolver implements TenantConnectionResolverInterface
+final readonly class DefaultConnectionResolver implements TenantConnectionResolverInterface
 {
     public function __construct(
-        private readonly array $defaultParameters = [],
+        private array $defaultParameters = [],
     ) {
     }
 

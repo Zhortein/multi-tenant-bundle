@@ -16,11 +16,11 @@ use Zhortein\MultiTenantBundle\Entity\TenantInterface;
  * This factory creates entity managers with tenant-specific database connections
  * while maintaining the same ORM configuration.
  */
-final class TenantEntityManagerFactory
+final readonly class TenantEntityManagerFactory
 {
     public function __construct(
-        private readonly TenantConnectionResolverInterface $connectionResolver,
-        private readonly Configuration $ormConfiguration,
+        private TenantConnectionResolverInterface $connectionResolver,
+        private Configuration                     $ormConfiguration,
     ) {
     }
 
@@ -47,6 +47,7 @@ final class TenantEntityManagerFactory
      * @param array<TenantInterface> $tenants The tenants to create entity managers for
      *
      * @return array<string, EntityManagerInterface> Array of entity managers keyed by tenant slug
+     * @throws \Exception
      */
     public function createForTenants(array $tenants): array
     {

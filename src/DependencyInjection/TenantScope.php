@@ -15,7 +15,7 @@ use Zhortein\MultiTenantBundle\Entity\TenantInterface;
  */
 final class TenantScope
 {
-    public const SCOPE_NAME = 'tenant';
+    public const string SCOPE_NAME = 'tenant';
 
     private ?TenantInterface $currentTenant = null;
 

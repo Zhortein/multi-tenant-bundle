@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace Zhortein\MultiTenantBundle\Messenger;
 
+use Psr\Cache\InvalidArgumentException;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Transport\Serialization\SerializerInterface;
 use Symfony\Component\Messenger\Transport\TransportFactoryInterface;
 use Symfony\Component\Messenger\Transport\TransportInterface;
-use Zhortein\MultiTenantBundle\Context\TenantContextInterface;
 
 /**
  * Transport factory for tenant-aware messenger configuration.
@@ -22,7 +22,6 @@ final readonly class TenantMessengerTransportFactory implements TransportFactory
      * @param iterable<TransportFactoryInterface> $factories
      */
     public function __construct(
-        private TenantContextInterface      $tenantContext, // @phpstan-ignore-line
         private TenantMessengerConfigurator $messengerConfigurator,
         private iterable                    $factories,
         private ?string                     $fallbackDsn = 'sync://',
@@ -30,6 +29,9 @@ final readonly class TenantMessengerTransportFactory implements TransportFactory
     ) {
     }
 
+    /**
+     * @throws InvalidArgumentException
+     */
     public function createTransport(string $dsn, array $options, SerializerInterface $serializer): TransportInterface
     {
         // Get tenant-specific DSN or use fallback
