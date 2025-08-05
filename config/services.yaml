@@ -18,7 +18,7 @@ services:
     tags:
       - { name: kernel.event_subscriber }
 
-  Zhortein\MultiTenantBundle\Manager\TenantSettingsManager: ~
+
 
   Zhortein\MultiTenantBundle\Doctrine\:
     resource: '../../Doctrine/'
@@ -28,15 +28,7 @@ services:
   Zhortein\MultiTenantBundle\EventSubscriber\TenantDoctrineSubscriber:
     tags: [kernel.event_subscriber]
 
-  Zhortein\MultiTenantBundle\Registry\DoctrineTenantRegistry:
-    arguments:
-      $tenantEntityClass: '%zhortein_multi_tenant.entity_class%'
-    tags: ['zhortein.tenant_registry']
-    autowire: true
-    autoconfigure: true
-    public: true
 
-  Zhortein\MultiTenantBundle\Registry\TenantRegistryInterface: '@Zhortein\MultiTenantBundle\Registry\DoctrineTenantRegistry'
 
   Zhortein\MultiTenantBundle\Registry\InMemoryTenantRegistry:
     arguments:

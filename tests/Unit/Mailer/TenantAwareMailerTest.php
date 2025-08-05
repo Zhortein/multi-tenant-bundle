@@ -7,6 +7,7 @@ namespace Zhortein\MultiTenantBundle\Tests\Unit\Mailer;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\Mime\Email;
+use Zhortein\MultiTenantBundle\Context\TenantContextInterface;
 use Zhortein\MultiTenantBundle\Mailer\TenantAwareMailer;
 use Zhortein\MultiTenantBundle\Mailer\TenantMailerConfigurator;
 
@@ -17,13 +18,19 @@ final class TenantAwareMailerTest extends TestCase
 {
     private MailerInterface $mailer;
     private TenantMailerConfigurator $configurator;
+    private TenantContextInterface $tenantContext;
     private TenantAwareMailer $tenantAwareMailer;
 
     protected function setUp(): void
     {
         $this->mailer = $this->createMock(MailerInterface::class);
         $this->configurator = $this->createMock(TenantMailerConfigurator::class);
-        $this->tenantAwareMailer = new TenantAwareMailer($this->mailer, $this->configurator);
+        $this->tenantContext = $this->createMock(TenantContextInterface::class);
+        $this->tenantAwareMailer = new TenantAwareMailer(
+            $this->mailer,
+            $this->configurator,
+            $this->tenantContext
+        );
     }
 
     public function testSendWithTenantConfiguration(): void

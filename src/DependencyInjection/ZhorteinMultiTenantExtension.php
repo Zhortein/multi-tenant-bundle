@@ -132,8 +132,9 @@ final class ZhorteinMultiTenantExtension extends Extension
         $container->register(TenantSettingsManager::class)
             ->setAutowired(true)
             ->setAutoconfigured(true)
-            ->setArgument('$cache', new Reference($config['cache']['pool']))
-            ->setArgument('$cacheTtl', $config['cache']['ttl']);
+            ->setArgument('$cache', new Reference($config['cache']['pool']));
+
+        $container->setAlias('Zhortein\MultiTenantBundle\Manager\TenantSettingsManagerInterface', TenantSettingsManager::class);
 
         // Register connection resolver
         $container->register(DefaultConnectionResolver::class)
@@ -285,7 +286,6 @@ final class ZhorteinMultiTenantExtension extends Extension
         $container->register(ClearTenantSettingsCacheCommand::class)
             ->setAutowired(true)
             ->setAutoconfigured(true)
-            ->setArgument('$cache', new Reference($config['cache']['pool']))
             ->addTag('console.command');
 
         // Tenant migration command
