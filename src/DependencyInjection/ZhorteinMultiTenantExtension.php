@@ -305,6 +305,7 @@ final class ZhorteinMultiTenantExtension extends Extension
         $container->register(MigrateTenantsCommand::class)
             ->setAutowired(true)
             ->setAutoconfigured(true)
+            ->setArgument('$migrationConfiguration', new Reference('doctrine.migrations.configuration'))
             ->addTag('console.command');
 
         // Tenant schema creation command
