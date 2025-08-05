@@ -13,7 +13,7 @@ use Zhortein\MultiTenantBundle\Entity\TenantInterface;
 
 #[AsCommand(
     name: 'tenant:create',
-    description: 'Crée un nouveau tenant (collectivité, client, etc.)'
+    description: 'Create a new tenant'
 )]
 final class CreateTenantCommand extends Command
 {
@@ -27,8 +27,8 @@ final class CreateTenantCommand extends Command
     protected function configure(): void
     {
         $this
-            ->addArgument('slug', InputArgument::REQUIRED, 'Identifiant unique du tenant (ex: genlis)')
-            ->addArgument('name', InputArgument::REQUIRED, 'Nom complet du tenant (ex: Ville de Genlis)');
+            ->addArgument('slug', InputArgument::REQUIRED, 'Unique tenant identifier (ex:acme)')
+            ->addArgument('name', InputArgument::REQUIRED, 'Full name of the tenant (ex:Acme customer)');
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
@@ -40,7 +40,7 @@ final class CreateTenantCommand extends Command
 
         $repo = $this->em->getRepository($this->tenantEntityClass);
         if ($repo->findOneBy(['slug' => $slug])) {
-            $io->error("Un tenant avec le slug '{$slug}' existe déjà.");
+            $io->error(sprintf('Un tenant avec le slug `%s` existe déjà.', $slug));
 
             return Command::FAILURE;
         }
@@ -56,7 +56,7 @@ final class CreateTenantCommand extends Command
         $this->em->persist($tenant);
         $this->em->flush();
 
-        $io->success("Tenant '{$name}' créé avec succès (slug: {$slug}).");
+        $io->success(sprintf("Tenant `%s` créé avec succès (slug: `%s`).", $name, $slug));
 
         return Command::SUCCESS;
     }

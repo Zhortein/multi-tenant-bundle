@@ -77,7 +77,7 @@ EOT
         $fullDatabase = $input->getOption('full-database');
 
         try {
-            $tenants = (null !== $tenantSlug && is_string($tenantSlug))
+            $tenants = (is_string($tenantSlug))
                 ? [$this->tenantRegistry->getBySlug($tenantSlug)]
                 : $this->tenantRegistry->getAll();
 
@@ -107,7 +107,7 @@ EOT
             $io->title('Tenant Schema Drop');
 
             // Get all entity metadata
-            $metadatas = $this->entityManager->getMetadataFactory()->getAllMetadata();
+            $metadata = $this->entityManager->getMetadataFactory()->getAllMetadata();
 
             foreach ($tenants as $tenant) {
                 $io->section(sprintf('Dropping schema for tenant: %s', $tenant->getSlug()));
@@ -125,24 +125,22 @@ EOT
                 $schemaTool = new SchemaTool($tenantEntityManager);
 
                 if ($dumpSql) {
-                    $sqls = $fullDatabase
+                    $sql = $fullDatabase
                         ? $schemaTool->getDropDatabaseSQL()
-                        : $schemaTool->getDropSchemaSQL($metadatas);
+                        : $schemaTool->getDropSchemaSQL($metadata);
 
-                    if (!empty($sqls)) {
+                    if (!empty($sql)) {
                         $io->text(sprintf('SQL for tenant %s:', $tenant->getSlug()));
-                        $io->block($sqls);
+                        $io->block($sql);
                     } else {
                         $io->note(sprintf('No SQL to execute for tenant %s', $tenant->getSlug()));
                     }
+                } else if ($fullDatabase) {
+                    $schemaTool->dropDatabase();
+                    $io->success(sprintf('Successfully dropped database for tenant %s', $tenant->getSlug()));
                 } else {
-                    if ($fullDatabase) {
-                        $schemaTool->dropDatabase();
-                        $io->success(sprintf('Successfully dropped database for tenant %s', $tenant->getSlug()));
-                    } else {
-                        $schemaTool->dropSchema($metadatas);
-                        $io->success(sprintf('Successfully dropped schema for tenant %s', $tenant->getSlug()));
-                    }
+                    $schemaTool->dropSchema($metadata);
+                    $io->success(sprintf('Successfully dropped schema for tenant %s', $tenant->getSlug()));
                 }
 
                 // Close the tenant entity manager

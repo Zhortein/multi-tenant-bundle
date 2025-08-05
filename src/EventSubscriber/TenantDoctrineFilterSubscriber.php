@@ -8,11 +8,11 @@ use Symfony\Component\HttpKernel\Event\RequestEvent;
 use Symfony\Component\HttpKernel\KernelEvents;
 use Zhortein\MultiTenantBundle\Context\TenantContext;
 
-final class TenantDoctrineFilterSubscriber implements EventSubscriberInterface
+final readonly class TenantDoctrineFilterSubscriber implements EventSubscriberInterface
 {
     public function __construct(
-        private readonly TenantContext $tenantContext,
-        private readonly EntityManagerInterface $em,
+        private TenantContext          $tenantContext,
+        private EntityManagerInterface $em,
     ) {
     }
 

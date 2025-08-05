@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Zhortein\MultiTenantBundle\Command;
 
 use Psr\Cache\CacheItemPoolInterface;
+use Psr\Cache\InvalidArgumentException;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
@@ -12,7 +13,6 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
-use Zhortein\MultiTenantBundle\Context\TenantContextInterface;
 use Zhortein\MultiTenantBundle\Registry\TenantRegistryInterface;
 
 /**
@@ -27,7 +27,6 @@ final class ClearTenantSettingsCacheCommand extends Command
     public function __construct(
         private readonly CacheItemPoolInterface $cache,
         private readonly TenantRegistryInterface $tenantRegistry,
-        private readonly TenantContextInterface $tenantContext,
     ) {
         parent::__construct();
     }
@@ -68,15 +67,21 @@ final class ClearTenantSettingsCacheCommand extends Command
             $tenant = $this->tenantRegistry->getBySlug($tenantSlug);
             $cacheKey = 'zhortein_tenant_settings_'.$tenant->getId();
 
-            if ($this->cache->deleteItem($cacheKey)) {
-                $io->success("Cache cleared for tenant '{$tenantSlug}'.");
-            } else {
-                $io->warning("No cache found for tenant '{$tenantSlug}'.");
+            try {
+                if ($this->cache->deleteItem($cacheKey)) {
+                    $io->success(sprintf('Cache cleared for tenant `%s`.', $tenantSlug));
+                } else {
+                    $io->warning(sprintf('No cache found for tenant `%s`.', $tenantSlug));
+                }
+            } catch (InvalidArgumentException|\Exception $e) {
+                $io->error(sprintf('Error for tenant `%s` : %s', $tenantSlug, $e->getMessage()));
+                return Command::FAILURE;
             }
 
             return Command::SUCCESS;
         } catch (\RuntimeException $e) {
-            $io->error("Tenant '{$tenantSlug}' not found.");
+            $io->error(sprintf('Tenant `%s` not found.', $tenantSlug));
+            $io->error($e->getMessage());
 
             return Command::FAILURE;
         }
@@ -90,12 +95,17 @@ final class ClearTenantSettingsCacheCommand extends Command
         foreach ($tenants as $tenant) {
             $cacheKey = 'zhortein_tenant_settings_'.$tenant->getId();
 
-            if ($this->cache->deleteItem($cacheKey)) {
-                ++$clearedCount;
+            try {
+                if ($this->cache->deleteItem($cacheKey)) {
+                    ++$clearedCount;
+                }
+            } catch (InvalidArgumentException|\Exception $e) {
+                $io->error(sprintf('Error for tenant `%s` : %s', $tenant->getId(), $e->getMessage()));
+                continue; // Ignore exceptions and move on to next tenant
             }
         }
 
-        $io->success("Cache cleared for {$clearedCount} tenant(s).");
+        $io->success(sprintf("Cache cleared for %d tenant%s.", $clearedCount, $clearedCount > 1 ? 's' : ''));
 
         return Command::SUCCESS;
     }

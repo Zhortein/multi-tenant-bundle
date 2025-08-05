@@ -130,7 +130,7 @@ EOT
      */
     private function executeMultiDbMigrations(SymfonyStyle $io, ?string $tenantSlug, bool $dryRun, bool $allowNoMigration): int
     {
-        $tenants = (null !== $tenantSlug && is_string($tenantSlug))
+        $tenants = (is_string($tenantSlug))
             ? [$this->tenantRegistry->getBySlug($tenantSlug)]
             : $this->tenantRegistry->getAll();
 
