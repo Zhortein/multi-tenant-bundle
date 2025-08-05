@@ -63,7 +63,7 @@ final class DoctrineTenantRegistryTest extends TestCase
             ->willReturn(null);
 
         $this->expectException(\RuntimeException::class);
-        $this->expectExceptionMessage("Tenant with slug 'non-existent' not found.");
+        $this->expectExceptionMessage("Tenant with slug `non-existent` not found.");
 
         $this->registry->getBySlug('non-existent');
     }
@@ -75,7 +75,7 @@ final class DoctrineTenantRegistryTest extends TestCase
             ->willReturn(new \stdClass());
 
         $this->expectException(\RuntimeException::class);
-        $this->expectExceptionMessage("Tenant with slug 'test-tenant' not found.");
+        $this->expectExceptionMessage("Tenant with slug `test-tenant` not found.");
 
         $this->registry->getBySlug('test-tenant');
     }
