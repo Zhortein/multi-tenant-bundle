@@ -167,7 +167,8 @@ final class ZhorteinMultiTenantExtension extends Extension
         // Register tenant entity manager factory
         $container->register(TenantEntityManagerFactory::class)
             ->setAutowired(true)
-            ->setAutoconfigured(true);
+            ->setAutoconfigured(true)
+            ->setArgument('$ormConfiguration', new Reference('doctrine.orm.default_configuration'));
 
         // Register tenant scope if enabled
         if ($config['container']['enable_tenant_scope']) {
@@ -189,7 +190,8 @@ final class ZhorteinMultiTenantExtension extends Extension
             case 'path':
                 $container->register(PathTenantResolver::class)
                     ->setAutowired(true)
-                    ->setAutoconfigured(true);
+                    ->setAutoconfigured(true)
+                    ->setArgument('$tenantEntityClass', '%zhortein_multi_tenant.tenant_entity%');
 
                 $container->setAlias(TenantResolverInterface::class, PathTenantResolver::class);
                 break;
@@ -303,6 +305,7 @@ final class ZhorteinMultiTenantExtension extends Extension
         $container->register(MigrateTenantsCommand::class)
             ->setAutowired(true)
             ->setAutoconfigured(true)
+            ->setArgument('$migrationConfiguration', new Reference('doctrine.migrations.configuration'))
             ->addTag('console.command');
 
         // Tenant schema creation command
