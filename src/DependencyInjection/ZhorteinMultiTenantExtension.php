@@ -190,7 +190,8 @@ final class ZhorteinMultiTenantExtension extends Extension
             case 'path':
                 $container->register(PathTenantResolver::class)
                     ->setAutowired(true)
-                    ->setAutoconfigured(true);
+                    ->setAutoconfigured(true)
+                    ->setArgument('$tenantEntityClass', '%zhortein_multi_tenant.tenant_entity%');
 
                 $container->setAlias(TenantResolverInterface::class, PathTenantResolver::class);
                 break;
