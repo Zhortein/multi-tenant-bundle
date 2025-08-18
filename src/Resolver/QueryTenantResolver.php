@@ -27,11 +27,7 @@ final readonly class QueryTenantResolver implements TenantResolverInterface
     {
         $tenantSlug = $request->query->get($this->parameterName);
 
-        if (null === $tenantSlug || '' === $tenantSlug) {
-            return null;
-        }
-
-        if (!\is_string($tenantSlug)) {
+        if (null === $tenantSlug || '' === $tenantSlug || !\is_string($tenantSlug)) {
             return null;
         }
 

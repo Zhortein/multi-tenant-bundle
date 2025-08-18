@@ -33,10 +33,18 @@ final class CreateTenantCommand extends Command
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        $slug = $input->getArgument('slug');
-        $name = $input->getArgument('name');
-
         $io = new SymfonyStyle($input, $output);
+        
+        $slugArg = $input->getArgument('slug');
+        $nameArg = $input->getArgument('name');
+        
+        if (!is_string($slugArg) || !is_string($nameArg)) {
+            $io->error('Invalid arguments provided');
+            return Command::FAILURE;
+        }
+        
+        $slug = $slugArg;
+        $name = $nameArg;
 
         $repo = $this->em->getRepository($this->tenantEntityClass);
         if ($repo->findOneBy(['slug' => $slug])) {

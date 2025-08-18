@@ -14,6 +14,9 @@ use Zhortein\MultiTenantBundle\Entity\TenantInterface;
  */
 final readonly class DoctrineTenantRegistry implements TenantRegistryInterface
 {
+    /**
+     * @param class-string<TenantInterface> $tenantEntityClass
+     */
     public function __construct(
         private EntityManagerInterface $em,
         private string $tenantEntityClass,

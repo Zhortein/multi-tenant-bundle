@@ -160,7 +160,7 @@ HELP
         foreach ($allMetadata as $metadata) {
             $reflectionClass = $metadata->getReflectionClass();
 
-            if (null === $reflectionClass) {
+            if (!$reflectionClass instanceof \ReflectionClass) {
                 continue;
             }
 
@@ -216,9 +216,9 @@ HELP
             if (!$policyExists) {
                 $statements[] = sprintf(
                     'CREATE POLICY %s ON %s USING (tenant_id::text = current_setting(%s, true));',
-                    $this->connection->quoteIdentifier($policyName),
-                    $this->connection->quoteIdentifier($tableName),
-                    $this->connection->quote($this->sessionVariable)
+                    (string) $this->connection->quoteIdentifier($policyName),
+                    (string) $this->connection->quoteIdentifier($tableName),
+                    (string) $this->connection->quote($this->sessionVariable)
                 );
             }
         } catch (Exception $exception) {
@@ -226,9 +226,9 @@ HELP
             $statements[] = sprintf('ALTER TABLE %s ENABLE ROW LEVEL SECURITY;', $this->connection->quoteIdentifier($tableName));
             $statements[] = sprintf(
                 'CREATE POLICY %s ON %s USING (tenant_id::text = current_setting(%s, true));',
-                $this->connection->quoteIdentifier($policyName),
-                $this->connection->quoteIdentifier($tableName),
-                $this->connection->quote($this->sessionVariable)
+                (string) $this->connection->quoteIdentifier($policyName),
+                (string) $this->connection->quoteIdentifier($tableName),
+                (string) $this->connection->quote($this->sessionVariable)
             );
         }
 

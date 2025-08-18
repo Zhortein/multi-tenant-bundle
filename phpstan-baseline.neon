@@ -1,12 +1,6 @@
 parameters:
 	ignoreErrors:
 		-
-			message: '#^Property Zhortein\\MultiTenantBundle\\Command\\ClearTenantSettingsCacheCommand\:\:\$tenantContext is never read, only written\.$#'
-			identifier: property.onlyWritten
-			count: 1
-			path: src/Command/ClearTenantSettingsCacheCommand.php
-
-		-
 			message: '#^Call to an undefined method Zhortein\\MultiTenantBundle\\Entity\\TenantInterface\:\:setSlug\(\)\.$#'
 			identifier: method.notFound
 			count: 1
@@ -19,18 +13,6 @@ parameters:
 			path: src/Command/CreateTenantCommand.php
 
 		-
-			message: '#^Part \$name \(mixed\) of encapsed string cannot be cast to string\.$#'
-			identifier: encapsedStringPart.nonString
-			count: 1
-			path: src/Command/CreateTenantCommand.php
-
-		-
-			message: '#^Part \$slug \(mixed\) of encapsed string cannot be cast to string\.$#'
-			identifier: encapsedStringPart.nonString
-			count: 2
-			path: src/Command/CreateTenantCommand.php
-
-		-
 			message: '#^Parameter \#1 \$className of method Doctrine\\ORM\\EntityManagerInterface\:\:getRepository\(\) expects class\-string\<object\>, string given\.$#'
 			identifier: argument.type
 			count: 1
@@ -39,12 +21,6 @@ parameters:
 		-
 			message: '#^Call to an undefined static method Doctrine\\Migrations\\DependencyFactory\:\:fromConfiguration\(\)\.$#'
 			identifier: staticMethod.notFound
-			count: 1
-			path: src/Command/MigrateTenantsCommand.php
-
-		-
-			message: '#^Call to function is_string\(\) with string will always evaluate to true\.$#'
-			identifier: function.alreadyNarrowedType
 			count: 1
 			path: src/Command/MigrateTenantsCommand.php
 
@@ -91,6 +67,24 @@ parameters:
 			path: src/Command/MigrateTenantsCommand.php
 
 		-
+			message: '#^Cannot cast mixed to string\.$#'
+			identifier: cast.string
+			count: 2
+			path: src/Command/SyncRlsPoliciesCommand.php
+
+		-
+			message: '#^Instanceof between ReflectionClass\<object\> and ReflectionClass will always evaluate to true\.$#'
+			identifier: instanceof.alwaysTrue
+			count: 1
+			path: src/Command/SyncRlsPoliciesCommand.php
+
+		-
+			message: '#^Cannot cast mixed to string\.$#'
+			identifier: cast.string
+			count: 2
+			path: src/Decorator/TenantAwareCacheDecorator.php
+
+		-
 			message: '#^Cannot access offset ''tenant_filter'' on array\|bool\|float\|int\|string\|null\.$#'
 			identifier: offsetAccess.nonOffsetAccessible
 			count: 1
@@ -123,7 +117,7 @@ parameters:
 		-
 			message: '#^Cannot access offset ''base_domain'' on mixed\.$#'
 			identifier: offsetAccess.nonOffsetAccessible
-			count: 2
+			count: 3
 			path: src/DependencyInjection/ZhorteinMultiTenantExtension.php
 
 		-
@@ -140,6 +134,18 @@ parameters:
 
 		-
 			message: '#^Cannot access offset ''bucket'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: src/DependencyInjection/ZhorteinMultiTenantExtension.php
+
+		-
+			message: '#^Cannot access offset ''cache'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 4
+			path: src/DependencyInjection/ZhorteinMultiTenantExtension.php
+
+		-
+			message: '#^Cannot access offset ''channels'' on mixed\.$#'
 			identifier: offsetAccess.nonOffsetAccessible
 			count: 1
 			path: src/DependencyInjection/ZhorteinMultiTenantExtension.php
@@ -165,13 +171,13 @@ parameters:
 		-
 			message: '#^Cannot access offset ''domain_mapping'' on mixed\.$#'
 			identifier: offsetAccess.nonOffsetAccessible
-			count: 4
+			count: 6
 			path: src/DependencyInjection/ZhorteinMultiTenantExtension.php
 
 		-
 			message: '#^Cannot access offset ''enable_cache'' on mixed\.$#'
 			identifier: offsetAccess.nonOffsetAccessible
-			count: 2
+			count: 3
 			path: src/DependencyInjection/ZhorteinMultiTenantExtension.php
 
 		-
@@ -189,13 +195,19 @@ parameters:
 		-
 			message: '#^Cannot access offset ''enabled'' on mixed\.$#'
 			identifier: offsetAccess.nonOffsetAccessible
-			count: 7
+			count: 16
 			path: src/DependencyInjection/ZhorteinMultiTenantExtension.php
 
 		-
 			message: '#^Cannot access offset ''excluded_subdomains'' on mixed\.$#'
 			identifier: offsetAccess.nonOffsetAccessible
-			count: 4
+			count: 6
+			path: src/DependencyInjection/ZhorteinMultiTenantExtension.php
+
+		-
+			message: '#^Cannot access offset ''header_allow_list'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 2
 			path: src/DependencyInjection/ZhorteinMultiTenantExtension.php
 
 		-
@@ -205,9 +217,39 @@ parameters:
 			path: src/DependencyInjection/ZhorteinMultiTenantExtension.php
 
 		-
+			message: '#^Cannot access offset ''logger'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 3
+			path: src/DependencyInjection/ZhorteinMultiTenantExtension.php
+
+		-
 			message: '#^Cannot access offset ''name'' on mixed\.$#'
 			identifier: offsetAccess.nonOffsetAccessible
+			count: 3
+			path: src/DependencyInjection/ZhorteinMultiTenantExtension.php
+
+		-
+			message: '#^Cannot access offset ''order'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
 			count: 2
+			path: src/DependencyInjection/ZhorteinMultiTenantExtension.php
+
+		-
+			message: '#^Cannot access offset ''parameter'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 3
+			path: src/DependencyInjection/ZhorteinMultiTenantExtension.php
+
+		-
+			message: '#^Cannot access offset ''path_separator'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: src/DependencyInjection/ZhorteinMultiTenantExtension.php
+
+		-
+			message: '#^Cannot access offset ''policy_name_prefix'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
 			path: src/DependencyInjection/ZhorteinMultiTenantExtension.php
 
 		-
@@ -229,21 +271,51 @@ parameters:
 			path: src/DependencyInjection/ZhorteinMultiTenantExtension.php
 
 		-
+			message: '#^Cannot access offset ''rls'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 5
+			path: src/DependencyInjection/ZhorteinMultiTenantExtension.php
+
+		-
 			message: '#^Cannot access offset ''s3'' on mixed\.$#'
 			identifier: offsetAccess.nonOffsetAccessible
 			count: 3
 			path: src/DependencyInjection/ZhorteinMultiTenantExtension.php
 
 		-
-			message: '#^Cannot access offset ''strategy'' on mixed\.$#'
+			message: '#^Cannot access offset ''services'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 2
+			path: src/DependencyInjection/ZhorteinMultiTenantExtension.php
+
+		-
+			message: '#^Cannot access offset ''session_variable'' on mixed\.$#'
 			identifier: offsetAccess.nonOffsetAccessible
 			count: 1
 			path: src/DependencyInjection/ZhorteinMultiTenantExtension.php
 
 		-
-			message: '#^Cannot access offset ''subdomain_mapping'' on mixed\.$#'
+			message: '#^Cannot access offset ''storage'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 4
+			path: src/DependencyInjection/ZhorteinMultiTenantExtension.php
+
+		-
+			message: '#^Cannot access offset ''strategy'' on mixed\.$#'
 			identifier: offsetAccess.nonOffsetAccessible
 			count: 2
+			path: src/DependencyInjection/ZhorteinMultiTenantExtension.php
+
+		-
+			message: '#^Cannot access offset ''strict'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 2
+			path: src/DependencyInjection/ZhorteinMultiTenantExtension.php
+
+		-
+			message: '#^Cannot access offset ''subdomain_mapping'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 3
 			path: src/DependencyInjection/ZhorteinMultiTenantExtension.php
 
 		-
@@ -255,7 +327,7 @@ parameters:
 		-
 			message: '#^Cannot access offset ''timeout'' on mixed\.$#'
 			identifier: offsetAccess.nonOffsetAccessible
-			count: 2
+			count: 3
 			path: src/DependencyInjection/ZhorteinMultiTenantExtension.php
 
 		-
@@ -267,6 +339,18 @@ parameters:
 		-
 			message: '#^Cannot access offset ''type'' on mixed\.$#'
 			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: src/DependencyInjection/ZhorteinMultiTenantExtension.php
+
+		-
+			message: '#^Cannot access offset ''use_slug'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: src/DependencyInjection/ZhorteinMultiTenantExtension.php
+
+		-
+			message: '#^Cannot cast mixed to string\.$#'
+			identifier: cast.string
 			count: 1
 			path: src/DependencyInjection/ZhorteinMultiTenantExtension.php
 
@@ -284,6 +368,12 @@ parameters:
 
 		-
 			message: '#^Parameter \#2 \$config of method Zhortein\\MultiTenantBundle\\DependencyInjection\\ZhorteinMultiTenantExtension\:\:registerCoreServices\(\) expects array\<string, mixed\>, array given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/DependencyInjection/ZhorteinMultiTenantExtension.php
+
+		-
+			message: '#^Parameter \#2 \$config of method Zhortein\\MultiTenantBundle\\DependencyInjection\\ZhorteinMultiTenantExtension\:\:registerDecorators\(\) expects array\<string, mixed\>, array given\.$#'
 			identifier: argument.type
 			count: 1
 			path: src/DependencyInjection/ZhorteinMultiTenantExtension.php
@@ -355,12 +445,6 @@ parameters:
 			path: src/Doctrine/TenantDoctrineFilter.php
 
 		-
-			message: '#^Parameter \#3 \.\.\.\$values of function sprintf expects bool\|float\|int\|string\|null, mixed given\.$#'
-			identifier: argument.type
-			count: 1
-			path: src/Doctrine/TenantDoctrineFilter.php
-
-		-
 			message: '#^Parameter \#1 \$params of static method Doctrine\\DBAL\\DriverManager\:\:getConnection\(\) expects array\{application_name\?\: string, charset\?\: string, dbname\?\: string, defaultTableOptions\?\: array\<string, mixed\>, default_dbname\?\: string, driver\?\: ''ibm_db2''\|''mysqli''\|''oci8''\|''pdo_mysql''\|''pdo_oci''\|''pdo_pgsql''\|''pdo_sqlite''\|''pdo_sqlsrv''\|''pgsql''\|''sqlite3''\|''sqlsrv'', driverClass\?\: class\-string\<Doctrine\\DBAL\\Driver\>, driverOptions\?\: array\<mixed\>, \.\.\.\}, array\<string, mixed\> given\.$#'
 			identifier: argument.type
 			count: 1
@@ -385,93 +469,9 @@ parameters:
 			path: src/Entity/Trait/TenantDatabaseInfoTrait.php
 
 		-
-			message: '#^Call to an undefined method Zhortein\\MultiTenantBundle\\Resolver\\TenantResolverInterface\:\:resolve\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: src/EventListener/TenantRequestListener.php
-
-		-
-			message: '#^Cannot call method getId\(\) on Zhortein\\MultiTenantBundle\\Entity\\TenantInterface\|null\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: src/EventSubscriber/TenantDoctrineFilterSubscriber.php
-
-		-
-			message: '#^Call to method from\(\) on an unknown class Symfony\\Bridge\\Twig\\Mime\\TemplatedEmail\.$#'
-			identifier: class.notFound
-			count: 1
-			path: src/Helper/TenantMailerHelper.php
-
-		-
-			message: '#^Call to method replyTo\(\) on an unknown class Symfony\\Bridge\\Twig\\Mime\\TemplatedEmail\.$#'
-			identifier: class.notFound
-			count: 1
-			path: src/Helper/TenantMailerHelper.php
-
-		-
-			message: '#^Instantiated class Symfony\\Bridge\\Twig\\Mime\\TemplatedEmail not found\.$#'
-			identifier: class.notFound
-			count: 1
-			path: src/Helper/TenantMailerHelper.php
-
-		-
-			message: '#^Method Zhortein\\MultiTenantBundle\\Helper\\TenantMailerHelper\:\:createEmail\(\) has invalid return type Symfony\\Bridge\\Twig\\Mime\\TemplatedEmail\.$#'
-			identifier: class.notFound
-			count: 1
-			path: src/Helper/TenantMailerHelper.php
-
-		-
-			message: '#^Parameter \#1 \$message of method Symfony\\Component\\Mailer\\MailerInterface\:\:send\(\) expects Symfony\\Component\\Mime\\RawMessage, Symfony\\Bridge\\Twig\\Mime\\TemplatedEmail given\.$#'
-			identifier: argument.type
-			count: 1
-			path: src/Helper/TenantMailerHelper.php
-
-		-
-			message: '#^Parameter \$email of method Zhortein\\MultiTenantBundle\\Helper\\TenantMailerHelper\:\:send\(\) has invalid type Symfony\\Bridge\\Twig\\Mime\\TemplatedEmail\.$#'
-			identifier: class.notFound
-			count: 1
-			path: src/Helper/TenantMailerHelper.php
-
-		-
 			message: '#^Call to an undefined method Zhortein\\MultiTenantBundle\\Entity\\TenantInterface\:\:getName\(\)\.$#'
 			identifier: method.notFound
 			count: 2
-			path: src/Mailer/TenantAwareMailer.php
-
-		-
-			message: '#^Call to method getLoader\(\) on an unknown class Twig\\Environment\.$#'
-			identifier: class.notFound
-			count: 1
-			path: src/Mailer/TenantAwareMailer.php
-
-		-
-			message: '#^Call to method render\(\) on an unknown class Twig\\Environment\.$#'
-			identifier: class.notFound
-			count: 1
-			path: src/Mailer/TenantAwareMailer.php
-
-		-
-			message: '#^Caught class Twig\\Error\\LoaderError not found\.$#'
-			identifier: class.notFound
-			count: 1
-			path: src/Mailer/TenantAwareMailer.php
-
-		-
-			message: '#^PHPDoc tag @throws with type RuntimeException\|Twig\\Error\\LoaderError\|Twig\\Error\\RuntimeError\|Twig\\Error\\SyntaxError is not subtype of Throwable$#'
-			identifier: throws.notThrowable
-			count: 1
-			path: src/Mailer/TenantAwareMailer.php
-
-		-
-			message: '#^Parameter \$twig of method Zhortein\\MultiTenantBundle\\Mailer\\TenantAwareMailer\:\:__construct\(\) has invalid type Twig\\Environment\.$#'
-			identifier: class.notFound
-			count: 1
-			path: src/Mailer/TenantAwareMailer.php
-
-		-
-			message: '#^Property Zhortein\\MultiTenantBundle\\Mailer\\TenantAwareMailer\:\:\$twig has unknown class Twig\\Environment as its type\.$#'
-			identifier: class.notFound
-			count: 1
 			path: src/Mailer/TenantAwareMailer.php
 
 		-
@@ -517,42 +517,6 @@ parameters:
 			path: src/Messenger/TenantMessengerTransportFactory.php
 
 		-
-			message: '#^Call to an undefined method object\:\:getName\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: src/Messenger/TenantMessengerTransportResolver.php
-
-		-
-			message: '#^Call to an undefined method object\:\:getSlug\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: src/Messenger/TenantMessengerTransportResolver.php
-
-		-
-			message: '#^Parameter \#1 \$tenantSlug of class Zhortein\\MultiTenantBundle\\Messenger\\TenantStamp constructor expects string, mixed given\.$#'
-			identifier: argument.type
-			count: 1
-			path: src/Messenger/TenantMessengerTransportResolver.php
-
-		-
-			message: '#^Parameter \#2 \$tenantName of class Zhortein\\MultiTenantBundle\\Messenger\\TenantStamp constructor expects string, mixed given\.$#'
-			identifier: argument.type
-			count: 1
-			path: src/Messenger/TenantMessengerTransportResolver.php
-
-		-
-			message: '#^Call to an undefined method Zhortein\\MultiTenantBundle\\Resolver\\TenantResolverInterface\:\:resolve\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: src/Middleware/TenantMiddleware.php
-
-		-
-			message: '#^Parameter \#1 \$className of method Doctrine\\ORM\\EntityManagerInterface\:\:getRepository\(\) expects class\-string\<object\>, string given\.$#'
-			identifier: argument.type
-			count: 2
-			path: src/Registry/DoctrineTenantRegistry.php
-
-		-
 			message: '#^Method Zhortein\\MultiTenantBundle\\Repository\\TenantSettingRepository\:\:findAllForTenant\(\) should return array\<Zhortein\\MultiTenantBundle\\Entity\\TenantSetting\> but returns mixed\.$#'
 			identifier: return.type
 			count: 1
@@ -589,205 +553,13 @@ parameters:
 			path: src/Resolver/PathTenantResolver.php
 
 		-
+			message: '#^Call to function is_string\(\) with non\-empty\-string will always evaluate to true\.$#'
+			identifier: function.alreadyNarrowedType
+			count: 1
+			path: src/Resolver/QueryTenantResolver.php
+
+		-
 			message: '#^Parameter \#1 \$className of method Doctrine\\ORM\\EntityManagerInterface\:\:getRepository\(\) expects class\-string\<object\>, string given\.$#'
 			identifier: argument.type
 			count: 1
 			path: src/Resolver/SubdomainTenantResolver.php
-
-		-
-			message: '#^Return type of call to method PHPUnit\\Framework\\TestCase\:\:createMock\(\) contains unresolvable type\.$#'
-			identifier: method.unresolvableReturnType
-			count: 1
-			path: tests/Integration/Command/MigrateTenantsCommandTest.php
-
-		-
-			message: '#^Unreachable statement \- code above always terminates\.$#'
-			identifier: deadCode.unreachable
-			count: 3
-			path: tests/Integration/Command/MigrateTenantsCommandTest.php
-
-		-
-			message: '#^Call to method expects\(\) on an unknown class Twig\\Environment\.$#'
-			identifier: class.notFound
-			count: 4
-			path: tests/Mailer/TenantAwareMailerTest.php
-
-		-
-			message: '#^Cannot access offset ''logoUrl'' on mixed\.$#'
-			identifier: offsetAccess.nonOffsetAccessible
-			count: 1
-			path: tests/Mailer/TenantAwareMailerTest.php
-
-		-
-			message: '#^Cannot access offset ''name'' on mixed\.$#'
-			identifier: offsetAccess.nonOffsetAccessible
-			count: 2
-			path: tests/Mailer/TenantAwareMailerTest.php
-
-		-
-			message: '#^Cannot access offset ''primaryColor'' on mixed\.$#'
-			identifier: offsetAccess.nonOffsetAccessible
-			count: 1
-			path: tests/Mailer/TenantAwareMailerTest.php
-
-		-
-			message: '#^Cannot access offset ''slug'' on mixed\.$#'
-			identifier: offsetAccess.nonOffsetAccessible
-			count: 1
-			path: tests/Mailer/TenantAwareMailerTest.php
-
-		-
-			message: '#^Cannot access offset ''websiteUrl'' on mixed\.$#'
-			identifier: offsetAccess.nonOffsetAccessible
-			count: 1
-			path: tests/Mailer/TenantAwareMailerTest.php
-
-		-
-			message: '#^Cannot call method getBody\(\) on Symfony\\Component\\Mime\\Header\\HeaderInterface\|null\.$#'
-			identifier: method.nonObject
-			count: 2
-			path: tests/Mailer/TenantAwareMailerTest.php
-
-		-
-			message: '#^Property Zhortein\\MultiTenantBundle\\Tests\\Mailer\\TenantAwareMailerTest\:\:\$twig has unknown class Twig\\Environment as its type\.$#'
-			identifier: class.notFound
-			count: 1
-			path: tests/Mailer/TenantAwareMailerTest.php
-
-		-
-			message: '#^Class Zhortein\\MultiTenantBundle\\Mailer\\TenantMailerConfigurator constructor invoked with 5 parameters, 1\-4 required\.$#'
-			identifier: arguments.count
-			count: 1
-			path: tests/Mailer/TenantMailerConfiguratorTest.php
-
-		-
-			message: '#^Parameter \#1 \$settingsManager of class Zhortein\\MultiTenantBundle\\Mailer\\TenantMailerConfigurator constructor expects Zhortein\\MultiTenantBundle\\Manager\\TenantSettingsManager, PHPUnit\\Framework\\MockObject\\MockObject&Zhortein\\MultiTenantBundle\\Context\\TenantContextInterface given\.$#'
-			identifier: argument.type
-			count: 1
-			path: tests/Mailer/TenantMailerConfiguratorTest.php
-
-		-
-			message: '#^Parameter \#2 \$fallbackDsn of class Zhortein\\MultiTenantBundle\\Mailer\\TenantMailerConfigurator constructor expects string\|null, PHPUnit\\Framework\\MockObject\\MockObject&Zhortein\\MultiTenantBundle\\Manager\\TenantSettingsManagerInterface given\.$#'
-			identifier: argument.type
-			count: 1
-			path: tests/Mailer/TenantMailerConfiguratorTest.php
-
-		-
-			message: '#^Call to an undefined method Zhortein\\MultiTenantBundle\\Tests\\Messenger\\TenantMessengerConfiguratorTest\:\:at\(\)\.$#'
-			identifier: method.notFound
-			count: 3
-			path: tests/Messenger/TenantMessengerConfiguratorTest.php
-
-		-
-			message: '#^Class Zhortein\\MultiTenantBundle\\Messenger\\TenantMessengerConfigurator constructor invoked with 4 parameters, 1\-3 required\.$#'
-			identifier: arguments.count
-			count: 1
-			path: tests/Messenger/TenantMessengerConfiguratorTest.php
-
-		-
-			message: '#^Parameter \#1 \$settingsManager of class Zhortein\\MultiTenantBundle\\Messenger\\TenantMessengerConfigurator constructor expects Zhortein\\MultiTenantBundle\\Manager\\TenantSettingsManager, PHPUnit\\Framework\\MockObject\\MockObject&Zhortein\\MultiTenantBundle\\Context\\TenantContextInterface given\.$#'
-			identifier: argument.type
-			count: 1
-			path: tests/Messenger/TenantMessengerConfiguratorTest.php
-
-		-
-			message: '#^Parameter \#2 \$fallbackDsn of class Zhortein\\MultiTenantBundle\\Messenger\\TenantMessengerConfigurator constructor expects string, PHPUnit\\Framework\\MockObject\\MockObject&Zhortein\\MultiTenantBundle\\Manager\\TenantSettingsManagerInterface given\.$#'
-			identifier: argument.type
-			count: 1
-			path: tests/Messenger/TenantMessengerConfiguratorTest.php
-
-		-
-			message: '#^Call to method PHPUnit\\Framework\\Assert\:\:assertNull\(\) with string will always evaluate to false\.$#'
-			identifier: method.impossibleType
-			count: 1
-			path: tests/Messenger/TenantStampTest.php
-
-		-
-			message: '#^Cannot cast Zhortein\\MultiTenantBundle\\Messenger\\TenantStamp to string\.$#'
-			identifier: cast.string
-			count: 2
-			path: tests/Messenger/TenantStampTest.php
-
-		-
-			message: '#^Parameter \#2 \$tenantName of class Zhortein\\MultiTenantBundle\\Messenger\\TenantStamp constructor expects string, null given\.$#'
-			identifier: argument.type
-			count: 2
-			path: tests/Messenger/TenantStampTest.php
-
-		-
-			message: '#^Property Zhortein\\MultiTenantBundle\\Tests\\Unit\\Command\\ListTenantsCommandTest\:\:\$repository with generic class Doctrine\\ORM\\EntityRepository does not specify its types\: TEntityClass$#'
-			identifier: missingType.generics
-			count: 1
-			path: tests/Unit/Command/ListTenantsCommandTest.php
-
-		-
-			message: '#^Cannot use \+\+ on mixed\.$#'
-			identifier: preInc.type
-			count: 1
-			path: tests/Unit/DependencyInjection/TenantScopeTest.php
-
-		-
-			message: '#^Call to an undefined method Zhortein\\MultiTenantBundle\\Doctrine\\TenantDoctrineFilter\:\:setTestParameter\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: tests/Unit/Doctrine/TenantDoctrineFilterTest.php
-
-		-
-			message: '#^Property Zhortein\\MultiTenantBundle\\Tests\\Unit\\Doctrine\\TenantDoctrineFilterTest\:\:\$filter is never written, only read\.$#'
-			identifier: property.onlyRead
-			count: 1
-			path: tests/Unit/Doctrine/TenantDoctrineFilterTest.php
-
-		-
-			message: '#^Call to method PHPUnit\\Framework\\Assert\:\:assertIsArray\(\) with array\<string, Doctrine\\ORM\\EntityManagerInterface\> will always evaluate to true\.$#'
-			identifier: method.alreadyNarrowedType
-			count: 1
-			path: tests/Unit/Doctrine/TenantEntityManagerFactoryTest.php
-
-		-
-			message: '#^Property Zhortein\\MultiTenantBundle\\Tests\\Unit\\Registry\\DoctrineTenantRegistryTest\:\:\$repository with generic class Doctrine\\ORM\\EntityRepository does not specify its types\: TEntityClass$#'
-			identifier: missingType.generics
-			count: 1
-			path: tests/Unit/Registry/DoctrineTenantRegistryTest.php
-
-		-
-			message: '#^Property Zhortein\\MultiTenantBundle\\Tests\\Unit\\Repository\\TenantSettingRepositoryTest\:\:\$entityManager is never written, only read\.$#'
-			identifier: property.onlyRead
-			count: 1
-			path: tests/Unit/Repository/TenantSettingRepositoryTest.php
-
-		-
-			message: '#^Property Zhortein\\MultiTenantBundle\\Tests\\Unit\\Repository\\TenantSettingRepositoryTest\:\:\$query is never written, only read\.$#'
-			identifier: property.onlyRead
-			count: 1
-			path: tests/Unit/Repository/TenantSettingRepositoryTest.php
-
-		-
-			message: '#^Property Zhortein\\MultiTenantBundle\\Tests\\Unit\\Repository\\TenantSettingRepositoryTest\:\:\$query with generic class Doctrine\\ORM\\Query does not specify its types\: TKey, TResult$#'
-			identifier: missingType.generics
-			count: 1
-			path: tests/Unit/Repository/TenantSettingRepositoryTest.php
-
-		-
-			message: '#^Property Zhortein\\MultiTenantBundle\\Tests\\Unit\\Repository\\TenantSettingRepositoryTest\:\:\$queryBuilder is never written, only read\.$#'
-			identifier: property.onlyRead
-			count: 1
-			path: tests/Unit/Repository/TenantSettingRepositoryTest.php
-
-		-
-			message: '#^Property Zhortein\\MultiTenantBundle\\Tests\\Unit\\Repository\\TenantSettingRepositoryTest\:\:\$repository is never written, only read\.$#'
-			identifier: property.onlyRead
-			count: 1
-			path: tests/Unit/Repository/TenantSettingRepositoryTest.php
-
-		-
-			message: '#^Property Zhortein\\MultiTenantBundle\\Tests\\Unit\\Resolver\\PathTenantResolverTest\:\:\$repository with generic class Doctrine\\ORM\\EntityRepository does not specify its types\: TEntityClass$#'
-			identifier: missingType.generics
-			count: 1
-			path: tests/Unit/Resolver/PathTenantResolverTest.php
-
-		-
-			message: '#^Property Zhortein\\MultiTenantBundle\\Tests\\Unit\\Resolver\\SubdomainTenantResolverTest\:\:\$repository with generic class Doctrine\\ORM\\EntityRepository does not specify its types\: TEntityClass$#'
-			identifier: missingType.generics
-			count: 1
-			path: tests/Unit/Resolver/SubdomainTenantResolverTest.php

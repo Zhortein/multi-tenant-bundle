@@ -137,7 +137,7 @@ final class ChainTenantResolver implements TenantResolverInterface
      * @param array<string, TenantInterface> $results
      * @param array<string, mixed>           $diagnostics
      */
-    private function handleStrictModeResults(array $results, array $diagnostics): ?TenantInterface
+    private function handleStrictModeResults(array $results, array $diagnostics): TenantInterface
     {
         if (empty($results)) {
             throw new TenantResolutionException('No tenant could be resolved by any resolver in the chain', $diagnostics);

@@ -73,6 +73,9 @@ final class TenantAwareSimpleCacheDecorator implements CacheInterface
         return $mappedResults;
     }
 
+    /**
+     * @param iterable<string, mixed> $values
+     */
     public function setMultiple(iterable $values, \DateInterval|int|null $ttl = null): bool
     {
         $prefixedValues = [];

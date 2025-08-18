@@ -639,15 +639,16 @@ final class ZhorteinMultiTenantExtension extends Extension
         // Register cache decorators
         if ($config['decorators']['cache']['enabled']) {
             foreach ($config['decorators']['cache']['services'] as $serviceId) {
+                $serviceIdString = (string) $serviceId;
                 // Register PSR-6 cache decorator
-                $container->register($serviceId.'.tenant_aware', TenantAwareCacheDecorator::class)
-                    ->setDecoratedService($serviceId)
+                $container->register($serviceIdString.'.tenant_aware', TenantAwareCacheDecorator::class)
+                    ->setDecoratedService($serviceIdString)
                     ->setAutowired(true)
                     ->setArgument('$enabled', '%zhortein_multi_tenant.decorators.cache.enabled%');
 
                 // Register PSR-16 simple cache decorator
-                $container->register($serviceId.'.simple.tenant_aware', TenantAwareSimpleCacheDecorator::class)
-                    ->setDecoratedService($serviceId.'.simple', null, 1) // Lower priority to avoid conflicts
+                $container->register($serviceIdString.'.simple.tenant_aware', TenantAwareSimpleCacheDecorator::class)
+                    ->setDecoratedService($serviceIdString.'.simple', null, 1) // Lower priority to avoid conflicts
                     ->setAutowired(true)
                     ->setArgument('$enabled', '%zhortein_multi_tenant.decorators.cache.enabled%');
             }
