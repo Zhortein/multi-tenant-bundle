@@ -16,8 +16,10 @@ use Zhortein\MultiTenantBundle\Command\DropTenantSchemaCommand;
 use Zhortein\MultiTenantBundle\Command\ListTenantsCommand;
 use Zhortein\MultiTenantBundle\Command\LoadTenantFixturesCommand;
 use Zhortein\MultiTenantBundle\Command\MigrateTenantsCommand;
+use Zhortein\MultiTenantBundle\Command\SyncRlsPoliciesCommand;
 use Zhortein\MultiTenantBundle\Context\TenantContext;
 use Zhortein\MultiTenantBundle\Context\TenantContextInterface;
+use Zhortein\MultiTenantBundle\Database\TenantSessionConfigurator;
 use Zhortein\MultiTenantBundle\Doctrine\DefaultConnectionResolver;
 use Zhortein\MultiTenantBundle\Doctrine\EventAwareConnectionResolver;
 use Zhortein\MultiTenantBundle\Doctrine\TenantConnectionResolverInterface;
@@ -104,6 +106,9 @@ final class ZhorteinMultiTenantExtension extends Extension
         $container->setParameter('zhortein_multi_tenant.dns_txt.enable_cache', $config['dns_txt']['enable_cache']);
         $container->setParameter('zhortein_multi_tenant.database.strategy', $config['database']['strategy']);
         $container->setParameter('zhortein_multi_tenant.database.enable_filter', $config['database']['enable_filter']);
+        $container->setParameter('zhortein_multi_tenant.database.rls.enabled', $config['database']['rls']['enabled']);
+        $container->setParameter('zhortein_multi_tenant.database.rls.session_variable', $config['database']['rls']['session_variable']);
+        $container->setParameter('zhortein_multi_tenant.database.rls.policy_name_prefix', $config['database']['rls']['policy_name_prefix']);
         $container->setParameter('zhortein_multi_tenant.cache.pool', $config['cache']['pool']);
         $container->setParameter('zhortein_multi_tenant.cache.ttl', $config['cache']['ttl']);
         $container->setParameter('zhortein_multi_tenant.mailer.enabled', $config['mailer']['enabled']);
@@ -327,6 +332,16 @@ final class ZhorteinMultiTenantExtension extends Extension
                 ->setAutoconfigured(true)
                 ->addTag('console.command');
         }
+
+        // RLS sync command (if RLS is enabled)
+        if ($config['database']['rls']['enabled']) {
+            $container->register(SyncRlsPoliciesCommand::class)
+                ->setAutowired(true)
+                ->setAutoconfigured(true)
+                ->setArgument('$sessionVariable', '%zhortein_multi_tenant.database.rls.session_variable%')
+                ->setArgument('$policyNamePrefix', '%zhortein_multi_tenant.database.rls.policy_name_prefix%')
+                ->addTag('console.command');
+        }
     }
 
     /**
@@ -350,6 +365,11 @@ final class ZhorteinMultiTenantExtension extends Extension
         // Register storage services
         if ($config['storage']['enabled']) {
             $this->registerStorageServices($container, $config);
+        }
+
+        // Register RLS services
+        if ($config['database']['rls']['enabled']) {
+            $this->registerRlsServices($container, $config);
         }
 
         // Register entity listener
@@ -440,6 +460,28 @@ final class ZhorteinMultiTenantExtension extends Extension
 
         // Register the interface alias
         $container->setAlias(TenantFileStorageInterface::class, 'zhortein_multi_tenant.storage');
+    }
+
+    /**
+     * Registers RLS services.
+     *
+     * @param ContainerBuilder     $container The container builder
+     * @param array<string, mixed> $config    The processed configuration
+     */
+    private function registerRlsServices(ContainerBuilder $container, array $config): void
+    {
+        // Only register RLS services for shared_db strategy
+        if ('shared_db' !== $config['database']['strategy']) {
+            return;
+        }
+
+        $container->register(TenantSessionConfigurator::class)
+            ->setAutowired(true)
+            ->setAutoconfigured(true)
+            ->setArgument('$rlsEnabled', '%zhortein_multi_tenant.database.rls.enabled%')
+            ->setArgument('$sessionVariable', '%zhortein_multi_tenant.database.rls.session_variable%')
+            ->addTag('kernel.event_listener')
+            ->addTag('messenger.middleware');
     }
 
     /**

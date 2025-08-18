@@ -28,24 +28,29 @@ final class InMemoryTenantRegistry implements TenantRegistryInterface
 
     public function getBySlug(string $slug): TenantInterface
     {
+        $tenant = $this->findBySlug($slug);
+
+        if (null === $tenant) {
+            throw new TenantNotFoundException(sprintf('Tenant with slug `%s` not found.', $slug));
+        }
+
+        return $tenant;
+    }
+
+    public function findBySlug(string $slug): ?TenantInterface
+    {
         foreach ($this->tenants as $tenant) {
             if ($tenant->getSlug() === $slug) {
                 return $tenant;
             }
         }
 
-        throw new TenantNotFoundException(sprintf('Tenant with slug `%s` not found.', $slug));
+        return null;
     }
 
     public function hasSlug(string $slug): bool
     {
-        foreach ($this->tenants as $tenant) {
-            if ($tenant->getSlug() === $slug) {
-                return true;
-            }
-        }
-
-        return false;
+        return null !== $this->findBySlug($slug);
     }
 
     /**

@@ -29,6 +29,10 @@ zhortein_multi_tenant:
         strategy: 'shared_db'
         enable_filter: true
         auto_tenant_id: true
+        rls:
+            enabled: true  # Enable PostgreSQL Row-Level Security for defense-in-depth
+            session_variable: 'app.tenant_id'
+            policy_name_prefix: 'tenant_isolation'
 ```
 
 ### Entity Setup
@@ -162,6 +166,28 @@ final class Version20240101000001 extends AbstractMigration
 }
 ```
 
+### Row-Level Security (PostgreSQL)
+
+For additional security with PostgreSQL, you can enable Row-Level Security (RLS):
+
+```bash
+# Generate and apply RLS policies
+php bin/console tenant:rls:sync --apply
+```
+
+This creates database-level policies that provide defense-in-depth protection:
+
+```sql
+-- Enable RLS on tenant-aware tables
+ALTER TABLE products ENABLE ROW LEVEL SECURITY;
+
+-- Create isolation policy
+CREATE POLICY tenant_isolation_products ON products
+    USING (tenant_id::text = current_setting('app.tenant_id', true));
+```
+
+See the [RLS Security documentation](rls-security.md) for detailed setup instructions.
+
 ### Advantages
 
 1. **Simplicity**: Single database to manage
@@ -169,6 +195,7 @@ final class Version20240101000001 extends AbstractMigration
 3. **Easy backups**: Single backup process
 4. **Cross-tenant queries**: Possible when needed
 5. **Resource sharing**: Efficient resource utilization
+6. **Defense-in-depth**: Optional PostgreSQL RLS provides database-level protection
 
 ### Disadvantages
 

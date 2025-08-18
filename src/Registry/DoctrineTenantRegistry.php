@@ -32,24 +32,25 @@ final readonly class DoctrineTenantRegistry implements TenantRegistryInterface
 
     public function getBySlug(string $slug): TenantInterface
     {
-        $repository = $this->em->getRepository($this->tenantEntityClass);
-        $tenant = $repository->findOneBy(['slug' => $slug]);
+        $tenant = $this->findBySlug($slug);
 
-        if (!$tenant instanceof TenantInterface) {
+        if (null === $tenant) {
             throw new \RuntimeException(sprintf('Tenant with slug `%s` not found.', $slug));
         }
 
         return $tenant;
     }
 
+    public function findBySlug(string $slug): ?TenantInterface
+    {
+        $repository = $this->em->getRepository($this->tenantEntityClass);
+        $tenant = $repository->findOneBy(['slug' => $slug]);
+
+        return $tenant instanceof TenantInterface ? $tenant : null;
+    }
+
     public function hasSlug(string $slug): bool
     {
-        try {
-            $this->getBySlug($slug);
-
-            return true;
-        } catch (\RuntimeException) {
-            return false;
-        }
+        return null !== $this->findBySlug($slug);
     }
 }

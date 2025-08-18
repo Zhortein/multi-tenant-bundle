@@ -1,0 +1,44 @@
+# Example configuration for PostgreSQL Row-Level Security (RLS)
+# config/packages/zhortein_multi_tenant.yaml
+
+zhortein_multi_tenant:
+    # Tenant entity configuration
+    tenant_entity: 'App\Entity\Tenant'
+    
+    # Tenant resolution strategy
+    resolver: 'subdomain'
+    subdomain:
+        base_domain: 'myapp.com'
+        excluded_subdomains: ['www', 'api', 'admin']
+    
+    # Database configuration with RLS enabled
+    database:
+        strategy: 'shared_db'
+        enable_filter: true
+        auto_tenant_id: true
+        
+        # PostgreSQL Row-Level Security configuration
+        rls:
+            enabled: true                           # Enable RLS for defense-in-depth
+            session_variable: 'app.tenant_id'       # PostgreSQL session variable name
+            policy_name_prefix: 'tenant_isolation'  # Prefix for RLS policy names
+    
+    # Cache configuration
+    cache:
+        pool: 'cache.app'
+        ttl: 3600
+    
+    # Event listeners
+    listeners:
+        request_listener: true
+        doctrine_filter_listener: true
+    
+    # Optional: Mailer configuration
+    mailer:
+        enabled: true
+    
+    # Optional: Messenger configuration
+    messenger:
+        enabled: true
+        default_transport: 'async'
+        add_tenant_headers: true
