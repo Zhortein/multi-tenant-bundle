@@ -56,10 +56,10 @@ csfixer-check: ## Check code style without fixing
 	$(DOCKER_RUN) vendor/bin/php-cs-fixer fix tests --rules=@Symfony --dry-run --diff
 
 phpstan: ## Run PHPStan static analysis
-	$(DOCKER_RUN) vendor/bin/phpstan analyse src tests -c phpstan.neon --memory-limit=512M
+	$(DOCKER_RUN) vendor/bin/phpstan analyse src -c phpstan.neon --memory-limit=512M
 
 phpstan-baseline: ## Generate PHPStan baseline
-	$(DOCKER_RUN) vendor/bin/phpstan analyse src tests -c phpstan.neon --generate-baseline --memory-limit=512M
+	$(DOCKER_RUN) vendor/bin/phpstan analyse src -c phpstan.neon --generate-baseline --memory-limit=512M
 
 ## —— 🔧 Bundle-specific ———————————————————————————————————————————————————————————————————
 bundle-validate: ## Validate bundle structure

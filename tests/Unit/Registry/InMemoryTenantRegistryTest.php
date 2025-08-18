@@ -131,4 +131,61 @@ final class InMemoryTenantRegistryTest extends TestCase
         $this->assertArrayHasKey(1, $result);
         $this->assertArrayNotHasKey(2, $result);
     }
+
+    public function testFindByIdReturnsTenant(): void
+    {
+        $tenant = $this->createMock(TenantInterface::class);
+        $tenant->method('getId')->willReturn('123');
+
+        $registry = new InMemoryTenantRegistry([$tenant]);
+
+        $result = $registry->findById('123');
+
+        $this->assertSame($tenant, $result);
+    }
+
+    public function testFindByIdReturnsNullWhenNotFound(): void
+    {
+        $registry = new InMemoryTenantRegistry();
+
+        $result = $registry->findById('non-existent');
+
+        $this->assertNull($result);
+    }
+
+    public function testFindByIdWithIntegerId(): void
+    {
+        $tenant = $this->createMock(TenantInterface::class);
+        $tenant->method('getId')->willReturn(456);
+
+        $registry = new InMemoryTenantRegistry([$tenant]);
+
+        $result = $registry->findById(456);
+
+        $this->assertSame($tenant, $result);
+    }
+
+    public function testFindByIdWithStringIdMatchesIntegerId(): void
+    {
+        $tenant = $this->createMock(TenantInterface::class);
+        $tenant->method('getId')->willReturn(456);
+
+        $registry = new InMemoryTenantRegistry([$tenant]);
+
+        $result = $registry->findById('456');
+
+        $this->assertSame($tenant, $result);
+    }
+
+    public function testFindByIdWithIntegerIdMatchesStringId(): void
+    {
+        $tenant = $this->createMock(TenantInterface::class);
+        $tenant->method('getId')->willReturn('456');
+
+        $registry = new InMemoryTenantRegistry([$tenant]);
+
+        $result = $registry->findById(456);
+
+        $this->assertSame($tenant, $result);
+    }
 }

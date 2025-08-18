@@ -114,4 +114,52 @@ final class DoctrineTenantRegistryTest extends TestCase
 
         $this->assertFalse($result);
     }
+
+    public function testFindByIdReturnsTenant(): void
+    {
+        $tenant = $this->createMock(TenantInterface::class);
+
+        $this->repository->method('find')
+            ->with('123')
+            ->willReturn($tenant);
+
+        $result = $this->registry->findById('123');
+
+        $this->assertSame($tenant, $result);
+    }
+
+    public function testFindByIdReturnsNullWhenNotFound(): void
+    {
+        $this->repository->method('find')
+            ->with('non-existent')
+            ->willReturn(null);
+
+        $result = $this->registry->findById('non-existent');
+
+        $this->assertNull($result);
+    }
+
+    public function testFindByIdReturnsNullWhenWrongType(): void
+    {
+        $this->repository->method('find')
+            ->with('123')
+            ->willReturn(new \stdClass());
+
+        $result = $this->registry->findById('123');
+
+        $this->assertNull($result);
+    }
+
+    public function testFindByIdWithIntegerId(): void
+    {
+        $tenant = $this->createMock(TenantInterface::class);
+
+        $this->repository->method('find')
+            ->with(456)
+            ->willReturn($tenant);
+
+        $result = $this->registry->findById(456);
+
+        $this->assertSame($tenant, $result);
+    }
 }

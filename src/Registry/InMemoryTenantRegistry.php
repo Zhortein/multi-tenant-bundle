@@ -48,6 +48,17 @@ final class InMemoryTenantRegistry implements TenantRegistryInterface
         return null;
     }
 
+    public function findById(string|int $id): ?TenantInterface
+    {
+        foreach ($this->tenants as $tenant) {
+            if ($tenant->getId() === $id || (string) $tenant->getId() === (string) $id) {
+                return $tenant;
+            }
+        }
+
+        return null;
+    }
+
     public function hasSlug(string $slug): bool
     {
         return null !== $this->findBySlug($slug);

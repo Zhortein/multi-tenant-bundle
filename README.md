@@ -12,7 +12,7 @@ A comprehensive Symfony 7+ bundle for building multi-tenant applications with Po
 - 🗄️ **Database Strategies**: Shared database with filtering or separate databases per tenant
 - ⚡ **Performance Optimized**: Built-in caching for tenant settings and configurations
 - 🔧 **Doctrine Integration**: Automatic tenant filtering with Doctrine ORM
-- 📧 **Tenant-Aware Services**: Mailer, Messenger, and file storage integration
+- 📧 **Tenant-Aware Services**: Mailer with automatic tenant propagation, Messenger with context preservation, and file storage integration
 - 🎯 **Event-Driven**: Database switching events and automatic tenant context resolution
 - 🛠️ **Advanced Commands**: Schema management, migrations, and fixtures for tenants
 - 🧪 **Fully Tested**: Comprehensive test suite with PHPUnit 12
@@ -176,7 +176,7 @@ class DashboardController extends AbstractController
 
 ### 🔧 Service Integration
 - [Mailer](docs/mailer.md) - Tenant-aware email with templated support
-- [Messenger](docs/messenger.md) - Tenant-aware queues with transport routing
+- [Messenger](docs/messenger.md) - Tenant-aware queues with automatic context propagation
 - [Storage](docs/storage.md) - File storage isolation
 
 ### 🗄️ Database Management

@@ -218,12 +218,12 @@ final class TenantSessionConfiguratorTest extends TestCase
     public function testMessengerMiddlewareConfiguresSessionFromStamp(): void
     {
         $tenant = $this->createTenant(456, 'tenant2');
-        $tenantStamp = new TenantStamp('tenant2', 'Tenant 2');
+        $tenantStamp = new TenantStamp('456');
         $envelope = new Envelope(new \stdClass(), [$tenantStamp]);
 
         $this->tenantRegistry
-            ->method('findBySlug')
-            ->with('tenant2')
+            ->method('findById')
+            ->with('456')
             ->willReturn($tenant);
 
         $this->tenantContext
@@ -275,7 +275,7 @@ final class TenantSessionConfiguratorTest extends TestCase
     {
         $envelope = new Envelope(new \stdClass());
 
-        $this->tenantRegistry->expects($this->never())->method('findBySlug');
+        $this->tenantRegistry->expects($this->never())->method('findById');
         $this->tenantContext->expects($this->never())->method('setTenant');
         $this->connection->expects($this->never())->method('executeStatement');
 
@@ -291,11 +291,11 @@ final class TenantSessionConfiguratorTest extends TestCase
 
     public function testMessengerMiddlewareSkipsWhenTenantNotFound(): void
     {
-        $tenantStamp = new TenantStamp('nonexistent', 'Nonexistent');
+        $tenantStamp = new TenantStamp('nonexistent');
         $envelope = new Envelope(new \stdClass(), [$tenantStamp]);
 
         $this->tenantRegistry
-            ->method('findBySlug')
+            ->method('findById')
             ->with('nonexistent')
             ->willReturn(null);
 
@@ -315,12 +315,12 @@ final class TenantSessionConfiguratorTest extends TestCase
     public function testMessengerMiddlewareClearsContextOnException(): void
     {
         $tenant = $this->createTenant(456, 'tenant2');
-        $tenantStamp = new TenantStamp('tenant2', 'Tenant 2');
+        $tenantStamp = new TenantStamp('456');
         $envelope = new Envelope(new \stdClass(), [$tenantStamp]);
 
         $this->tenantRegistry
-            ->method('findBySlug')
-            ->with('tenant2')
+            ->method('findById')
+            ->with('456')
             ->willReturn($tenant);
 
         $this->tenantContext

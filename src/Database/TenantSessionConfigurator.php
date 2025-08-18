@@ -72,7 +72,7 @@ final readonly class TenantSessionConfigurator implements MiddlewareInterface
 
         if ($tenantStamp instanceof TenantStamp) {
             // Restore tenant context from stamp
-            $tenant = $this->tenantRegistry->findBySlug($tenantStamp->getTenantSlug());
+            $tenant = $this->tenantRegistry->findById($tenantStamp->getTenantId());
 
             if (null !== $tenant) {
                 $this->tenantContext->setTenant($tenant);
@@ -92,6 +92,16 @@ final readonly class TenantSessionConfigurator implements MiddlewareInterface
                 $this->clearTenantSession();
             }
         }
+    }
+
+    /**
+     * Manually configures the PostgreSQL session variable with current tenant ID.
+     *
+     * This method can be called directly to configure the session when needed.
+     */
+    public function setConfig(): void
+    {
+        $this->configureTenantSession();
     }
 
     /**

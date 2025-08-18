@@ -15,44 +15,18 @@ class TenantStampTest extends TestCase
     public function testConstructorAndGetters(): void
     {
         // Arrange & Act
-        $stamp = new TenantStamp('acme', 'Acme Corporation');
+        $stamp = new TenantStamp('123');
 
         // Assert
-        $this->assertSame('acme', $stamp->getTenantSlug());
-        $this->assertSame('Acme Corporation', $stamp->getTenantName());
+        $this->assertSame('123', $stamp->getTenantId());
     }
 
-    public function testConstructorWithNullName(): void
+    public function testConstructorWithStringId(): void
     {
         // Arrange & Act
-        $stamp = new TenantStamp('acme', null);
+        $stamp = new TenantStamp('tenant-uuid-123');
 
         // Assert
-        $this->assertSame('acme', $stamp->getTenantSlug());
-        $this->assertNull($stamp->getTenantName());
-    }
-
-    public function testToString(): void
-    {
-        // Arrange
-        $stamp = new TenantStamp('acme', 'Acme Corporation');
-
-        // Act
-        $result = (string) $stamp;
-
-        // Assert
-        $this->assertSame('TenantStamp(acme, Acme Corporation)', $result);
-    }
-
-    public function testToStringWithNullName(): void
-    {
-        // Arrange
-        $stamp = new TenantStamp('acme', null);
-
-        // Act
-        $result = (string) $stamp;
-
-        // Assert
-        $this->assertSame('TenantStamp(acme, )', $result);
+        $this->assertSame('tenant-uuid-123', $stamp->getTenantId());
     }
 }

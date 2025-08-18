@@ -8,8 +8,18 @@ The tenant-aware messenger system consists of several components:
 
 - **TenantMessengerConfigurator**: Manages tenant-specific messenger settings
 - **TenantMessengerTransportResolver**: Middleware that routes messages to tenant-specific transports
-- **TenantStamp**: Carries tenant information with messages for async processing
+- **TenantStamp**: Carries tenant ID with messages for async processing
+- **TenantSendingMiddleware**: Automatically attaches tenant context to outgoing messages
+- **TenantWorkerMiddleware**: Restores tenant context when processing messages in workers
 - **TenantMessengerTransportFactory**: Creates tenant-specific transport instances
+
+## Tenant Propagation
+
+The bundle automatically propagates tenant context across asynchronous message processing:
+
+1. **Sending Phase**: When dispatching a message, `TenantSendingMiddleware` automatically attaches a `TenantStamp` containing the current tenant ID
+2. **Worker Phase**: When processing messages, `TenantWorkerMiddleware` reads the `TenantStamp`, restores the tenant context, and configures the database session
+3. **Cleanup**: After processing, the tenant context is automatically cleared to prevent leakage between messages
 
 ## Requirements
 
@@ -62,6 +72,7 @@ framework:
                 middleware:
                     - validation
                     - doctrine_transaction
+                    # Tenant middleware is automatically registered
         
         transports:
             # Default transport
@@ -114,11 +125,35 @@ public function configureMessenger(TenantSettingsManager $settings): void
 | `messenger_delay` | Default delay in milliseconds | `5000` |
 | `messenger_delay_{transport}` | Transport-specific delay | `messenger_delay_email: 10000` |
 
+## Middleware Registration
+
+The tenant propagation middleware is automatically registered when the bundle is enabled. The middleware stack includes:
+
+1. **TenantSendingMiddleware** (Priority: 100) - Attaches tenant context to outgoing messages
+2. **TenantWorkerMiddleware** (Priority: 100) - Restores tenant context in workers
+3. **TenantMessengerTransportResolver** (Priority: 100) - Routes messages to tenant-specific transports
+
+### Manual Middleware Configuration
+
+If you need to customize middleware registration, you can configure it manually:
+
+```yaml
+# config/services.yaml
+services:
+    Zhortein\MultiTenantBundle\Messenger\TenantSendingMiddleware:
+        tags:
+            - { name: messenger.middleware, priority: 100 }
+    
+    Zhortein\MultiTenantBundle\Messenger\TenantWorkerMiddleware:
+        tags:
+            - { name: messenger.middleware, priority: 100 }
+```
+
 ## Usage
 
 ### Basic Message Dispatching
 
-Messages are automatically routed to tenant-specific transports:
+Messages are automatically routed to tenant-specific transports and tagged with tenant context:
 
 ```php
 use Symfony\Component\Messenger\MessageBusInterface;
@@ -128,8 +163,10 @@ public function sendMessage(MessageBusInterface $bus): void
 {
     $message = new SendEmailMessage('user@example.com', 'Welcome!');
     
-    // Message will be automatically routed to tenant-specific transport
-    // and tagged with tenant information
+    // Message will be automatically:
+    // 1. Tagged with current tenant ID (TenantStamp)
+    // 2. Routed to tenant-specific transport
+    // 3. Processed with tenant context restored in worker
     $bus->dispatch($message);
 }
 ```
@@ -171,7 +208,6 @@ namespace App\MessageHandler;
 use App\Message\TenantAwareMessage;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use Symfony\Component\Messenger\Envelope;
-use Symfony\Component\Messenger\Stamp\StampInterface;
 use Zhortein\MultiTenantBundle\Context\TenantContextInterface;
 use Zhortein\MultiTenantBundle\Messenger\TenantStamp;
 
@@ -185,27 +221,73 @@ class TenantAwareMessageHandler
 
     public function __invoke(TenantAwareMessage $message, Envelope $envelope): void
     {
-        // Get tenant information from the stamp
+        // Tenant context is automatically restored by TenantWorkerMiddleware
+        // You can access it directly from the context
+        if ($this->tenantContext->hasTenant()) {
+            $tenant = $this->tenantContext->getTenant();
+            $this->processForTenant($message, $tenant);
+        }
+        
+        // Or get tenant ID from the stamp if needed
         /** @var TenantStamp|null $tenantStamp */
         $tenantStamp = $envelope->last(TenantStamp::class);
-        
         if ($tenantStamp) {
-            $tenantSlug = $tenantStamp->getTenantSlug();
-            $tenantName = $tenantStamp->getTenantName();
-            
-            // Process message with tenant context
-            $this->processForTenant($message, $tenantSlug, $tenantName);
+            $tenantId = $tenantStamp->getTenantId();
+            // Process with tenant ID
         }
     }
     
-    private function processForTenant(TenantAwareMessage $message, string $slug, string $name): void
+    private function processForTenant(TenantAwareMessage $message, object $tenant): void
     {
         // Your tenant-specific processing logic
-        echo "Processing message for tenant: {$name} ({$slug})";
+        echo "Processing message for tenant: {$tenant->getName()} ({$tenant->getSlug()})";
         echo "Data: " . $message->getData();
+        
+        // Database queries will automatically be filtered by tenant
+        // thanks to the restored tenant context
     }
 }
 ```
+
+### Automatic Tenant Propagation
+
+The bundle provides automatic tenant context propagation through two middleware components:
+
+#### TenantSendingMiddleware
+
+Automatically attaches tenant context to outgoing messages:
+
+```php
+// When you dispatch a message with tenant context active:
+$tenantContext->setTenant($tenant); // Tenant ID: "123"
+$bus->dispatch(new MyMessage());
+
+// The middleware automatically:
+// 1. Detects current tenant context
+// 2. Attaches TenantStamp with tenant ID "123"
+// 3. Message is queued with tenant information
+```
+
+#### TenantWorkerMiddleware
+
+Automatically restores tenant context when processing messages:
+
+```php
+// When a worker processes the message:
+// 1. Reads TenantStamp from message envelope
+// 2. Looks up tenant by ID in TenantRegistry
+// 3. Sets tenant in TenantContext
+// 4. Configures database session (RLS, etc.)
+// 5. Processes message with full tenant context
+// 6. Clears tenant context after processing
+```
+
+#### Safety Features
+
+- **No-tenant safety**: Messages without tenant context process normally
+- **Missing tenant handling**: If tenant ID in stamp doesn't exist, message processes without tenant context
+- **Exception safety**: Tenant context is always cleared, even if message processing fails
+- **Existing stamp respect**: Won't override manually set TenantStamps
 
 ### Manual Transport Resolution
 
@@ -356,8 +438,13 @@ class MessageHandlerTest extends TestCase
     public function testTenantAwareHandler(): void
     {
         $message = new TenantAwareMessage('acme', 'test data');
-        $tenantStamp = new TenantStamp('acme', 'Acme Corporation');
+        $tenantStamp = new TenantStamp('123'); // Tenant ID
         $envelope = new Envelope($message, [$tenantStamp]);
+        
+        // Mock tenant context to return the tenant
+        $tenant = $this->createMockTenant('123', 'acme');
+        $this->tenantContext->method('hasTenant')->willReturn(true);
+        $this->tenantContext->method('getTenant')->willReturn($tenant);
         
         $handler = new TenantAwareMessageHandler($this->tenantContext);
         $handler($message, $envelope);
@@ -435,7 +522,7 @@ public function __invoke(MyMessage $message, Envelope $envelope): void
     // Check for tenant stamp specifically
     $tenantStamp = $envelope->last(TenantStamp::class);
     if ($tenantStamp) {
-        dump('Tenant:', $tenantStamp->getTenantSlug(), $tenantStamp->getTenantName());
+        dump('Tenant ID:', $tenantStamp->getTenantId());
     }
 }
 ```
@@ -493,23 +580,21 @@ class SendTenantEmailHandler
 
     public function __invoke(SendTenantEmailMessage $message, Envelope $envelope): void
     {
-        // Get tenant from stamp
-        $tenantStamp = $envelope->last(TenantStamp::class);
-        if (!$tenantStamp) {
+        // Tenant context is automatically restored by TenantWorkerMiddleware
+        if (!$this->tenantContext->hasTenant()) {
             throw new \RuntimeException('Tenant context required for email processing');
         }
 
-        // Set tenant context for the handler
-        $tenant = $this->tenantRegistry->getBySlug($tenantStamp->getTenantSlug());
-        $this->tenantContext->setTenant($tenant);
-
-        // Send tenant-aware email
+        // Send tenant-aware email - tenant context is already set
         $this->mailer->sendTemplatedEmail(
             $message->getTo(),
             $message->getSubject(),
             $message->getTemplate(),
             $message->getContext()
         );
+        
+        // Database queries in the mailer will be automatically
+        // filtered by tenant thanks to the restored context
     }
 }
 
@@ -522,8 +607,11 @@ public function scheduleEmail(MessageBusInterface $bus): void
         'emails/welcome.html.twig',
         ['user' => $user]
     ));
-    // Message will be automatically routed to tenant-specific transport
-    // and processed with tenant context preserved
+    // Message will be automatically:
+    // 1. Tagged with current tenant ID (TenantStamp)
+    // 2. Routed to tenant-specific transport
+    // 3. Processed with tenant context fully restored in worker
+    // 4. Database session configured for tenant isolation
 }
 ```
 

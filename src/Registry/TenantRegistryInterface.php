@@ -41,6 +41,15 @@ interface TenantRegistryInterface
     public function findBySlug(string $slug): ?TenantInterface;
 
     /**
+     * Finds a tenant by its ID.
+     *
+     * @param string|int $id The tenant ID
+     *
+     * @return TenantInterface|null The tenant entity or null if not found
+     */
+    public function findById(string|int $id): ?TenantInterface;
+
+    /**
      * Checks if a tenant exists by slug.
      *
      * @param string $slug The tenant slug

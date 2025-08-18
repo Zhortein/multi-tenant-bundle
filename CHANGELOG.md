@@ -19,6 +19,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Comprehensive logging and diagnostics for resolution process
   - Support for fallback resolution strategies in non-strict mode
 
+- **Messenger Tenant Propagation**
+  - `TenantStamp` for carrying tenant ID through message queues
+  - `TenantSendingMiddleware` automatically attaches tenant context to outgoing messages
+  - `TenantWorkerMiddleware` restores tenant context when processing messages in workers
+  - Automatic database session configuration (RLS) for tenant isolation in workers
+  - Enhanced `TenantRegistryInterface` with `findById()` method for tenant lookup by ID
+  - Safe handling of messages without tenant context or missing tenants
+  - Exception-safe tenant context cleanup after message processing
+  - Comprehensive test coverage for tenant propagation scenarios
+
 ## [1.0.0-RC1] - 2025-08-01
 
 ### Added

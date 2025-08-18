@@ -15,28 +15,17 @@ use Symfony\Component\Messenger\Stamp\StampInterface;
 final readonly class TenantStamp implements StampInterface
 {
     public function __construct(
-        private string $tenantSlug,
-        private string $tenantName,
+        private string $tenantId,
     ) {
     }
 
     /**
-     * Gets the tenant slug.
+     * Gets the tenant ID.
      *
-     * @return string The tenant slug
+     * @return string The tenant ID
      */
-    public function getTenantSlug(): string
+    public function getTenantId(): string
     {
-        return $this->tenantSlug;
-    }
-
-    /**
-     * Gets the tenant name.
-     *
-     * @return string The tenant name
-     */
-    public function getTenantName(): string
-    {
-        return $this->tenantName;
+        return $this->tenantId;
     }
 }
