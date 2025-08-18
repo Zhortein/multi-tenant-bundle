@@ -20,6 +20,7 @@ Welcome to the comprehensive documentation for the Zhortein Multi-Tenant Bundle,
 - [Tenant Settings](tenant-settings.md) - Configuration system with fallback rules
 
 ### Service Integration
+- [Decorators](decorators.md) - Tenant-aware decorators for caching, logging, and storage
 - [Mailer](mailer.md) - Tenant-aware email configuration and sending
 - [Messenger](messenger.md) - Tenant-aware message queues and processing
 - [Storage](storage.md) - Tenant-specific file storage mechanisms
@@ -54,7 +55,7 @@ The Zhortein Multi-Tenant Bundle provides a comprehensive, production-ready solu
 - **🗄️ Database Strategies**: Shared database with filtering or separate databases per tenant
 - **⚡ Performance Optimized**: Built-in caching for tenant settings and configurations
 - **🔧 Doctrine Integration**: Automatic tenant filtering with Doctrine ORM
-- **📧 Service Integrations**: Tenant-aware mailer, messenger, and file storage
+- **📧 Service Integrations**: Tenant-aware decorators, mailer, messenger, and file storage
 - **🎯 Event-Driven Architecture**: Automatic tenant context resolution via event listeners
 - **🛠️ Console Commands**: Management commands for tenant operations
 - **🧪 Comprehensive Testing**: Full test suite with PHPUnit 12 and PHPStan level max

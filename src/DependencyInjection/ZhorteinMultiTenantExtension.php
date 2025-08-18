@@ -20,6 +20,10 @@ use Zhortein\MultiTenantBundle\Command\SyncRlsPoliciesCommand;
 use Zhortein\MultiTenantBundle\Context\TenantContext;
 use Zhortein\MultiTenantBundle\Context\TenantContextInterface;
 use Zhortein\MultiTenantBundle\Database\TenantSessionConfigurator;
+use Zhortein\MultiTenantBundle\Decorator\TenantAwareCacheDecorator;
+use Zhortein\MultiTenantBundle\Decorator\TenantAwareSimpleCacheDecorator;
+use Zhortein\MultiTenantBundle\Decorator\TenantLoggerProcessor;
+use Zhortein\MultiTenantBundle\Decorator\TenantStoragePathHelper;
 use Zhortein\MultiTenantBundle\Doctrine\DefaultConnectionResolver;
 use Zhortein\MultiTenantBundle\Doctrine\EventAwareConnectionResolver;
 use Zhortein\MultiTenantBundle\Doctrine\TenantConnectionResolverInterface;
@@ -82,6 +86,9 @@ final class ZhorteinMultiTenantExtension extends Extension
         // Register tenant-aware services
         $this->registerTenantAwareServices($container, $config);
 
+        // Register decorators
+        $this->registerDecorators($container, $config);
+
         // Load service definitions from YAML
         $this->loadServiceDefinitions($container);
     }
@@ -126,6 +133,13 @@ final class ZhorteinMultiTenantExtension extends Extension
         $container->setParameter('zhortein_multi_tenant.fixtures.enabled', $config['fixtures']['enabled']);
         $container->setParameter('zhortein_multi_tenant.events.dispatch_database_switch', $config['events']['dispatch_database_switch']);
         $container->setParameter('zhortein_multi_tenant.container.enable_tenant_scope', $config['container']['enable_tenant_scope']);
+        $container->setParameter('zhortein_multi_tenant.decorators.cache.enabled', $config['decorators']['cache']['enabled']);
+        $container->setParameter('zhortein_multi_tenant.decorators.cache.services', $config['decorators']['cache']['services']);
+        $container->setParameter('zhortein_multi_tenant.decorators.logger.enabled', $config['decorators']['logger']['enabled']);
+        $container->setParameter('zhortein_multi_tenant.decorators.logger.channels', $config['decorators']['logger']['channels']);
+        $container->setParameter('zhortein_multi_tenant.decorators.storage.enabled', $config['decorators']['storage']['enabled']);
+        $container->setParameter('zhortein_multi_tenant.decorators.storage.use_slug', $config['decorators']['storage']['use_slug']);
+        $container->setParameter('zhortein_multi_tenant.decorators.storage.path_separator', $config['decorators']['storage']['path_separator']);
     }
 
     /**
@@ -596,6 +610,48 @@ final class ZhorteinMultiTenantExtension extends Extension
         $container->register('zhortein_multi_tenant.entity_listener', TenantEntityListener::class)
             ->setAutowired(true)
             ->setAutoconfigured(true);
+    }
+
+    /**
+     * Registers tenant-aware decorators.
+     *
+     * @param ContainerBuilder     $container The container builder
+     * @param array<string, mixed> $config    The processed configuration
+     */
+    private function registerDecorators(ContainerBuilder $container, array $config): void
+    {
+        // Register storage path helper
+        if ($config['decorators']['storage']['enabled']) {
+            $container->register(TenantStoragePathHelper::class)
+                ->setAutowired(true)
+                ->setArgument('$enabled', '%zhortein_multi_tenant.decorators.storage.enabled%')
+                ->setArgument('$pathSeparator', '%zhortein_multi_tenant.decorators.storage.path_separator%');
+        }
+
+        // Register logger processor
+        if ($config['decorators']['logger']['enabled']) {
+            $container->register('zhortein_multi_tenant.logger_processor', TenantLoggerProcessor::class)
+                ->setAutowired(true)
+                ->setArgument('$enabled', '%zhortein_multi_tenant.decorators.logger.enabled%')
+                ->addTag('monolog.processor');
+        }
+
+        // Register cache decorators
+        if ($config['decorators']['cache']['enabled']) {
+            foreach ($config['decorators']['cache']['services'] as $serviceId) {
+                // Register PSR-6 cache decorator
+                $container->register($serviceId.'.tenant_aware', TenantAwareCacheDecorator::class)
+                    ->setDecoratedService($serviceId)
+                    ->setAutowired(true)
+                    ->setArgument('$enabled', '%zhortein_multi_tenant.decorators.cache.enabled%');
+
+                // Register PSR-16 simple cache decorator
+                $container->register($serviceId.'.simple.tenant_aware', TenantAwareSimpleCacheDecorator::class)
+                    ->setDecoratedService($serviceId.'.simple', null, 1) // Lower priority to avoid conflicts
+                    ->setAutowired(true)
+                    ->setArgument('$enabled', '%zhortein_multi_tenant.decorators.cache.enabled%');
+            }
+        }
     }
 
     /**

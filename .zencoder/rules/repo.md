@@ -10,10 +10,29 @@ A comprehensive Symfony 7+ bundle for building multi-tenant applications with Po
 
 ## Structure
 - **src/**: Core bundle code organized by component
+  - **Attribute/**: Custom attributes for tenant-aware entities
+  - **Command/**: Console commands for tenant management
+  - **Context/**: Tenant context management
+  - **Database/**: Database session configuration
+  - **DependencyInjection/**: Symfony DI configuration
+  - **Doctrine/**: Doctrine integration (filters, listeners)
+  - **Entity/**: Core entity interfaces and implementations
+  - **Event/**: Event classes for tenant lifecycle
+  - **EventListener/**: Event listeners for automatic tenant resolution
+  - **EventSubscriber/**: Event subscribers for advanced workflows
+  - **Exception/**: Custom exceptions for tenant operations
+  - **Helper/**: Utility classes and helpers
+  - **Mailer/**: Tenant-aware mailer integration
+  - **Manager/**: High-level service managers
+  - **Messenger/**: Tenant-aware messenger integration
+  - **Middleware/**: HTTP middleware for tenant resolution
+  - **Registry/**: Tenant registry implementations
+  - **Repository/**: Doctrine repositories for tenant entities
+  - **Resolver/**: Tenant resolution strategies
+  - **Storage/**: Storage abstraction for tenant data
 - **tests/**: Test suite with unit, integration, and functional tests
 - **docs/**: Comprehensive documentation and examples
 - **config/**: Bundle configuration files
-- **assets/**: Frontend assets (if any)
 
 ## Language & Runtime
 **Language**: PHP
@@ -22,6 +41,7 @@ A comprehensive Symfony 7+ bundle for building multi-tenant applications with Po
 **Database**: PostgreSQL 16 (via Doctrine ORM)
 **Build System**: Composer
 **Package Manager**: Composer
+**Frontend**: Supports stimulus/turbo/alpinejs/tailwind 4/bootstrap 5 when needed
 
 ## Dependencies
 **Main Dependencies**:
@@ -35,6 +55,11 @@ A comprehensive Symfony 7+ bundle for building multi-tenant applications with Po
 - symfony/http-kernel: ^7.0
 - symfony/orm-pack: ^2.0
 
+**Optional Dependencies**:
+- symfony/mailer: For tenant-aware mail sending
+- symfony/messenger: For tenant-aware async message dispatching
+- symfony/twig-bundle: For templated tenant-aware emails
+
 **Development Dependencies**:
 - phpstan/phpstan: ^2.1 (max level)
 - phpunit/phpunit: ^12.2.5
@@ -47,11 +72,11 @@ A comprehensive Symfony 7+ bundle for building multi-tenant applications with Po
 # Install via Composer
 composer require zhortein/multi-tenant-bundle
 
-# Development setup
-make dev-setup
+# Enable the bundle in config/bundles.php
+# Zhortein\MultiTenantBundle\ZhorteinMultiTenantBundle::class => ['all' => true]
 
-# Run tests
-make test
+# Create tenant entity implementing TenantInterface
+# Configure in config/packages/zhortein_multi_tenant.yaml
 ```
 
 ## Docker
@@ -63,6 +88,7 @@ make test
 make installdeps  # Install dependencies
 make test         # Run tests
 make phpstan      # Run static analysis
+make dev-check    # Run all development checks
 ```
 
 ## Testing
@@ -81,17 +107,20 @@ make test-coverage # With coverage report
 
 ## Core Components
 - **Tenant Context**: Thread-safe tenant state management
-- **Tenant Resolution**: Multiple strategies (subdomain, path, header, DNS)
+- **Tenant Resolution**: Multiple strategies (subdomain, path, header, DNS, hybrid)
 - **Database Integration**: Automatic query filtering with Doctrine
+- **Database Strategies**: Shared database with filtering or separate databases per tenant
 - **Tenant Registry**: Database and in-memory implementations
 - **Settings Management**: Tenant-specific configuration with caching
 - **Service Integrations**: Mailer, Messenger, and file storage
-- **Console Commands**: Tenant management and migrations
+- **Console Commands**: Tenant management, migrations, and fixtures
 
 ## Code Quality
-- PHPStan at maximum level
+- PHPStan at maximum level (Level 9)
 - PHP-CS-Fixer with Symfony rules
 - Strict typing throughout
-- Comprehensive test suite
-- Interface-based architecture
-- Follows Symfony best practices
+- Comprehensive test suite (71 tests with 139 assertions)
+- Interface-based architecture for extensibility
+- Follows Symfony best practices and PSR standards
+- DRY and SOLID principles
+- Documentation in English
