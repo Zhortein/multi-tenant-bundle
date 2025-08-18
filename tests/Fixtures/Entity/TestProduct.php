@@ -7,7 +7,6 @@ namespace Zhortein\MultiTenantBundle\Tests\Fixtures\Entity;
 use Doctrine\ORM\Mapping as ORM;
 use Zhortein\MultiTenantBundle\Attribute\AsTenantAware;
 use Zhortein\MultiTenantBundle\Doctrine\TenantAwareEntityTrait;
-use Zhortein\MultiTenantBundle\Entity\TenantInterface;
 
 /**
  * Test product entity for functional tests.

@@ -12,7 +12,6 @@ use Doctrine\ORM\Mapping\ClassMetadata;
 use Doctrine\ORM\Mapping\ClassMetadataFactory;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
-use ReflectionClass;
 use Symfony\Component\Console\Application;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Tester\CommandTester;
@@ -58,7 +57,7 @@ final class SyncRlsPoliciesCommandTest extends TestCase
     {
         $platform = $this->createMock(\Doctrine\DBAL\Platforms\MySQLPlatform::class);
         $platform->method('getName')->willReturn('mysql');
-        
+
         $this->connection
             ->method('getDatabasePlatform')
             ->willReturn($platform);
@@ -98,13 +97,13 @@ final class SyncRlsPoliciesCommandTest extends TestCase
         $metadata->method('getName')->willReturn('App\\Entity\\Product');
         $metadata->method('getTableName')->willReturn('products');
 
-        $reflectionClass = $this->createMock(ReflectionClass::class);
+        $reflectionClass = $this->createMock(\ReflectionClass::class);
         $metadata->method('getReflectionClass')->willReturn($reflectionClass);
 
         // Mock AsTenantAware attribute
         $attribute = $this->createMock(\ReflectionAttribute::class);
         $attribute->method('newInstance')->willReturn(new AsTenantAware(requireTenantId: true));
-        
+
         $reflectionClass->method('getAttributes')
             ->with(AsTenantAware::class)
             ->willReturn([$attribute]);
@@ -120,17 +119,17 @@ final class SyncRlsPoliciesCommandTest extends TestCase
 
         $this->connection
             ->method('quoteIdentifier')
-            ->willReturnCallback(fn($identifier) => '"' . $identifier . '"');
+            ->willReturnCallback(fn ($identifier) => '"'.$identifier.'"');
 
         $this->connection
             ->method('quote')
-            ->willReturnCallback(fn($value) => "'" . $value . "'");
+            ->willReturnCallback(fn ($value) => "'".$value."'");
 
         $exitCode = $this->commandTester->execute([]);
 
         $this->assertSame(Command::SUCCESS, $exitCode);
         $output = $this->commandTester->getDisplay();
-        
+
         $this->assertStringContainsString('Found 1 tenant-aware entities', $output);
         $this->assertStringContainsString('ALTER TABLE "products" ENABLE ROW LEVEL SECURITY', $output);
         $this->assertStringContainsString('CREATE POLICY "tenant_isolation_products" ON "products"', $output);
@@ -150,13 +149,13 @@ final class SyncRlsPoliciesCommandTest extends TestCase
         $metadata->method('getName')->willReturn('App\\Entity\\Product');
         $metadata->method('getTableName')->willReturn('products');
 
-        $reflectionClass = $this->createMock(ReflectionClass::class);
+        $reflectionClass = $this->createMock(\ReflectionClass::class);
         $metadata->method('getReflectionClass')->willReturn($reflectionClass);
 
         // Mock AsTenantAware attribute
         $attribute = $this->createMock(\ReflectionAttribute::class);
         $attribute->method('newInstance')->willReturn(new AsTenantAware(requireTenantId: true));
-        
+
         $reflectionClass->method('getAttributes')
             ->with(AsTenantAware::class)
             ->willReturn([$attribute]);
@@ -172,23 +171,24 @@ final class SyncRlsPoliciesCommandTest extends TestCase
 
         $this->connection
             ->method('quoteIdentifier')
-            ->willReturnCallback(fn($identifier) => '"' . $identifier . '"');
+            ->willReturnCallback(fn ($identifier) => '"'.$identifier.'"');
 
         $this->connection
             ->method('quote')
-            ->willReturnCallback(fn($value) => "'" . $value . "'");
+            ->willReturnCallback(fn ($value) => "'".$value."'");
 
         // Expect SQL statements to be executed
         $expectedCalls = [
             'ALTER TABLE "products" ENABLE ROW LEVEL SECURITY;',
-            'CREATE POLICY "tenant_isolation_products" ON "products" USING (tenant_id::text = current_setting(\'app.tenant_id\', true));'
+            'CREATE POLICY "tenant_isolation_products" ON "products" USING (tenant_id::text = current_setting(\'app.tenant_id\', true));',
         ];
-        
+
         $this->connection
             ->expects($this->exactly(2))
             ->method('executeStatement')
             ->willReturnCallback(function ($sql) use (&$expectedCalls) {
                 $this->assertContains($sql, $expectedCalls);
+
                 return null;
             });
 
@@ -210,13 +210,13 @@ final class SyncRlsPoliciesCommandTest extends TestCase
         $metadata->method('getName')->willReturn('App\\Entity\\Product');
         $metadata->method('getTableName')->willReturn('products');
 
-        $reflectionClass = $this->createMock(ReflectionClass::class);
+        $reflectionClass = $this->createMock(\ReflectionClass::class);
         $metadata->method('getReflectionClass')->willReturn($reflectionClass);
 
         // Mock AsTenantAware attribute
         $attribute = $this->createMock(\ReflectionAttribute::class);
         $attribute->method('newInstance')->willReturn(new AsTenantAware(requireTenantId: true));
-        
+
         $reflectionClass->method('getAttributes')
             ->with(AsTenantAware::class)
             ->willReturn([$attribute]);
@@ -232,17 +232,17 @@ final class SyncRlsPoliciesCommandTest extends TestCase
 
         $this->connection
             ->method('quoteIdentifier')
-            ->willReturnCallback(fn($identifier) => '"' . $identifier . '"');
+            ->willReturnCallback(fn ($identifier) => '"'.$identifier.'"');
 
         $this->connection
             ->method('quote')
-            ->willReturnCallback(fn($value) => "'" . $value . "'");
+            ->willReturnCallback(fn ($value) => "'".$value."'");
 
         $exitCode = $this->commandTester->execute(['--force' => true]);
 
         $this->assertSame(Command::SUCCESS, $exitCode);
         $output = $this->commandTester->getDisplay();
-        
+
         // Should include DROP POLICY statement when forcing
         $this->assertStringContainsString('DROP POLICY IF EXISTS "tenant_isolation_products"', $output);
         $this->assertStringContainsString('CREATE POLICY "tenant_isolation_products"', $output);
@@ -260,13 +260,13 @@ final class SyncRlsPoliciesCommandTest extends TestCase
         $metadata->method('getName')->willReturn('App\\Entity\\Product');
         $metadata->method('getTableName')->willReturn('products');
 
-        $reflectionClass = $this->createMock(ReflectionClass::class);
+        $reflectionClass = $this->createMock(\ReflectionClass::class);
         $metadata->method('getReflectionClass')->willReturn($reflectionClass);
 
         // Mock AsTenantAware attribute
         $attribute = $this->createMock(\ReflectionAttribute::class);
         $attribute->method('newInstance')->willReturn(new AsTenantAware(requireTenantId: true));
-        
+
         $reflectionClass->method('getAttributes')
             ->with(AsTenantAware::class)
             ->willReturn([$attribute]);
@@ -282,18 +282,18 @@ final class SyncRlsPoliciesCommandTest extends TestCase
 
         $this->connection
             ->method('quoteIdentifier')
-            ->willReturnCallback(fn($identifier) => '"' . $identifier . '"');
+            ->willReturnCallback(fn ($identifier) => '"'.$identifier.'"');
 
         $this->connection
             ->method('quote')
-            ->willReturnCallback(fn($value) => "'" . $value . "'");
+            ->willReturnCallback(fn ($value) => "'".$value."'");
 
         // Should still generate SQL even when checking existing state fails
         $exitCode = $this->commandTester->execute([]);
 
         $this->assertSame(Command::SUCCESS, $exitCode);
         $output = $this->commandTester->getDisplay();
-        
+
         $this->assertStringContainsString('ALTER TABLE "products" ENABLE ROW LEVEL SECURITY', $output);
         $this->assertStringContainsString('CREATE POLICY "tenant_isolation_products"', $output);
     }
@@ -310,13 +310,13 @@ final class SyncRlsPoliciesCommandTest extends TestCase
         $metadata->method('getName')->willReturn('App\\Entity\\Product');
         $metadata->method('getTableName')->willReturn('products');
 
-        $reflectionClass = $this->createMock(ReflectionClass::class);
+        $reflectionClass = $this->createMock(\ReflectionClass::class);
         $metadata->method('getReflectionClass')->willReturn($reflectionClass);
 
         // Mock AsTenantAware attribute with requireTenantId = false (multi-db mode)
         $attribute = $this->createMock(\ReflectionAttribute::class);
         $attribute->method('newInstance')->willReturn(new AsTenantAware(requireTenantId: false));
-        
+
         $reflectionClass->method('getAttributes')
             ->with(AsTenantAware::class)
             ->willReturn([$attribute]);

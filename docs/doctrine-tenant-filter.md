@@ -2,16 +2,101 @@
 
 The Doctrine tenant filter automatically adds tenant constraints to database queries, ensuring that entities are filtered by the current tenant context. This provides transparent data isolation without requiring manual filtering in every query.
 
-## How It Works
+## Overview
 
-The tenant filter operates at the SQL level, automatically adding `WHERE` clauses to queries for entities that implement the tenant-aware interface or use the `#[AsTenantAware]` attribute.
+The enhanced filter provides robust tenant isolation with improved safety, debugging, and type handling for complex multi-tenant scenarios. It operates at the SQL level, automatically adding `WHERE` clauses to queries for entities that implement the tenant-aware interface or use the `#[AsTenantAware]` attribute.
 
 ### Database Strategies
 
 The filter behavior depends on your database strategy:
 
-- **Shared DB**: Adds `tenant_id` filtering to all queries
+- **Shared**: Adds `tenant_id` filtering to all queries with enhanced safety checks
+- **Hybrid**: Selective filtering based on entity configuration
 - **Multi-DB**: Filter is disabled as each tenant has its own database
+
+## Key Features
+
+### 1. Safe Entity Inspection
+
+The filter safely inspects entity metadata to determine if filtering should be applied:
+
+- Automatically detects tenant-aware entities using `TenantOwnedEntityInterface`
+- Supports `#[AsTenantAware]` attribute with custom tenant field names
+- Safely skips non-tenant entities without errors
+- Inspects ClassMetadata to verify tenant columns exist
+
+### 2. Proper Parameter Typing
+
+The filter automatically detects and properly formats tenant ID parameters:
+
+- **Integer tenant IDs**: `WHERE t.tenant_id = 123`
+- **UUID tenant IDs**: `WHERE t.tenant_id = '550e8400-e29b-41d4-a716-446655440000'` (properly quoted)
+- **String tenant IDs**: `WHERE t.tenant_id = 'tenant-slug-123'` (properly quoted)
+- Type detection based on entity mapping metadata
+
+### 3. Complex Query Support
+
+The filter works seamlessly with complex DQL queries:
+
+- Simple repository queries with automatic filtering
+- JOIN queries with multiple table aliases
+- Subqueries with proper tenant isolation
+- Mixed entity queries (tenant-aware and global entities)
+
+### 4. Comprehensive Debug Logging
+
+The filter provides detailed logging for troubleshooting:
+
+```php
+// When entity is not tenant-aware
+[DEBUG] Entity is not tenant-aware, skipping filter
+{
+    "entity": "App\\Entity\\GlobalSetting",
+    "reason": "not_tenant_aware"
+}
+
+// When filter is successfully applied
+[DEBUG] Applied tenant filter constraint
+{
+    "entity": "App\\Entity\\Product",
+    "alias": "p",
+    "column": "tenant_id",
+    "type": "integer",
+    "constraint": "p.tenant_id = 123"
+}
+
+// When tenant parameter is missing
+[DEBUG] No tenant_id parameter set, skipping filter
+{
+    "entity": "App\\Entity\\Product",
+    "reason": "no_tenant_parameter"
+}
+```
+
+## Enhanced Features
+
+### Error Handling
+
+The filter includes robust error handling:
+
+1. **Missing Metadata**: Gracefully handles entities without proper metadata
+2. **Invalid Parameters**: Safely skips filtering when tenant parameters are invalid
+3. **Reflection Errors**: Falls back to safe defaults when reflection fails
+4. **Type Conversion**: Handles various tenant ID types automatically
+
+### Performance Considerations
+
+- **Metadata Caching**: Entity metadata is cached by Doctrine
+- **Efficient Inspection**: Minimal overhead for entity type detection
+- **Query Optimization**: Filter constraints are applied at the SQL level
+- **Selective Application**: Only applies to tenant-aware entities
+
+### Security Considerations
+
+- **Data Isolation**: Filter ensures complete tenant data separation
+- **SQL Injection**: All parameters are properly escaped and typed
+- **Access Control**: Filter works at the database level, preventing data leaks
+- **Audit Trail**: Debug logging provides audit trail for filter application
 
 ## Configuration
 
@@ -33,10 +118,28 @@ doctrine:
 # config/packages/zhortein_multi_tenant.yaml
 zhortein_multi_tenant:
     database:
-        strategy: 'shared_db' # Required for filter to work
+        strategy: 'shared'  # or 'hybrid' - Required for filter to work
         enable_filter: true
         auto_tenant_id: true # Automatically add tenant_id to entities
 ```
+
+### Enable Debug Logging
+
+To enable detailed debug logging for the tenant filter:
+
+```yaml
+# config/packages/monolog.yaml
+monolog:
+    handlers:
+        main:
+            level: debug
+            channels: ["!event"]
+```
+
+The filter will log debug information when:
+- Entities are skipped (not tenant-aware, no tenant column, etc.)
+- Filter constraints are successfully applied
+- Tenant parameters are missing or invalid
 
 ## Entity Setup
 
@@ -202,6 +305,40 @@ class Product
     private ?string $name = null;
 
     // No tenant relationship needed - each tenant has its own database
+}
+```
+
+## Mixed Entity Queries
+
+The enhanced filter can handle queries that mix tenant-aware and non-tenant entities:
+
+```php
+<?php
+
+namespace App\Service;
+
+use Doctrine\ORM\EntityManagerInterface;
+use App\Entity\Product;
+use App\Entity\GlobalSetting;
+
+class MixedQueryService
+{
+    public function __construct(
+        private EntityManagerInterface $entityManager,
+    ) {}
+
+    public function getProductsWithGlobalSettings(): array
+    {
+        // Query mixing tenant-aware and non-tenant entities
+        $query = $this->entityManager->createQueryBuilder()
+            ->select('p', 's')
+            ->from(Product::class, 'p')        // Filtered by tenant
+            ->leftJoin(GlobalSetting::class, 's', 'WITH', 's.key = :key')  // Not filtered
+            ->setParameter('key', 'tax_rate')
+            ->getQuery();
+
+        return $query->getResult(); // Products filtered, settings global
+    }
 }
 ```
 
@@ -756,10 +893,24 @@ class TenantFilterIntegrationTest extends WebTestCase
 
 ### Common Issues
 
-1. **Filter Not Applied**: Check if filter is enabled and entity uses correct interface/attribute
-2. **Performance Issues**: Add proper database indexes for tenant_id columns
-3. **Cross-Tenant Queries**: Temporarily disable filter when needed
-4. **Migration Issues**: Ensure tenant_id columns are properly created
+1. **Filter Not Applied**: Check debug logs for skip reasons (entity not tenant-aware, no tenant column, etc.)
+2. **Wrong Results**: Verify tenant context is set correctly and check debug logs
+3. **Performance Issues**: Ensure proper database indexes on tenant columns
+4. **Cross-Tenant Queries**: Temporarily disable filter when needed
+5. **Parameter Type Issues**: Check debug logs for parameter type detection
+
+### Debug Commands
+
+```bash
+# Check tenant context
+bin/console debug:container tenant.context
+
+# Verify filter configuration
+bin/console doctrine:mapping:info
+
+# Test tenant isolation
+bin/console tenant:list
+```
 
 ### Debug Queries
 
@@ -787,12 +938,60 @@ if ($isEnabled) {
 }
 ```
 
+### Debug Log Analysis
+
+Monitor your logs for debug messages from the tenant filter:
+
+```bash
+# Watch for tenant filter debug messages
+tail -f var/log/dev.log | grep "tenant filter"
+
+# Filter for specific debug reasons
+tail -f var/log/dev.log | grep "not_tenant_aware\|no_tenant_column\|no_tenant_parameter"
+```
+
 ## Best Practices
 
-1. **Always Use Indexes**: Add database indexes for tenant_id columns
-2. **Test Filtering**: Write tests to verify tenant isolation
-3. **Monitor Performance**: Use profiling to identify slow queries
-4. **Handle Edge Cases**: Consider what happens when no tenant is set
-5. **Document Exceptions**: Clearly document when filter is disabled
+1. **Always Set Context**: Ensure tenant context is set before database operations
+2. **Index Tenant Columns**: Add database indexes on tenant foreign keys
+3. **Monitor Logs**: Use debug logging to verify filter behavior
+4. **Test Isolation**: Regularly test tenant data isolation with comprehensive tests
+5. **Handle Edge Cases**: Consider scenarios where tenant context might be missing
 6. **Use Attributes**: Prefer `#[AsTenantAware]` over interface implementation
 7. **Validate Data**: Ensure tenant_id is set when creating entities
+8. **Document Exceptions**: Clearly document when filter is disabled
+9. **Monitor Performance**: Use profiling to identify slow queries
+10. **Review Debug Logs**: Regularly check debug logs for filter application issues
+
+## Migration Guide
+
+### From Previous Versions
+
+The enhanced filter is backward compatible. Existing entities using `TenantOwnedEntityInterface` continue to work without changes.
+
+### New Features
+
+To use new features like custom tenant fields:
+
+```php
+// Before (still works)
+class Product implements TenantOwnedEntityInterface
+{
+    private ?TenantInterface $tenant = null;
+}
+
+// After (new option)
+#[AsTenantAware(tenantField: 'organization')]
+class Employee
+{
+    private ?TenantInterface $organization = null;
+}
+```
+
+### Enhanced Testing
+
+The enhanced filter includes comprehensive test coverage:
+
+- **Unit Tests**: Core logic and edge cases
+- **Integration Tests**: Real database scenarios with joins and subqueries
+- **Functional Tests**: End-to-end tenant isolation verification

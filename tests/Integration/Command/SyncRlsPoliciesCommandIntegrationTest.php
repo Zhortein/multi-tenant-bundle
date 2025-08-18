@@ -85,7 +85,7 @@ final class SyncRlsPoliciesCommandIntegrationTest extends TestCase
 
         $this->assertSame('tenant:rls:sync', $command->getName());
         $this->assertStringContainsString('PostgreSQL Row-Level Security', $command->getDescription());
-        
+
         // Check that the command has the expected options
         $definition = $command->getDefinition();
         $this->assertTrue($definition->hasOption('apply'));

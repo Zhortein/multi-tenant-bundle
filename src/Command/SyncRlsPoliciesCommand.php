@@ -81,6 +81,7 @@ HELP
         // Check if we're using PostgreSQL
         if (!$this->isPostgreSQL()) {
             $io->error('RLS policies are only supported with PostgreSQL databases.');
+
             return Command::FAILURE;
         }
 
@@ -91,13 +92,14 @@ HELP
 
             if (empty($tenantAwareEntities)) {
                 $io->success('No tenant-aware entities found. Nothing to do.');
+
                 return Command::SUCCESS;
             }
 
             $io->section(sprintf('Found %d tenant-aware entities', count($tenantAwareEntities)));
 
             $sqlStatements = [];
-            
+
             foreach ($tenantAwareEntities as $entityClass => $metadata) {
                 $tableName = $metadata->getTableName();
                 $io->text(sprintf('Processing entity: <info>%s</info> (table: <comment>%s</comment>)', $entityClass, $tableName));
@@ -108,24 +110,26 @@ HELP
 
             if (empty($sqlStatements)) {
                 $io->success('All RLS policies are already up to date.');
+
                 return Command::SUCCESS;
             }
 
             $io->section('Generated SQL statements:');
             foreach ($sqlStatements as $sql) {
-                $io->text('<comment>' . $sql . '</comment>');
+                $io->text('<comment>'.$sql.'</comment>');
             }
 
             if ($apply) {
                 $io->section('Applying SQL statements...');
-                
+
                 foreach ($sqlStatements as $sql) {
                     try {
                         $this->connection->executeStatement($sql);
-                        $io->text('✓ ' . $sql);
+                        $io->text('✓ '.$sql);
                     } catch (Exception $exception) {
                         $io->error(sprintf('Failed to execute: %s', $sql));
                         $io->error($exception->getMessage());
+
                         return Command::FAILURE;
                     }
                 }
@@ -138,6 +142,7 @@ HELP
             return Command::SUCCESS;
         } catch (\Throwable $exception) {
             $io->error(sprintf('An error occurred: %s', $exception->getMessage()));
+
             return Command::FAILURE;
         }
     }
@@ -154,17 +159,17 @@ HELP
 
         foreach ($allMetadata as $metadata) {
             $reflectionClass = $metadata->getReflectionClass();
-            
+
             if (null === $reflectionClass) {
                 continue;
             }
 
             $attributes = $reflectionClass->getAttributes(AsTenantAware::class);
-            
+
             if (!empty($attributes)) {
                 /** @var AsTenantAware $attribute */
                 $attribute = $attributes[0]->newInstance();
-                
+
                 // Only include entities that require tenant_id (shared_db mode)
                 if ($attribute->requireTenantId) {
                     $tenantAwareEntities[$metadata->getName()] = $metadata;
@@ -186,19 +191,19 @@ HELP
     private function generateRlsStatements(string $tableName, bool $force): array
     {
         $statements = [];
-        $policyName = $this->policyNamePrefix . '_' . $tableName;
+        $policyName = $this->policyNamePrefix.'_'.$tableName;
 
         try {
             // Check if RLS is already enabled on the table
             $rlsEnabled = $this->isRlsEnabled($tableName);
-            
+
             if (!$rlsEnabled) {
                 $statements[] = sprintf('ALTER TABLE %s ENABLE ROW LEVEL SECURITY;', $this->connection->quoteIdentifier($tableName));
             }
 
             // Check if policy already exists
             $policyExists = $this->policyExists($tableName, $policyName);
-            
+
             if ($policyExists && $force) {
                 $statements[] = sprintf(
                     'DROP POLICY IF EXISTS %s ON %s;',

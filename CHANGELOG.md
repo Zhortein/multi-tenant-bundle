@@ -17,7 +17,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Tenant registry with Doctrine and in-memory implementations
 
 - **Database Integration**
-  - Doctrine ORM integration with automatic tenant filtering via `TenantDoctrineFilter`
+  - Enhanced `TenantDoctrineFilter` with improved safety and debugging:
+    - Safely skips entities without tenant columns by inspecting ClassMetadata
+    - Properly typed parameters (UUID vs int) derived from entity mapping
+    - Handles DQL with multiple aliases and join scenarios
+    - Added DEBUG logging when filter cannot apply, with entity FQCN and reason
+    - Support for both `TenantOwnedEntityInterface` and `AsTenantAware` attribute
+    - Support for custom tenant field names via `AsTenantAware` attribute
+    - Improved error handling with graceful fallbacks
   - Support for shared database with tenant filtering strategy
   - Support for separate databases per tenant strategy (via `TenantConnectionResolverInterface`)
   - Automatic entity tagging for tenant-aware entities with `AsTenantAware` attribute

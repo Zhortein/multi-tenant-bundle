@@ -107,7 +107,7 @@ final class TenantSessionConfiguratorTest extends TestCase
 
         $platform = $this->createMock(\Doctrine\DBAL\Platforms\MySQLPlatform::class);
         $platform->method('getName')->willReturn('mysql');
-        
+
         $this->connection
             ->method('getDatabasePlatform')
             ->willReturn($platform);
@@ -242,17 +242,18 @@ final class TenantSessionConfiguratorTest extends TestCase
 
         $expectedCalls = [
             ['SELECT set_config(?, ?, true)', ['app.tenant_id', '456']],
-            ['SELECT set_config(?, NULL, true)', ['app.tenant_id']]
+            ['SELECT set_config(?, NULL, true)', ['app.tenant_id']],
         ];
         $callCount = 0;
-        
+
         $this->connection
             ->expects($this->exactly(2))
             ->method('executeStatement')
             ->willReturnCallback(function ($sql, $params = []) use (&$expectedCalls, &$callCount) {
                 $this->assertSame($expectedCalls[$callCount][0], $sql);
                 $this->assertSame($expectedCalls[$callCount][1], $params);
-                $callCount++;
+                ++$callCount;
+
                 return null;
             });
 

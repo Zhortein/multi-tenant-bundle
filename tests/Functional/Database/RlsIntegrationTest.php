@@ -7,11 +7,9 @@ namespace Zhortein\MultiTenantBundle\Tests\Functional\Database;
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\DriverManager;
 use Doctrine\DBAL\Exception;
-use Doctrine\DBAL\Platforms\PostgreSQLPlatform;
 use PHPUnit\Framework\TestCase;
 use Zhortein\MultiTenantBundle\Context\TenantContext;
 use Zhortein\MultiTenantBundle\Database\TenantSessionConfigurator;
-use Zhortein\MultiTenantBundle\Entity\TenantInterface;
 use Zhortein\MultiTenantBundle\Registry\InMemoryTenantRegistry;
 use Zhortein\MultiTenantBundle\Tests\Fixtures\Entity\TestTenant;
 
@@ -44,7 +42,7 @@ final class RlsIntegrationTest extends TestCase
             // Test the connection
             $this->connection->executeQuery('SELECT 1');
         } catch (\Exception $e) {
-            $this->markTestSkipped('PostgreSQL connection not available for RLS testing: ' . $e->getMessage());
+            $this->markTestSkipped('PostgreSQL connection not available for RLS testing: '.$e->getMessage());
         }
 
         $this->tenantContext = new TenantContext();
@@ -87,7 +85,7 @@ final class RlsIntegrationTest extends TestCase
         ]);
         $this->connection->insert('test_tenants', [
             'id' => 2,
-            'slug' => 'tenant2', 
+            'slug' => 'tenant2',
             'name' => 'Tenant 2',
             'active' => true,
         ]);
@@ -291,8 +289,6 @@ final class RlsIntegrationTest extends TestCase
         ');
     }
 
-
-
     private function configureSessionForCurrentTenant(): void
     {
         $tenant = $this->tenantContext->getTenant();
@@ -328,7 +324,7 @@ final class RlsIntegrationTest extends TestCase
         $idProperty = $reflection->getProperty('id');
         $idProperty->setAccessible(true);
         $idProperty->setValue($tenant, $id);
-        
+
         $tenant->setSlug($slug);
         $tenant->setName($name);
         $tenant->setActive(true);

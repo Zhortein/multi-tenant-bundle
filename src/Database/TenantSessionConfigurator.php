@@ -69,11 +69,11 @@ final readonly class TenantSessionConfigurator implements MiddlewareInterface
 
         // Extract tenant information from message stamps
         $tenantStamp = $envelope->last(TenantStamp::class);
-        
+
         if ($tenantStamp instanceof TenantStamp) {
             // Restore tenant context from stamp
             $tenant = $this->tenantRegistry->findBySlug($tenantStamp->getTenantSlug());
-            
+
             if (null !== $tenant) {
                 $this->tenantContext->setTenant($tenant);
                 $this->configureTenantSession();
@@ -86,7 +86,7 @@ final readonly class TenantSessionConfigurator implements MiddlewareInterface
         } finally {
             // Clear tenant context after message processing
             $this->tenantContext->clear();
-            
+
             // Only clear session if it was configured
             if ($sessionConfigured) {
                 $this->clearTenantSession();
@@ -100,9 +100,10 @@ final readonly class TenantSessionConfigurator implements MiddlewareInterface
     private function configureTenantSession(): void
     {
         $tenant = $this->tenantContext->getTenant();
-        
+
         if (null === $tenant) {
             $this->logger?->debug('No tenant context available for RLS configuration');
+
             return;
         }
 
@@ -110,11 +111,12 @@ final readonly class TenantSessionConfigurator implements MiddlewareInterface
             // Check if we're using PostgreSQL
             if (!$this->isPostgreSQL()) {
                 $this->logger?->debug('RLS is only supported with PostgreSQL, skipping session configuration');
+
                 return;
             }
 
             $tenantId = (string) $tenant->getId();
-            
+
             // Set the session variable for RLS policies
             $this->connection->executeStatement(
                 'SELECT set_config(?, ?, true)',
