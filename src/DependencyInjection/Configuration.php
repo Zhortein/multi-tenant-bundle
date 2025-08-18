@@ -29,9 +29,30 @@ final class Configuration implements ConfigurationInterface
 
                 // Tenant resolver configuration
                 ->enumNode('resolver')
-                    ->values(['path', 'subdomain', 'header', 'domain', 'hybrid', 'dns_txt', 'custom'])
+                    ->values(['path', 'subdomain', 'header', 'query', 'domain', 'hybrid', 'dns_txt', 'chain', 'custom'])
                     ->defaultValue('path')
                     ->info('The tenant resolution strategy to use')
+                ->end()
+
+                // Resolver chain configuration
+                ->arrayNode('resolver_chain')
+                    ->addDefaultsIfNotSet()
+                    ->children()
+                        ->arrayNode('order')
+                            ->scalarPrototype()->end()
+                            ->defaultValue(['subdomain', 'path', 'header', 'query'])
+                            ->info('Order of resolvers to try in the chain')
+                        ->end()
+                        ->booleanNode('strict')
+                            ->defaultTrue()
+                            ->info('Whether to use strict mode (throw exceptions on failure/ambiguity)')
+                        ->end()
+                        ->arrayNode('header_allow_list')
+                            ->scalarPrototype()->end()
+                            ->defaultValue(['X-Tenant-Id', 'X-Tenant-Slug'])
+                            ->info('List of allowed header names for header resolvers')
+                        ->end()
+                    ->end()
                 ->end()
 
                 // Default tenant configuration
@@ -69,6 +90,17 @@ final class Configuration implements ConfigurationInterface
                         ->scalarNode('name')
                             ->defaultValue('X-Tenant-Slug')
                             ->info('HTTP header name to use for tenant resolution')
+                        ->end()
+                    ->end()
+                ->end()
+
+                // Query resolver configuration
+                ->arrayNode('query')
+                    ->addDefaultsIfNotSet()
+                    ->children()
+                        ->scalarNode('parameter')
+                            ->defaultValue('tenant')
+                            ->info('Query parameter name to use for tenant resolution')
                         ->end()
                     ->end()
                 ->end()

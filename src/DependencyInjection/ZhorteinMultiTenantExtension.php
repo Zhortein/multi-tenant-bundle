@@ -27,6 +27,7 @@ use Zhortein\MultiTenantBundle\Doctrine\TenantEntityManagerFactory;
 use Zhortein\MultiTenantBundle\EventListener\TenantDoctrineFilterListener;
 use Zhortein\MultiTenantBundle\EventListener\TenantEntityListener;
 use Zhortein\MultiTenantBundle\EventListener\TenantRequestListener;
+use Zhortein\MultiTenantBundle\EventListener\TenantResolutionExceptionListener;
 use Zhortein\MultiTenantBundle\Mailer\TenantAwareMailer;
 use Zhortein\MultiTenantBundle\Mailer\TenantMailerConfigurator;
 use Zhortein\MultiTenantBundle\Mailer\TenantMailerTransportFactory;
@@ -37,11 +38,13 @@ use Zhortein\MultiTenantBundle\Messenger\TenantMessengerTransportFactory;
 use Zhortein\MultiTenantBundle\Messenger\TenantMessengerTransportResolver;
 use Zhortein\MultiTenantBundle\Registry\DoctrineTenantRegistry;
 use Zhortein\MultiTenantBundle\Registry\TenantRegistryInterface;
+use Zhortein\MultiTenantBundle\Resolver\ChainTenantResolver;
 use Zhortein\MultiTenantBundle\Resolver\DnsTxtTenantResolver;
 use Zhortein\MultiTenantBundle\Resolver\DomainBasedTenantResolver;
 use Zhortein\MultiTenantBundle\Resolver\HeaderTenantResolver;
 use Zhortein\MultiTenantBundle\Resolver\HybridDomainSubdomainResolver;
 use Zhortein\MultiTenantBundle\Resolver\PathTenantResolver;
+use Zhortein\MultiTenantBundle\Resolver\QueryTenantResolver;
 use Zhortein\MultiTenantBundle\Resolver\SubdomainTenantResolver;
 use Zhortein\MultiTenantBundle\Resolver\TenantResolverInterface;
 use Zhortein\MultiTenantBundle\Storage\LocalStorage;
@@ -98,6 +101,10 @@ final class ZhorteinMultiTenantExtension extends Extension
         $container->setParameter('zhortein_multi_tenant.subdomain.base_domain', $config['subdomain']['base_domain']);
         $container->setParameter('zhortein_multi_tenant.subdomain.excluded_subdomains', $config['subdomain']['excluded_subdomains']);
         $container->setParameter('zhortein_multi_tenant.header.name', $config['header']['name']);
+        $container->setParameter('zhortein_multi_tenant.query.parameter', $config['query']['parameter']);
+        $container->setParameter('zhortein_multi_tenant.resolver_chain.order', $config['resolver_chain']['order']);
+        $container->setParameter('zhortein_multi_tenant.resolver_chain.strict', $config['resolver_chain']['strict']);
+        $container->setParameter('zhortein_multi_tenant.resolver_chain.header_allow_list', $config['resolver_chain']['header_allow_list']);
         $container->setParameter('zhortein_multi_tenant.domain.domain_mapping', $config['domain']['domain_mapping']);
         $container->setParameter('zhortein_multi_tenant.hybrid.domain_mapping', $config['hybrid']['domain_mapping']);
         $container->setParameter('zhortein_multi_tenant.hybrid.subdomain_mapping', $config['hybrid']['subdomain_mapping']);
@@ -220,6 +227,15 @@ final class ZhorteinMultiTenantExtension extends Extension
                 $container->setAlias(TenantResolverInterface::class, HeaderTenantResolver::class);
                 break;
 
+            case 'query':
+                $container->register(QueryTenantResolver::class)
+                    ->setAutowired(true)
+                    ->setAutoconfigured(true)
+                    ->setArgument('$parameterName', $config['query']['parameter']);
+
+                $container->setAlias(TenantResolverInterface::class, QueryTenantResolver::class);
+                break;
+
             case 'domain':
                 $container->register(DomainBasedTenantResolver::class)
                     ->setAutowired(true)
@@ -250,11 +266,90 @@ final class ZhorteinMultiTenantExtension extends Extension
                 $container->setAlias(TenantResolverInterface::class, DnsTxtTenantResolver::class);
                 break;
 
+            case 'chain':
+                $this->registerChainResolver($container, $config);
+                break;
+
             case 'custom':
                 // For custom resolvers, the user must register their own implementation
                 // and alias it to TenantResolverInterface
                 break;
         }
+    }
+
+    /**
+     * Registers the chain resolver with all individual resolvers.
+     *
+     * @param ContainerBuilder     $container The container builder
+     * @param array<string, mixed> $config    The processed configuration
+     */
+    private function registerChainResolver(ContainerBuilder $container, array $config): void
+    {
+        // Register all individual resolvers
+        $resolverServices = [];
+
+        // Path resolver
+        $container->register('zhortein_multi_tenant.resolver.path', PathTenantResolver::class)
+            ->setAutowired(true)
+            ->setAutoconfigured(true)
+            ->setArgument('$tenantEntityClass', '%zhortein_multi_tenant.tenant_entity%');
+        $resolverServices['path'] = new Reference('zhortein_multi_tenant.resolver.path');
+
+        // Subdomain resolver
+        $container->register('zhortein_multi_tenant.resolver.subdomain', SubdomainTenantResolver::class)
+            ->setAutowired(true)
+            ->setAutoconfigured(true)
+            ->setArgument('$baseDomain', $config['subdomain']['base_domain'])
+            ->setArgument('$excludedSubdomains', $config['subdomain']['excluded_subdomains']);
+        $resolverServices['subdomain'] = new Reference('zhortein_multi_tenant.resolver.subdomain');
+
+        // Header resolver
+        $container->register('zhortein_multi_tenant.resolver.header', HeaderTenantResolver::class)
+            ->setAutowired(true)
+            ->setAutoconfigured(true)
+            ->setArgument('$headerName', $config['header']['name']);
+        $resolverServices['header'] = new Reference('zhortein_multi_tenant.resolver.header');
+
+        // Query resolver
+        $container->register('zhortein_multi_tenant.resolver.query', QueryTenantResolver::class)
+            ->setAutowired(true)
+            ->setAutoconfigured(true)
+            ->setArgument('$parameterName', $config['query']['parameter']);
+        $resolverServices['query'] = new Reference('zhortein_multi_tenant.resolver.query');
+
+        // Domain resolver
+        $container->register('zhortein_multi_tenant.resolver.domain', DomainBasedTenantResolver::class)
+            ->setAutowired(true)
+            ->setAutoconfigured(true)
+            ->setArgument('$domainMapping', $config['domain']['domain_mapping']);
+        $resolverServices['domain'] = new Reference('zhortein_multi_tenant.resolver.domain');
+
+        // Hybrid resolver
+        $container->register('zhortein_multi_tenant.resolver.hybrid', HybridDomainSubdomainResolver::class)
+            ->setAutowired(true)
+            ->setAutoconfigured(true)
+            ->setArgument('$domainMapping', $config['hybrid']['domain_mapping'])
+            ->setArgument('$subdomainMapping', $config['hybrid']['subdomain_mapping'])
+            ->setArgument('$excludedSubdomains', $config['hybrid']['excluded_subdomains']);
+        $resolverServices['hybrid'] = new Reference('zhortein_multi_tenant.resolver.hybrid');
+
+        // DNS TXT resolver
+        $container->register('zhortein_multi_tenant.resolver.dns_txt', DnsTxtTenantResolver::class)
+            ->setAutowired(true)
+            ->setAutoconfigured(true)
+            ->setArgument('$dnsTimeout', $config['dns_txt']['timeout'])
+            ->setArgument('$enableCache', $config['dns_txt']['enable_cache']);
+        $resolverServices['dns_txt'] = new Reference('zhortein_multi_tenant.resolver.dns_txt');
+
+        // Register the chain resolver
+        $container->register(ChainTenantResolver::class)
+            ->setArgument('$resolvers', $resolverServices)
+            ->setArgument('$order', $config['resolver_chain']['order'])
+            ->setArgument('$strict', $config['resolver_chain']['strict'])
+            ->setArgument('$headerAllowList', $config['resolver_chain']['header_allow_list'])
+            ->setArgument('$logger', new Reference('logger', ContainerBuilder::NULL_ON_INVALID_REFERENCE));
+
+        $container->setAlias(TenantResolverInterface::class, ChainTenantResolver::class);
     }
 
     /**
@@ -276,6 +371,13 @@ final class ZhorteinMultiTenantExtension extends Extension
                 ->setAutowired(true)
                 ->setAutoconfigured(true);
         }
+
+        // Register tenant resolution exception listener
+        $container->register(TenantResolutionExceptionListener::class)
+            ->setAutowired(true)
+            ->setAutoconfigured(true)
+            ->setArgument('$environment', '%kernel.environment%')
+            ->setArgument('$logger', new Reference('logger', ContainerBuilder::NULL_ON_INVALID_REFERENCE));
     }
 
     /**

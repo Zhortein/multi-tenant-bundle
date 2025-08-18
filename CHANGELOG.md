@@ -5,12 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- **Resolver Chain System**
+  - `ChainTenantResolver` for configurable multi-strategy tenant resolution
+  - `QueryTenantResolver` for query parameter-based tenant resolution
+  - Configurable resolver order with `resolver_chain.order` setting
+  - Strict mode with `resolver_chain.strict` for validation and error handling
+  - Header allow-list with `resolver_chain.header_allow_list` for security
+  - `TenantResolutionException` and `AmbiguousTenantResolutionException` for error handling
+  - `TenantResolutionExceptionListener` for converting exceptions to HTTP 400 responses
+  - Comprehensive logging and diagnostics for resolution process
+  - Support for fallback resolution strategies in non-strict mode
+
 ## [1.0.0-RC1] - 2025-08-01
 
 ### Added
 - **Core Multi-Tenancy Features**
   - Tenant context management with `TenantContext` and `TenantContextInterface`
-  - Multiple tenant resolution strategies: path-based, subdomain-based, header-based, domain-based, DNS TXT, hybrid, and custom resolvers
+  - Multiple tenant resolution strategies: path-based, subdomain-based, header-based, query-based, domain-based, DNS TXT, hybrid, and custom resolvers
   - DNS TXT resolver for DNS-based tenant resolution with configurable timeout and caching
   - Domain-based and hybrid resolvers for flexible domain mapping
   - Automatic tenant resolution via `TenantRequestListener`
