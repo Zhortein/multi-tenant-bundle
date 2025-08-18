@@ -34,6 +34,7 @@ final class TenantAwareCacheDecorator implements CacheItemPoolInterface
 
     /**
      * @param array<string> $keys
+     *
      * @return array<string, CacheItemInterface>
      */
     public function getItems(array $keys = []): iterable
@@ -45,7 +46,7 @@ final class TenantAwareCacheDecorator implements CacheItemPoolInterface
         $keyMap = array_combine($prefixedKeys, $keys);
 
         foreach ($items as $prefixedKey => $item) {
-            if (!$item instanceof \Psr\Cache\CacheItemInterface) {
+            if (!$item instanceof CacheItemInterface) {
                 continue;
             }
             $originalKey = $keyMap[$prefixedKey] ?? $prefixedKey;

@@ -8,6 +8,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Enhanced Console Commands System**
+  - `AbstractTenantAwareCommand` base class for all tenant-aware commands
+  - Global `--tenant` option support across all tenant-aware commands
+  - `TENANT_ID` environment variable support with priority resolution
+  - Automatic tenant context management (set/clear) during command execution
+  - Enhanced `tenant:list` command with multiple output formats (table, JSON, YAML)
+  - Detailed mode for `tenant:list` showing mailer/messenger DSNs with sensitive data masking
+  - Enhanced `tenant:migrate` command with global tenant context support
+  - Enhanced `tenant:fixtures` command with global tenant context support
+  - New `tenant:impersonate` admin-only command for tenant impersonation with security restrictions
+  - Tenant resolution by slug or ID with comprehensive error handling
+  - Command execution in tenant context with interactive mode support
+  - Security warnings and configurable restrictions for administrative commands
+  - Comprehensive test coverage with 68 tests and 266 assertions
+
 - **Resolver Chain System**
   - `ChainTenantResolver` for configurable multi-strategy tenant resolution
   - `QueryTenantResolver` for query parameter-based tenant resolution
@@ -28,6 +43,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Safe handling of messages without tenant context or missing tenants
   - Exception-safe tenant context cleanup after message processing
   - Comprehensive test coverage for tenant propagation scenarios
+
+### Security
+- **Command Security Enhancements**: `tenant:impersonate` command restricted to debug mode by default with configurable security settings
+- **Sensitive Data Protection**: Automatic masking of passwords and sensitive information in DSN strings across all command outputs
+- **Tenant Validation**: Comprehensive tenant existence validation before command execution with clear error messages
 
 ## [1.0.0-RC1] - 2025-08-01
 

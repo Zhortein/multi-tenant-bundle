@@ -57,7 +57,7 @@ The Zhortein Multi-Tenant Bundle provides a comprehensive, production-ready solu
 - **🔧 Doctrine Integration**: Automatic tenant filtering with Doctrine ORM
 - **📧 Service Integrations**: Tenant-aware decorators, mailer, messenger, and file storage
 - **🎯 Event-Driven Architecture**: Automatic tenant context resolution via event listeners
-- **🛠️ Console Commands**: Management commands for tenant operations
+- **🛠️ Enhanced Console Commands**: Comprehensive tenant-aware CLI with global `--tenant` option, environment variable support, and admin impersonation
 - **🧪 Comprehensive Testing**: Full test suite with PHPUnit 12 and PHPStan level max
 - **📚 Complete Documentation**: Extensive documentation with examples
 

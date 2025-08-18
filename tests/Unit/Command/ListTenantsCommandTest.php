@@ -5,84 +5,282 @@ declare(strict_types=1);
 namespace Zhortein\MultiTenantBundle\Tests\Unit\Command;
 
 use Doctrine\ORM\EntityManagerInterface;
-use Doctrine\ORM\EntityRepository;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Tester\CommandTester;
 use Zhortein\MultiTenantBundle\Command\ListTenantsCommand;
+use Zhortein\MultiTenantBundle\Context\TenantContextInterface;
 use Zhortein\MultiTenantBundle\Entity\TenantInterface;
+use Zhortein\MultiTenantBundle\Registry\TenantRegistryInterface;
 
 /**
  * @covers \Zhortein\MultiTenantBundle\Command\ListTenantsCommand
  */
 final class ListTenantsCommandTest extends TestCase
 {
-    private ListTenantsCommand $command;
+    private TenantRegistryInterface $tenantRegistry;
+    private TenantContextInterface $tenantContext;
     private EntityManagerInterface $entityManager;
-    private EntityRepository $repository;
+    private ListTenantsCommand $command;
 
     protected function setUp(): void
     {
+        $this->tenantRegistry = $this->createMock(TenantRegistryInterface::class);
+        $this->tenantContext = $this->createMock(TenantContextInterface::class);
         $this->entityManager = $this->createMock(EntityManagerInterface::class);
-        $this->repository = $this->createMock(EntityRepository::class);
 
-        $this->entityManager->method('getRepository')
-            ->with('App\\Entity\\Tenant')
-            ->willReturn($this->repository);
-
-        $this->command = new ListTenantsCommand($this->entityManager, 'App\\Entity\\Tenant');
+        $this->command = new ListTenantsCommand(
+            $this->tenantRegistry,
+            $this->tenantContext,
+            $this->entityManager,
+            'App\\Entity\\Tenant'
+        );
     }
 
     public function testExecuteWithNoTenants(): void
     {
-        $this->repository->method('findAll')->willReturn([]);
+        $this->tenantContext->expects($this->any())
+            ->method('getTenant')
+            ->willReturn(null);
+
+        $this->tenantRegistry->expects($this->once())
+            ->method('getAll')
+            ->willReturn([]);
 
         $commandTester = new CommandTester($this->command);
-        $exitCode = $commandTester->execute([]);
+        $commandTester->execute([]);
 
-        $this->assertSame(Command::SUCCESS, $exitCode);
-        $this->assertStringContainsString('No tenants found.', $commandTester->getDisplay());
+        $this->assertSame(Command::SUCCESS, $commandTester->getStatusCode());
+        $this->assertStringContainsString('No tenants found', $commandTester->getDisplay());
     }
 
     public function testExecuteWithTenants(): void
     {
-        $tenant1 = $this->createMock(TenantInterface::class);
-        $tenant1->method('getId')->willReturn('1');
-        $tenant1->method('getSlug')->willReturn('tenant-1');
-        $tenant1->method('getMailerDsn')->willReturn('smtp://localhost');
-        $tenant1->method('getMessengerDsn')->willReturn('redis://localhost');
+        $tenant1 = $this->createMockTenant('1', 'tenant1', 'Tenant One');
+        $tenant2 = $this->createMockTenant('2', 'tenant2', 'Tenant Two');
 
-        $tenant2 = $this->createMock(TenantInterface::class);
-        $tenant2->method('getId')->willReturn('2');
-        $tenant2->method('getSlug')->willReturn('tenant-2');
-        $tenant2->method('getMailerDsn')->willReturn(null);
-        $tenant2->method('getMessengerDsn')->willReturn(null);
+        $this->tenantContext->expects($this->any())
+            ->method('getTenant')
+            ->willReturn(null);
 
-        // Mock getName method if it exists
-        if (method_exists($tenant1, 'getName')) {
-            $tenant1->method('getName')->willReturn('Tenant One');
-            $tenant2->method('getName')->willReturn('Tenant Two');
-        }
-
-        $this->repository->method('findAll')->willReturn([$tenant1, $tenant2]);
+        $this->tenantRegistry->expects($this->once())
+            ->method('getAll')
+            ->willReturn([$tenant1, $tenant2]);
 
         $commandTester = new CommandTester($this->command);
-        $exitCode = $commandTester->execute([]);
+        $commandTester->execute([]);
 
+        $this->assertSame(Command::SUCCESS, $commandTester->getStatusCode());
         $output = $commandTester->getDisplay();
-
-        $this->assertSame(Command::SUCCESS, $exitCode);
-        $this->assertStringContainsString('tenant-1', $output);
-        $this->assertStringContainsString('tenant-2', $output);
-        $this->assertStringContainsString('smtp://localhost', $output);
-        $this->assertStringContainsString('redis://localhost', $output);
-        $this->assertStringContainsString('N/A', $output); // For null values
-        $this->assertStringContainsString('Found 2 tenant(s).', $output);
+        $this->assertStringContainsString('tenant1', $output);
+        $this->assertStringContainsString('tenant2', $output);
+        $this->assertStringContainsString('Found 2 tenant(s)', $output);
     }
 
-    public function testCommandConfiguration(): void
+    public function testExecuteWithSpecificTenant(): void
     {
-        $this->assertSame('tenant:list', $this->command->getName());
-        $this->assertSame('Lists all tenants in the system', $this->command->getDescription());
+        $tenant = $this->createMockTenant('1', 'tenant1', 'Tenant One');
+
+        $this->tenantRegistry->expects($this->once())
+            ->method('findBySlug')
+            ->with('tenant1')
+            ->willReturn($tenant);
+
+        $this->tenantContext->expects($this->once())
+            ->method('setTenant')
+            ->with($tenant);
+
+        $this->tenantContext->expects($this->any())
+            ->method('getTenant')
+            ->willReturn($tenant);
+
+        $commandTester = new CommandTester($this->command);
+        $commandTester->execute(['--tenant' => 'tenant1']);
+
+        $this->assertSame(Command::SUCCESS, $commandTester->getStatusCode());
+        $output = $commandTester->getDisplay();
+        $this->assertStringContainsString('Operating on tenant: tenant1', $output);
+        $this->assertStringContainsString('Found 1 tenant(s)', $output);
+    }
+
+    public function testExecuteWithDetailedOutput(): void
+    {
+        $tenant = $this->createMockTenant('1', 'tenant1', 'Tenant One', 'smtp://user:pass@localhost', 'redis://localhost');
+
+        $this->tenantContext->expects($this->any())
+            ->method('getTenant')
+            ->willReturn(null);
+
+        $this->tenantRegistry->expects($this->once())
+            ->method('getAll')
+            ->willReturn([$tenant]);
+
+        $commandTester = new CommandTester($this->command);
+        $commandTester->execute(['--detailed' => true]);
+
+        $this->assertSame(Command::SUCCESS, $commandTester->getStatusCode());
+        $output = $commandTester->getDisplay();
+        $this->assertStringContainsString('tenant1', $output);
+        // Check that sensitive data is masked
+        $this->assertStringContainsString('smtp://user:***@localhost', $output);
+        $this->assertStringContainsString('redis://localhost', $output);
+    }
+
+    public function testExecuteWithJsonFormat(): void
+    {
+        $tenant = $this->createMockTenant('1', 'tenant1', 'Tenant One');
+
+        $this->tenantContext->expects($this->any())
+            ->method('getTenant')
+            ->willReturn(null);
+
+        $this->tenantRegistry->expects($this->once())
+            ->method('getAll')
+            ->willReturn([$tenant]);
+
+        $commandTester = new CommandTester($this->command);
+        $commandTester->execute(['--format' => 'json']);
+
+        $this->assertSame(Command::SUCCESS, $commandTester->getStatusCode());
+        $output = $commandTester->getDisplay();
+
+        $data = json_decode($output, true);
+        $this->assertIsArray($data);
+        $this->assertCount(1, $data);
+        $this->assertSame('1', $data[0]['id']);
+        $this->assertSame('tenant1', $data[0]['slug']);
+    }
+
+    public function testExecuteWithJsonFormatDetailed(): void
+    {
+        $tenant = $this->createMockTenant('1', 'tenant1', 'Tenant One', 'smtp://localhost', 'redis://localhost');
+
+        $this->tenantContext->expects($this->any())
+            ->method('getTenant')
+            ->willReturn(null);
+
+        $this->tenantRegistry->expects($this->once())
+            ->method('getAll')
+            ->willReturn([$tenant]);
+
+        $commandTester = new CommandTester($this->command);
+        $commandTester->execute(['--format' => 'json', '--detailed' => true]);
+
+        $this->assertSame(Command::SUCCESS, $commandTester->getStatusCode());
+        $output = $commandTester->getDisplay();
+
+        $data = json_decode($output, true);
+        $this->assertIsArray($data);
+        $this->assertCount(1, $data);
+        $this->assertSame('1', $data[0]['id']);
+        $this->assertSame('tenant1', $data[0]['slug']);
+        $this->assertNull($data[0]['name']); // getName method doesn't exist on mock
+        $this->assertSame('smtp://localhost', $data[0]['mailer_dsn']);
+        $this->assertSame('redis://localhost', $data[0]['messenger_dsn']);
+    }
+
+    public function testExecuteWithYamlFormat(): void
+    {
+        $tenant = $this->createMockTenant('1', 'tenant1', 'Tenant One');
+
+        $this->tenantContext->expects($this->any())
+            ->method('getTenant')
+            ->willReturn(null);
+
+        $this->tenantRegistry->expects($this->once())
+            ->method('getAll')
+            ->willReturn([$tenant]);
+
+        $commandTester = new CommandTester($this->command);
+        $commandTester->execute(['--format' => 'yaml']);
+
+        $this->assertSame(Command::SUCCESS, $commandTester->getStatusCode());
+        $output = $commandTester->getDisplay();
+        $this->assertStringContainsString('tenants:', $output);
+        $this->assertStringContainsString('id: 1', $output);
+        $this->assertStringContainsString('slug: tenant1', $output);
+    }
+
+    public function testExecuteWithYamlFormatDetailed(): void
+    {
+        $tenant = $this->createMockTenant('1', 'tenant1', 'Tenant One', 'smtp://localhost', 'redis://localhost');
+
+        $this->tenantContext->expects($this->any())
+            ->method('getTenant')
+            ->willReturn(null);
+
+        $this->tenantRegistry->expects($this->once())
+            ->method('getAll')
+            ->willReturn([$tenant]);
+
+        $commandTester = new CommandTester($this->command);
+        $commandTester->execute(['--format' => 'yaml', '--detailed' => true]);
+
+        $this->assertSame(Command::SUCCESS, $commandTester->getStatusCode());
+        $output = $commandTester->getDisplay();
+        $this->assertStringContainsString('tenants:', $output);
+        $this->assertStringContainsString('id: 1', $output);
+        $this->assertStringContainsString('slug: tenant1', $output);
+        $this->assertStringContainsString('name: null', $output); // getName method doesn't exist on mock
+        $this->assertStringContainsString('mailer_dsn: smtp://localhost', $output);
+        $this->assertStringContainsString('messenger_dsn: redis://localhost', $output);
+    }
+
+    public function testMaskSensitiveData(): void
+    {
+        $reflection = new \ReflectionClass($this->command);
+        $method = $reflection->getMethod('maskSensitiveData');
+        $method->setAccessible(true);
+
+        $testCases = [
+            'N/A' => 'N/A',
+            'smtp://user:password@localhost:587' => 'smtp://user:***@localhost:587',
+            'redis://user:secret@redis.example.com:6379' => 'redis://user:***@redis.example.com:6379',
+            'simple-string' => 'simple-string',
+        ];
+
+        foreach ($testCases as $input => $expected) {
+            $result = $method->invoke($this->command, $input);
+            $this->assertSame($expected, $result, "Failed for input: $input");
+        }
+    }
+
+    public function testExecuteWithUnknownTenant(): void
+    {
+        $this->tenantRegistry->expects($this->once())
+            ->method('findBySlug')
+            ->with('unknown')
+            ->willReturn(null);
+
+        $this->tenantRegistry->expects($this->once())
+            ->method('findById')
+            ->with('unknown')
+            ->willReturn(null);
+
+        $commandTester = new CommandTester($this->command);
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Unknown tenant: unknown');
+
+        $commandTester->execute(['--tenant' => 'unknown']);
+    }
+
+    private function createMockTenant(
+        string $id,
+        string $slug,
+        ?string $name = null,
+        ?string $mailerDsn = null,
+        ?string $messengerDsn = null,
+    ): TenantInterface {
+        $tenant = $this->createMock(TenantInterface::class);
+        $tenant->method('getId')->willReturn($id);
+        $tenant->method('getSlug')->willReturn($slug);
+        $tenant->method('getMailerDsn')->willReturn($mailerDsn);
+        $tenant->method('getMessengerDsn')->willReturn($messengerDsn);
+
+        // Don't try to mock getName since it's not part of the interface
+        // The command will use method_exists() to check for it
+
+        return $tenant;
     }
 }

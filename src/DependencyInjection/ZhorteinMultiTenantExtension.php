@@ -17,6 +17,7 @@ use Zhortein\MultiTenantBundle\Command\ListTenantsCommand;
 use Zhortein\MultiTenantBundle\Command\LoadTenantFixturesCommand;
 use Zhortein\MultiTenantBundle\Command\MigrateTenantsCommand;
 use Zhortein\MultiTenantBundle\Command\SyncRlsPoliciesCommand;
+use Zhortein\MultiTenantBundle\Command\TenantImpersonateCommand;
 use Zhortein\MultiTenantBundle\Context\TenantContext;
 use Zhortein\MultiTenantBundle\Context\TenantContextInterface;
 use Zhortein\MultiTenantBundle\Database\TenantSessionConfigurator;
@@ -458,6 +459,13 @@ final class ZhorteinMultiTenantExtension extends Extension
                 ->setArgument('$policyNamePrefix', '%zhortein_multi_tenant.database.rls.policy_name_prefix%')
                 ->addTag('console.command');
         }
+
+        // Tenant impersonate command (admin-only)
+        $container->register(TenantImpersonateCommand::class)
+            ->setAutowired(true)
+            ->setAutoconfigured(true)
+            ->setArgument('$allowImpersonation', '%kernel.debug%') // Only allow in debug mode by default
+            ->addTag('console.command');
     }
 
     /**

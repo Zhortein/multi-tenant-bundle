@@ -34,15 +34,16 @@ final class CreateTenantCommand extends Command
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $io = new SymfonyStyle($input, $output);
-        
+
         $slugArg = $input->getArgument('slug');
         $nameArg = $input->getArgument('name');
-        
+
         if (!is_string($slugArg) || !is_string($nameArg)) {
             $io->error('Invalid arguments provided');
+
             return Command::FAILURE;
         }
-        
+
         $slug = $slugArg;
         $name = $nameArg;
 
