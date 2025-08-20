@@ -8,6 +8,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Comprehensive Test Kit**
+  - `WithTenantTrait` for tenant context management in tests with `withTenant()` and `withoutDoctrineTenantFilter()` methods
+  - `TestData` lightweight test data builders for tenant-aware entities with seeding and counting methods
+  - `TenantWebTestCase` base class for HTTP testing with resolver-aware client creation methods
+  - `TenantCliTestCase` base class for CLI testing with tenant-aware command execution
+  - `TenantMessengerTestCase` base class for Messenger testing with tenant stamp verification
+  - `RlsIsolationTest` proving PostgreSQL Row-Level Security works as defense-in-depth
+  - `ResolverChainHttpTest` for HTTP tenant resolution strategy testing
+  - `MessengerTenantPropagationTest` for async message tenant context propagation
+  - `CliTenantContextTest` for CLI tenant context management
+  - `DecoratorsTest` for tenant-aware service decorators (cache, logging, storage)
+  - `ResolverChainTest` for resolver precedence and configuration testing
+  - Docker Compose setup for PostgreSQL testing with RLS policies
+  - PostgreSQL session variable management for `app.tenant_id` setting
+  - Test fixtures including `TestController`, `TestTenantAwareMessage`, and enhanced `TestTenant`
+  - CI/CD integration examples with GitHub Actions and PostgreSQL services
+  - Comprehensive documentation in `docs/testing.md` with Test Kit usage examples
+
 - **Enhanced Console Commands System**
   - `AbstractTenantAwareCommand` base class for all tenant-aware commands
   - Global `--tenant` option support across all tenant-aware commands

@@ -88,4 +88,14 @@ class TestTenant implements TenantInterface
 
         return $this;
     }
+
+    public function getMailerDsn(): ?string
+    {
+        return null;
+    }
+
+    public function getMessengerDsn(): ?string
+    {
+        return null;
+    }
 }

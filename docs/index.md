@@ -29,9 +29,10 @@ Welcome to the comprehensive documentation for the Zhortein Multi-Tenant Bundle,
 - [Migrations](migrations.md) - Running migrations for each tenant
 - [Fixtures](fixtures.md) - Creating and loading fixtures per tenant
 
-### Development
+### Development & Testing
 - [CLI Commands](cli.md) - Console commands with examples
-- [Testing](testing.md) - Unit and functional testing for multi-tenant apps
+- [Testing & Test Kit](testing.md) - Comprehensive testing utilities and strategies for multi-tenant apps
+- [Test Kit Usage Examples](examples/test-kit-usage.md) - Detailed Test Kit examples and best practices
 - [FAQ](faq.md) - Frequently asked questions
 
 ### Examples
@@ -58,7 +59,8 @@ The Zhortein Multi-Tenant Bundle provides a comprehensive, production-ready solu
 - **📧 Service Integrations**: Tenant-aware decorators, mailer, messenger, and file storage
 - **🎯 Event-Driven Architecture**: Automatic tenant context resolution via event listeners
 - **🛠️ Enhanced Console Commands**: Comprehensive tenant-aware CLI with global `--tenant` option, environment variable support, and admin impersonation
-- **🧪 Comprehensive Testing**: Full test suite with PHPUnit 12 and PHPStan level max
+- **🧪 Comprehensive Test Kit**: First-class testing utilities with RLS isolation verification, tenant context management, and defense-in-depth testing
+- **🔒 RLS Integration**: PostgreSQL Row-Level Security for bulletproof tenant isolation
 - **📚 Complete Documentation**: Extensive documentation with examples
 
 ### Technical Requirements
@@ -117,6 +119,39 @@ class DashboardController extends AbstractController
     }
 }
 ```
+
+## Test Kit Highlights
+
+The bundle includes a **comprehensive Test Kit** that makes testing multi-tenant applications easy and reliable:
+
+### 🎯 **Core Features**
+- **WithTenantTrait**: Execute code within specific tenant contexts
+- **TestData Builder**: Lightweight test data creation for tenant-aware entities
+- **Base Test Classes**: Pre-configured for HTTP, CLI, and Messenger testing
+- **RLS Isolation Tests**: Prove PostgreSQL Row-Level Security works as defense-in-depth
+
+### 🔒 **Critical Security Testing**
+```php
+// The CRITICAL test - proves RLS works even when Doctrine filters are disabled
+$this->withTenant('tenant-a', function () {
+    $this->withoutDoctrineTenantFilter(function () {
+        $products = $this->repository->findAll();
+        // Should still see only tenant A products due to RLS
+        $this->assertCount(2, $products);
+    });
+});
+```
+
+### 🚀 **Quick Start**
+```bash
+make dev-setup          # Setup development environment
+make validate-testkit   # Validate Test Kit configuration
+make postgres-start     # Start PostgreSQL for testing
+make test-kit          # Run all Test Kit tests
+make test-rls          # Run critical RLS isolation tests
+```
+
+**📖 Learn More**: [Testing & Test Kit Documentation](testing.md) | [Test Kit Usage Examples](examples/test-kit-usage.md)
 
 ## Getting Help
 

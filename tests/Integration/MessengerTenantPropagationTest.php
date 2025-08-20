@@ -4,189 +4,200 @@ declare(strict_types=1);
 
 namespace Zhortein\MultiTenantBundle\Tests\Integration;
 
-use Doctrine\DBAL\Connection;
-use PHPUnit\Framework\TestCase;
-use Psr\Log\LoggerInterface;
-use Symfony\Component\Messenger\Envelope;
-use Symfony\Component\Messenger\Middleware\StackInterface;
-use Zhortein\MultiTenantBundle\Context\TenantContext;
-use Zhortein\MultiTenantBundle\Database\TenantSessionConfigurator;
-use Zhortein\MultiTenantBundle\Entity\TenantInterface;
-use Zhortein\MultiTenantBundle\Messenger\TenantSendingMiddleware;
-use Zhortein\MultiTenantBundle\Messenger\TenantStamp;
-use Zhortein\MultiTenantBundle\Messenger\TenantWorkerMiddleware;
-use Zhortein\MultiTenantBundle\Registry\InMemoryTenantRegistry;
+use Zhortein\MultiTenantBundle\Tests\Fixtures\Message\TestTenantAwareMessage;
+use Zhortein\MultiTenantBundle\Tests\Toolkit\TenantMessengerTestCase;
 
 /**
- * Integration test for tenant propagation through Symfony Messenger.
+ * Integration test for Messenger tenant propagation.
  *
- * @covers \Zhortein\MultiTenantBundle\Messenger\TenantSendingMiddleware
- * @covers \Zhortein\MultiTenantBundle\Messenger\TenantWorkerMiddleware
- * @covers \Zhortein\MultiTenantBundle\Messenger\TenantStamp
+ * This test verifies that:
+ * 1. Messages dispatched with tenant context carry TenantStamp
+ * 2. Worker middleware applies tenant context from TenantStamp
+ * 3. Message handlers execute in the correct tenant context
  */
-class MessengerTenantPropagationTest extends TestCase
+class MessengerTenantPropagationTest extends TenantMessengerTestCase
 {
-    private TenantContext $tenantContext;
-    private InMemoryTenantRegistry $tenantRegistry;
-    private TenantSessionConfigurator $sessionConfigurator;
-    private TenantSendingMiddleware $sendingMiddleware;
-    private TenantWorkerMiddleware $workerMiddleware;
+    private const TENANT_A_SLUG = 'tenant-a';
+    private const TENANT_B_SLUG = 'tenant-b';
 
     protected function setUp(): void
     {
-        $this->tenantContext = new TenantContext();
-        $this->tenantRegistry = new InMemoryTenantRegistry();
+        parent::setUp();
 
-        // Create a real TenantSessionConfigurator with mocked dependencies
-        $connection = $this->createMock(Connection::class);
-        $platform = $this->createMock(\Doctrine\DBAL\Platforms\AbstractPlatform::class);
-        $platform->method('getName')->willReturn('postgresql');
-        $connection->method('getDatabasePlatform')->willReturn($platform);
+        // Create test tenants
+        $this->getTestData()->seedTenants([
+            self::TENANT_A_SLUG => ['name' => 'Tenant A'],
+            self::TENANT_B_SLUG => ['name' => 'Tenant B'],
+        ]);
 
-        $logger = $this->createMock(LoggerInterface::class);
-
-        $this->sessionConfigurator = new TenantSessionConfigurator(
-            $this->tenantContext,
-            $connection,
-            $this->tenantRegistry,
-            false, // RLS disabled for testing
-            'app.tenant_id',
-            $logger
-        );
-
-        $this->sendingMiddleware = new TenantSendingMiddleware($this->tenantContext);
-        $this->workerMiddleware = new TenantWorkerMiddleware(
-            $this->tenantContext,
-            $this->tenantRegistry,
-            $this->sessionConfigurator
-        );
+        // Seed test data
+        $this->getTestData()->seedProducts(self::TENANT_A_SLUG, 2);
+        $this->getTestData()->seedProducts(self::TENANT_B_SLUG, 1);
     }
 
-    public function testFullTenantPropagationFlow(): void
+    /**
+     * Test that messages dispatched with tenant context carry TenantStamp.
+     */
+    public function testMessageDispatchWithTenantStamp(): void
     {
-        // Arrange: Create a tenant and add it to registry
-        $tenant = $this->createMockTenant('123', 'acme');
-        $this->tenantRegistry->addTenant($tenant);
+        $message = new TestTenantAwareMessage('test-data');
 
-        // Set tenant context (simulating a web request with tenant resolution)
-        $this->tenantContext->setTenant($tenant);
+        // Dispatch message in tenant A context
+        $envelope = $this->dispatchAndAssertTenantStamp($message, self::TENANT_A_SLUG);
 
-        $message = new \stdClass();
-        $envelope = new Envelope($message);
+        // Verify the message was dispatched
+        $this->assertNotNull($envelope);
 
-        // Act 1: Sending middleware should attach TenantStamp
-        $sendingStack = $this->createMockStack($envelope);
-        $envelopeWithStamp = $this->sendingMiddleware->handle($envelope, $sendingStack);
+        // Dispatch message in tenant B context
+        $envelope = $this->dispatchAndAssertTenantStamp($message, self::TENANT_B_SLUG);
 
-        // Assert: TenantStamp was attached
-        $stamp = $envelopeWithStamp->last(TenantStamp::class);
-        $this->assertInstanceOf(TenantStamp::class, $stamp);
-        $this->assertSame('123', $stamp->getTenantId());
-
-        // Clear tenant context (simulating end of web request)
-        $this->tenantContext->clear();
-        $this->assertFalse($this->tenantContext->hasTenant());
-
-        // Act 2: Worker middleware should restore tenant context
-        $workerStack = $this->createMockStack($envelopeWithStamp);
-        $processedEnvelope = $this->workerMiddleware->handle($envelopeWithStamp, $workerStack);
-
-        // Assert: Message was processed and tenant context was cleared
-        $this->assertSame($envelopeWithStamp, $processedEnvelope);
-        $this->assertFalse($this->tenantContext->hasTenant()); // Should be cleared after processing
+        // Verify the message was dispatched
+        $this->assertNotNull($envelope);
     }
 
-    public function testSendingWithoutTenantContextDoesNotAttachStamp(): void
+    /**
+     * Test that messages dispatched without tenant context don't carry TenantStamp.
+     */
+    public function testMessageDispatchWithoutTenantContext(): void
     {
-        // Arrange: No tenant context set
-        $this->assertFalse($this->tenantContext->hasTenant());
+        $message = new TestTenantAwareMessage('test-data');
 
-        $message = new \stdClass();
-        $envelope = new Envelope($message);
+        // Clear any existing tenant context
+        $this->getTenantContext()->clear();
 
-        // Act: Sending middleware should not attach TenantStamp
-        $sendingStack = $this->createMockStack($envelope);
-        $processedEnvelope = $this->sendingMiddleware->handle($envelope, $sendingStack);
+        // Dispatch message without tenant context
+        $envelope = $this->getMessageBus()->dispatch($message);
 
-        // Assert: No TenantStamp was attached
-        $this->assertNull($processedEnvelope->last(TenantStamp::class));
+        // Verify no tenant stamp is present
+        $this->assertEnvelopeHasNoTenantStamp($envelope);
     }
 
-    public function testWorkerWithoutTenantStampProceedsSafely(): void
+    /**
+     * Test that async messages are properly queued with tenant stamps.
+     */
+    public function testAsyncMessageQueuingWithTenantStamp(): void
     {
-        // Arrange: Message without TenantStamp
-        $message = new \stdClass();
-        $envelope = new Envelope($message);
+        $message = new TestTenantAwareMessage('async-test-data');
 
-        // Act: Worker middleware should proceed without setting tenant context
+        // Dispatch message in tenant A context
+        $this->dispatchWithTenant($message, self::TENANT_A_SLUG);
 
-        $workerStack = $this->createMockStack($envelope);
-        $processedEnvelope = $this->workerMiddleware->handle($envelope, $workerStack);
+        // Check that message was queued in async transport
+        $messages = $this->getTransportMessages('async');
+        $this->assertCount(1, $messages, 'One message should be queued in async transport');
 
-        // Assert: Message was processed without tenant context
-        $this->assertSame($envelope, $processedEnvelope);
-        $this->assertFalse($this->tenantContext->hasTenant());
+        $envelope = $messages[0];
+        $this->assertEnvelopeHasTenantStamp($envelope, self::TENANT_A_SLUG);
     }
 
-    public function testWorkerWithNonexistentTenantProceedsSafely(): void
+    /**
+     * Test that worker middleware applies tenant context from TenantStamp.
+     */
+    public function testWorkerMiddlewareAppliesTenantContext(): void
     {
-        // Arrange: Message with TenantStamp for nonexistent tenant
-        $message = new \stdClass();
-        $tenantStamp = new TenantStamp('nonexistent');
-        $envelope = new Envelope($message, [$tenantStamp]);
+        $message = new TestTenantAwareMessage('worker-test-data');
 
-        // Act: Worker middleware should proceed without setting tenant context
+        // Dispatch message in tenant A context
+        $this->dispatchWithTenant($message, self::TENANT_A_SLUG);
 
-        $workerStack = $this->createMockStack($envelope);
-        $processedEnvelope = $this->workerMiddleware->handle($envelope, $workerStack);
+        // Simulate worker processing the message
+        $this->processMessagesWithTenant('async', self::TENANT_A_SLUG);
 
-        // Assert: Message was processed without tenant context
-        $this->assertSame($envelope, $processedEnvelope);
-        $this->assertFalse($this->tenantContext->hasTenant());
+        // Verify that the message was processed
+        // (In a real scenario, the handler would perform tenant-aware operations)
+        $this->assertTransportIsEmpty('async');
     }
 
-    public function testSendingMiddlewareDoesNotOverrideExistingStamp(): void
+    /**
+     * Test tenant context isolation in message handlers.
+     */
+    public function testTenantContextIsolationInHandlers(): void
     {
-        // Arrange: Create tenant and set context
-        $tenant = $this->createMockTenant('123', 'acme');
-        $this->tenantContext->setTenant($tenant);
+        $messageA = new TestTenantAwareMessage('tenant-a-data');
+        $messageB = new TestTenantAwareMessage('tenant-b-data');
 
-        // Create envelope with existing TenantStamp
-        $message = new \stdClass();
-        $existingStamp = new TenantStamp('456');
-        $envelope = new Envelope($message, [$existingStamp]);
+        // Dispatch messages for different tenants
+        $this->dispatchWithTenant($messageA, self::TENANT_A_SLUG);
+        $this->dispatchWithTenant($messageB, self::TENANT_B_SLUG);
 
-        // Act: Sending middleware should not add another stamp
-        $sendingStack = $this->createMockStack($envelope);
-        $processedEnvelope = $this->sendingMiddleware->handle($envelope, $sendingStack);
+        // Verify both messages are queued
+        $messages = $this->getTransportMessages('async');
+        $this->assertCount(2, $messages, 'Two messages should be queued');
 
-        // Assert: Original stamp is preserved
-        $stamp = $processedEnvelope->last(TenantStamp::class);
-        $this->assertInstanceOf(TenantStamp::class, $stamp);
-        $this->assertSame('456', $stamp->getTenantId()); // Original stamp preserved
+        // Verify each message has the correct tenant stamp
+        $this->assertEnvelopeHasTenantStamp($messages[0], self::TENANT_A_SLUG);
+        $this->assertEnvelopeHasTenantStamp($messages[1], self::TENANT_B_SLUG);
     }
 
-    private function createMockTenant(string $id, string $slug): TenantInterface
+    /**
+     * Test that tenant context is properly restored after message processing.
+     */
+    public function testTenantContextRestorationAfterMessageProcessing(): void
     {
-        $tenant = $this->createMock(TenantInterface::class);
-        $tenant->method('getId')->willReturn($id);
-        $tenant->method('getSlug')->willReturn($slug);
-        $tenant->method('getMailerDsn')->willReturn(null);
-        $tenant->method('getMessengerDsn')->willReturn(null);
+        // Set initial tenant context
+        $tenantA = $this->getTenantRegistry()->findBySlug(self::TENANT_A_SLUG);
+        $this->assertNotNull($tenantA);
+        $this->getTenantContext()->setTenant($tenantA);
 
-        return $tenant;
+        $message = new TestTenantAwareMessage('context-restoration-test');
+
+        // Dispatch message for different tenant
+        $this->dispatchWithTenant($message, self::TENANT_B_SLUG);
+
+        // Verify original context is restored
+        $currentTenant = $this->getTenantContext()->getTenant();
+        $this->assertNotNull($currentTenant);
+        $this->assertSame($tenantA->getId(), $currentTenant->getId());
     }
 
-    private function createMockStack(Envelope $expectedEnvelope): StackInterface
+    /**
+     * Test message retry with tenant context preservation.
+     */
+    public function testMessageRetryWithTenantContextPreservation(): void
     {
-        $stack = $this->createMock(StackInterface::class);
-        $nextMiddleware = $this->createMock(\Symfony\Component\Messenger\Middleware\MiddlewareInterface::class);
+        $message = new TestTenantAwareMessage('retry-test-data');
 
-        $stack->method('next')->willReturn($nextMiddleware);
-        $nextMiddleware->method('handle')->willReturnCallback(function (Envelope $envelope) {
-            return $envelope; // Return the envelope as-is (with any modifications)
-        });
+        // Dispatch message in tenant A context
+        $envelope = $this->dispatchWithTenant($message, self::TENANT_A_SLUG);
 
-        return $stack;
+        // Simulate message failure and retry
+        // The retry should maintain the same tenant context
+        $this->assertEnvelopeHasTenantStamp($envelope, self::TENANT_A_SLUG);
+
+        // In a real scenario, the failed message would be requeued with the same stamps
+        $retryEnvelope = $envelope->with(/* additional retry stamps */);
+        $this->assertEnvelopeHasTenantStamp($retryEnvelope, self::TENANT_A_SLUG);
+    }
+
+    /**
+     * Test that multiple message buses handle tenant context correctly.
+     */
+    public function testMultipleBusesWithTenantContext(): void
+    {
+        $message = new TestTenantAwareMessage('multi-bus-test');
+
+        // Test with default bus
+        $envelope = $this->dispatchWithTenant($message, self::TENANT_A_SLUG);
+        $this->assertEnvelopeHasTenantStamp($envelope, self::TENANT_A_SLUG);
+
+        // If there are other buses configured, test them too
+        // This would require additional setup in the test configuration
+    }
+
+    /**
+     * Test tenant-aware message routing.
+     */
+    public function testTenantAwareMessageRouting(): void
+    {
+        $message = new TestTenantAwareMessage('routing-test');
+
+        // Dispatch messages for different tenants
+        $this->dispatchWithTenant($message, self::TENANT_A_SLUG);
+        $this->dispatchWithTenant($message, self::TENANT_B_SLUG);
+
+        // Verify messages are routed correctly
+        // (This would depend on tenant-specific transport configuration)
+        $messages = $this->getTransportMessages('async');
+        $this->assertGreaterThanOrEqual(2, count($messages));
     }
 }

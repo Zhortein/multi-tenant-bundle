@@ -46,6 +46,24 @@ test-integration: ## Run integration tests only
 test-coverage: ## Run tests with coverage report
 	$(DOCKER_RUN) vendor/bin/phpunit --configuration phpunit.xml.dist --coverage-html coverage
 
+test-kit: ## Run Test Kit integration tests
+	$(DOCKER_RUN) vendor/bin/phpunit tests/Integration --no-coverage
+
+test-rls: ## Run RLS isolation tests (requires PostgreSQL)
+	$(DOCKER_RUN) vendor/bin/phpunit tests/Integration/RlsIsolationTest.php --no-coverage
+
+test-resolvers: ## Run resolver chain tests
+	$(DOCKER_RUN) vendor/bin/phpunit tests/Integration/ResolverChainHttpTest.php tests/Integration/ResolverChainTest.php --no-coverage
+
+test-messenger: ## Run Messenger tenant propagation tests
+	$(DOCKER_RUN) vendor/bin/phpunit tests/Integration/MessengerTenantPropagationTest.php --no-coverage
+
+test-cli: ## Run CLI tenant context tests
+	$(DOCKER_RUN) vendor/bin/phpunit tests/Integration/CliTenantContextTest.php --no-coverage
+
+test-decorators: ## Run decorator tests
+	$(DOCKER_RUN) vendor/bin/phpunit tests/Integration/DecoratorsTest.php --no-coverage
+
 ## —— 🧪 QA tools ———————————————————————————————————————————————————————————————————————————
 csfixer: ## Run PHP-CS-Fixer on src/ and tests/
 	$(DOCKER_RUN) vendor/bin/php-cs-fixer fix src --rules=@Symfony --verbose
@@ -60,6 +78,29 @@ phpstan: ## Run PHPStan static analysis
 
 phpstan-baseline: ## Generate PHPStan baseline
 	$(DOCKER_RUN) vendor/bin/phpstan analyse src -c phpstan.neon --generate-baseline --memory-limit=512M
+
+## —— 🐘 PostgreSQL Test Environment ——————————————————————————————————————————————————————
+postgres-start: ## Start PostgreSQL test container
+	@echo "🐘 Starting PostgreSQL test container..."
+	cd tests && docker-compose up -d postgres
+	@echo "⏳ Waiting for PostgreSQL to be ready..."
+	cd tests && docker-compose exec postgres pg_isready -U test_user -d multi_tenant_test || sleep 5
+	@echo "✅ PostgreSQL is ready!"
+
+postgres-stop: ## Stop PostgreSQL test container
+	@echo "🛑 Stopping PostgreSQL test container..."
+	cd tests && docker-compose down
+
+postgres-logs: ## Show PostgreSQL logs
+	cd tests && docker-compose logs postgres
+
+postgres-shell: ## Connect to PostgreSQL shell
+	cd tests && docker-compose exec postgres psql -U test_user -d multi_tenant_test
+
+test-with-postgres: postgres-start test-rls postgres-stop ## Run RLS tests with PostgreSQL
+
+validate-testkit: ## Validate Test Kit setup and configuration
+	$(DOCKER_RUN) php tests/validate-testkit.php
 
 ## —— 🔧 Bundle-specific ———————————————————————————————————————————————————————————————————
 bundle-validate: ## Validate bundle structure
@@ -80,14 +121,18 @@ clean-vendor: ## Remove vendor directory
 	rm -rf vendor/
 
 ## —— 🚀 Development workflow ——————————————————————————————————————————————————————————————
-dev-setup: installdeps ## Complete development setup
+dev-setup: installdeps validate-testkit ## Complete development setup
 	@echo "✅ Development environment setup complete!"
 	@echo "Run 'make test' to verify everything works"
 
-dev-check: composer-validate phpstan csfixer-check test-unit ## Run all development checks
+dev-check: composer-validate phpstan csfixer-check test-unit test-kit ## Run all development checks
 
 ci-check: composer-validate phpstan test ## Run CI checks
+
+ci-check-full: composer-validate phpstan test test-with-postgres ## Run CI checks with PostgreSQL
 
 all: clean installdeps dev-check ## Clean, install, and run all checks
 
 quick-check: phpstan test-unit ## Quick development check
+
+test-all: test test-kit ## Run all tests including Test Kit

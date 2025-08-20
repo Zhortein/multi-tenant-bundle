@@ -11,6 +11,293 @@ Multi-tenant testing involves:
 - **Database Strategy Testing**: Testing both shared-db and multi-db scenarios
 - **Service Integration**: Testing tenant-aware services (mailer, messenger, storage)
 - **Fixture Management**: Loading tenant-specific test data
+- **RLS Verification**: Proving PostgreSQL Row-Level Security works as defense-in-depth
+
+## Test Kit
+
+The bundle provides a comprehensive Test Kit to make testing multi-tenant applications easy and reliable. The Test Kit includes:
+
+- **WithTenantTrait**: Core trait for tenant context management in tests
+- **TestData**: Lightweight test data builders for tenant-aware entities
+- **Base Test Classes**: Pre-configured test cases for HTTP, CLI, and Messenger testing
+- **Integration Tests**: End-to-end tests proving tenant isolation works
+
+### Using the Test Kit
+
+#### 1. WithTenantTrait
+
+The `WithTenantTrait` provides two essential methods for testing:
+
+```php
+<?php
+
+use Zhortein\MultiTenantBundle\Tests\Toolkit\WithTenantTrait;
+
+class MyTest extends TestCase
+{
+    use WithTenantTrait;
+
+    public function testTenantIsolation(): void
+    {
+        // Execute code within tenant A context
+        $this->withTenant('tenant-a', function () {
+            $products = $this->repository->findAll();
+            $this->assertCount(2, $products);
+        });
+
+        // Execute code with Doctrine filter disabled (tests RLS)
+        $this->withTenant('tenant-a', function () {
+            $this->withoutDoctrineTenantFilter(function () {
+                $products = $this->repository->findAll();
+                // Should still see only tenant A products due to RLS
+                $this->assertCount(2, $products);
+            });
+        });
+    }
+}
+```
+
+#### 2. TestData Builder
+
+The `TestData` class provides methods to seed test data:
+
+```php
+<?php
+
+use Zhortein\MultiTenantBundle\Tests\Toolkit\TestData;
+
+// Seed products for specific tenants
+$testData->seedProducts('tenant-a', 2);
+$testData->seedProducts('tenant-b', 1);
+
+// Create individual entities
+$product = $testData->createProduct('tenant-a', 'Test Product', '99.99');
+
+// Count and retrieve tenant-specific data
+$count = $testData->countProductsForTenant('tenant-a');
+$products = $testData->getProductsForTenant('tenant-a');
+```
+
+#### 3. Base Test Classes
+
+##### TenantWebTestCase
+
+For HTTP/web testing with tenant-aware clients:
+
+```php
+<?php
+
+use Zhortein\MultiTenantBundle\Tests\Toolkit\TenantWebTestCase;
+
+class ProductControllerTest extends TenantWebTestCase
+{
+    public function testSubdomainResolution(): void
+    {
+        // Create client with subdomain
+        $client = $this->createSubdomainClient('tenant-a');
+        $crawler = $client->request('GET', '/products');
+        
+        $this->assertResponseIsSuccessful();
+        $this->assertResponseContainsTenantData('tenant-a', $client->getResponse()->getContent());
+    }
+
+    public function testHeaderResolution(): void
+    {
+        // Create client with header
+        $client = $this->createHeaderClient('tenant-b', 'X-Tenant-ID');
+        $crawler = $client->request('GET', '/products');
+        
+        $this->assertResponseIsSuccessful();
+    }
+}
+```
+
+##### TenantCliTestCase
+
+For CLI/console testing:
+
+```php
+<?php
+
+use Zhortein\MultiTenantBundle\Tests\Toolkit\TenantCliTestCase;
+
+class TenantCommandTest extends TenantCliTestCase
+{
+    public function testCommandWithTenantOption(): void
+    {
+        $commandTester = $this->executeCommandWithTenantOption(
+            'tenant:list',
+            'tenant-a'
+        );
+        
+        $this->assertCommandIsSuccessful($commandTester);
+        $this->assertCommandOutputContainsTenant($commandTester, 'tenant-a');
+    }
+}
+```
+
+##### TenantMessengerTestCase
+
+For Messenger testing:
+
+```php
+<?php
+
+use Zhortein\MultiTenantBundle\Tests\Toolkit\TenantMessengerTestCase;
+
+class MessengerTest extends TenantMessengerTestCase
+{
+    public function testMessageWithTenantStamp(): void
+    {
+        $message = new TestMessage('data');
+        
+        $envelope = $this->dispatchAndAssertTenantStamp($message, 'tenant-a');
+        
+        $this->assertEnvelopeHasTenantStamp($envelope, 'tenant-a');
+    }
+}
+```
+
+## RLS Isolation Testing
+
+The Test Kit includes comprehensive tests to prove that PostgreSQL Row-Level Security (RLS) provides defense-in-depth tenant isolation:
+
+### RlsIsolationTest
+
+This critical test verifies:
+
+1. **Doctrine Filter ON**: Normal operation shows only tenant-specific data
+2. **Doctrine Filter OFF + RLS ON**: Even with filters disabled, RLS still provides isolation
+3. **DQL Queries**: Raw DQL queries respect RLS policies
+4. **Native SQL**: Direct SQL queries are also filtered by RLS
+
+```php
+<?php
+
+use Zhortein\MultiTenantBundle\Tests\Integration\RlsIsolationTest;
+
+class RlsIsolationTest extends TenantWebTestCase
+{
+    public function testRlsIsolationWithDoctrineFilterDisabled(): void
+    {
+        // This is the critical test - proves RLS works as defense-in-depth
+        $this->withTenant('tenant-a', function () {
+            $this->withoutDoctrineTenantFilter(function () {
+                $products = $this->repository->findAll();
+                
+                // Should still see only tenant A products due to RLS
+                $this->assertCount(2, $products);
+                
+                foreach ($products as $product) {
+                    $this->assertStringContainsString('tenant-a', $product->getName());
+                }
+            });
+        });
+    }
+}
+```
+
+### PostgreSQL Session Variable Management
+
+The Test Kit automatically manages PostgreSQL session variables:
+
+```sql
+-- Set tenant context
+SELECT set_config('app.tenant_id', '1', true);
+
+-- Clear tenant context  
+SELECT set_config('app.tenant_id', NULL, true);
+```
+
+## CI/CD Integration
+
+### Docker Compose for Testing
+
+The Test Kit includes a Docker Compose setup for PostgreSQL testing:
+
+```yaml
+# tests/docker-compose.yml
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: multi_tenant_test
+      POSTGRES_USER: test_user
+      POSTGRES_PASSWORD: test_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./sql/init.sql:/docker-entrypoint-initdb.d/init.sql
+```
+
+### Running Tests with PostgreSQL
+
+```bash
+# Start PostgreSQL for testing
+cd tests && docker-compose up -d postgres
+
+# Wait for PostgreSQL to be ready
+docker-compose exec postgres pg_isready -U test_user -d multi_tenant_test
+
+# Run the Test Kit tests
+make test-integration
+
+# Run specific RLS tests
+vendor/bin/phpunit tests/Integration/RlsIsolationTest.php
+
+# Clean up
+docker-compose down
+```
+
+### GitHub Actions Example
+
+```yaml
+# .github/workflows/test.yml
+name: Tests
+
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: multi_tenant_test
+          POSTGRES_USER: test_user
+          POSTGRES_PASSWORD: test_password
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: pdo_pgsql
+          
+      - name: Install dependencies
+        run: composer install
+        
+      - name: Run Test Kit
+        run: |
+          vendor/bin/phpunit tests/Integration/RlsIsolationTest.php
+          vendor/bin/phpunit tests/Integration/ResolverChainHttpTest.php
+          vendor/bin/phpunit tests/Integration/MessengerTenantPropagationTest.php
+        env:
+          DATABASE_URL: postgresql://test_user:test_password@localhost:5432/multi_tenant_test
+```
 
 ## Test Environment Setup
 
