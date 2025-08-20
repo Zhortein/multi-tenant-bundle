@@ -2,6 +2,8 @@
 
 The tenant migration system handles database schema changes for multi-tenant applications, supporting both shared database and multi-database strategies. It ensures that all tenants receive schema updates consistently and safely.
 
+> 📖 **Navigation**: [← Fixtures](fixtures.md) | [Back to Documentation Index](index.md) | [RLS Security →](rls-security.md)
+
 ## Overview
 
 The migration system provides:

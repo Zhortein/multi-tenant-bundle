@@ -1,5 +1,7 @@
 # Tenant-Aware Database Usage Examples
 
+> 📖 **Navigation**: [← Basic Usage](basic-usage.md) | [Back to Documentation Index](../index.md) | [Doctrine Filter Usage →](doctrine-filter-usage.md)
+
 ## Entity Setup
 
 ### 1. Basic Tenant-Owned Entity

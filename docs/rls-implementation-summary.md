@@ -2,6 +2,8 @@
 
 This document summarizes the PostgreSQL Row-Level Security (RLS) implementation added to the multi-tenant bundle as a defense-in-depth security measure.
 
+> 📖 **Navigation**: [← Project Overview](project-overview.md) | [Back to Documentation Index](index.md) | [Examples →](examples/)
+
 ## Overview
 
 The RLS feature provides database-level tenant isolation by creating PostgreSQL policies that automatically filter rows based on the current tenant context. This works alongside Doctrine filters to provide multiple layers of protection.

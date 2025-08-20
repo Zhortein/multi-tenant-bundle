@@ -1,5 +1,7 @@
 # Doctrine Filter Usage Examples
 
+> 📖 **Navigation**: [← Database Usage](database-usage.md) | [Back to Documentation Index](../index.md) | [Resolver Chain Usage →](resolver-chain-usage.md)
+
 This document provides comprehensive examples of using the enhanced Doctrine tenant filter in various scenarios.
 
 ## Basic Usage Example

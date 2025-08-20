@@ -2,6 +2,8 @@
 
 The Zhortein Multi-Tenant Bundle provides comprehensive tenant-aware message queue functionality through its messenger integration. This allows you to route messages to tenant-specific transports and maintain tenant context throughout asynchronous processing.
 
+> 📖 **Navigation**: [← Mailer](mailer.md) | [Back to Documentation Index](index.md) | [Storage →](storage.md)
+
 ## Overview
 
 The tenant-aware messenger system consists of several components:

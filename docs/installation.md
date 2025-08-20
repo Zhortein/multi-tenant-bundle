@@ -2,6 +2,8 @@
 
 This guide walks you through installing and configuring the Zhortein Multi-Tenant Bundle for Symfony 7+ applications.
 
+> 📖 **Navigation**: [← Back to Documentation Index](index.md) | [Configuration →](configuration.md)
+
 ## Requirements
 
 - **PHP**: >= 8.3
@@ -305,3 +307,7 @@ After installation, you can:
 3. [Configure tenant settings](tenant-settings.md)
 4. [Set up tenant-aware services](mailer.md)
 5. [Create fixtures and migrations](fixtures.md)
+
+---
+
+> 📖 **Navigation**: [← Back to Documentation Index](index.md) | [Configuration →](configuration.md)

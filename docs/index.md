@@ -2,6 +2,19 @@
 
 Welcome to the comprehensive documentation for the Zhortein Multi-Tenant Bundle, a powerful Symfony 7+ solution for building multi-tenant applications with PostgreSQL 16 support.
 
+> 📖 **Quick Start**: New to the bundle? Check out the [main README](../README.md) for installation and quick start guide.
+
+## Navigation
+
+- [🏠 Main README](../README.md) - Installation, quick start, and overview
+- [📋 Table of Contents](#table-of-contents) - Complete documentation index
+- [🚀 Getting Started](#getting-started) - Step-by-step setup guides
+- [🏗️ Core Concepts](#core-concepts) - Understanding multi-tenancy concepts
+- [🔧 Service Integration](#service-integration) - Integrating with Symfony services
+- [🗄️ Database Management](#database-management) - Database strategies and management
+- [🛠️ Development & Testing](#development--testing) - Development tools and testing
+- [📖 Examples](#examples) - Practical code examples
+
 ## Table of Contents
 
 ### Getting Started

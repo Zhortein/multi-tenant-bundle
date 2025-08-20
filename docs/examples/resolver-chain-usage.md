@@ -1,5 +1,7 @@
 # Resolver Chain Usage Examples
 
+> 📖 **Navigation**: [← Doctrine Filter Usage](doctrine-filter-usage.md) | [Back to Documentation Index](../index.md) | [Domain Resolver Usage →](domain-resolver-usage.md)
+
 This document provides practical examples of using the resolver chain feature in the Zhortein Multi-Tenant Bundle.
 
 ## Basic Configuration

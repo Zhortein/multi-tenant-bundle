@@ -2,6 +2,8 @@
 
 The tenant-aware storage system provides isolated file storage for each tenant, supporting both local filesystem and cloud storage (S3-compatible) backends. Each tenant's files are completely isolated from other tenants while maintaining a unified API.
 
+> 📖 **Navigation**: [← Messenger](messenger.md) | [Back to Documentation Index](index.md) | [Fixtures →](fixtures.md)
+
 ## Overview
 
 The storage system provides:

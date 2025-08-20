@@ -2,6 +2,8 @@
 
 The DNS TXT Record Tenant Resolver is an advanced tenant resolution strategy that uses DNS TXT records to determine tenant information. This resolver queries DNS TXT records for the pattern `_tenant.<domain>` to retrieve tenant identifiers, making it ideal for distributed systems and multi-domain setups where DNS control is available.
 
+> 📖 **Navigation**: [← Domain Resolvers](domain-resolvers.md) | [Back to Documentation Index](index.md) | [Tenant Context →](tenant-context.md)
+
 ## Overview
 
 The `DnsTxtTenantResolver` provides a DNS-based approach to tenant resolution that offers several advantages:

@@ -2,6 +2,8 @@
 
 The tenant context is the core mechanism that manages the current tenant state throughout your application. It provides a centralized way to access the current tenant and ensures that all tenant-aware services operate within the correct tenant scope.
 
+> 📖 **Navigation**: [← DNS TXT Resolver](dns-txt-resolver.md) | [Back to Documentation Index](index.md) | [Tenant Settings →](tenant-settings.md)
+
 ## How It Works
 
 The tenant context system consists of several components working together:

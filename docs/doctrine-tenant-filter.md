@@ -2,6 +2,8 @@
 
 The Doctrine tenant filter automatically adds tenant constraints to database queries, ensuring that entities are filtered by the current tenant context. This provides transparent data isolation without requiring manual filtering in every query.
 
+> 📖 **Navigation**: [← Database Strategies](database-strategies.md) | [Back to Documentation Index](index.md) | [Tenant Resolution →](tenant-resolution.md)
+
 ## Overview
 
 The enhanced filter provides robust tenant isolation with improved safety, debugging, and type handling for complex multi-tenant scenarios. It operates at the SQL level, automatically adding `WHERE` clauses to queries for entities that implement the tenant-aware interface or use the `#[AsTenantAware]` attribute.
@@ -995,3 +997,7 @@ The enhanced filter includes comprehensive test coverage:
 - **Unit Tests**: Core logic and edge cases
 - **Integration Tests**: Real database scenarios with joins and subqueries
 - **Functional Tests**: End-to-end tenant isolation verification
+
+---
+
+> 📖 **Navigation**: [← Database Strategies](database-strategies.md) | [Back to Documentation Index](index.md) | [Tenant Resolution →](tenant-resolution.md)

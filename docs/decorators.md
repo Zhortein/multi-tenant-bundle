@@ -2,6 +2,8 @@
 
 The Zhortein MultiTenantBundle provides several tenant-aware decorators that automatically isolate data and operations by tenant context. These decorators ensure that each tenant's data remains completely separate without requiring manual tenant filtering in your application code.
 
+> 📖 **Navigation**: [← RLS Security](rls-security.md) | [Back to Documentation Index](index.md) | [FAQ →](faq.md)
+
 ## Overview
 
 The bundle includes the following decorators:

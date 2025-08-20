@@ -1,5 +1,7 @@
 # Tenant-Aware Storage Usage Examples
 
+> 📖 **Navigation**: [← Messenger Usage](messenger-usage.md) | [Back to Documentation Index](../index.md) | [Test Kit Usage →](test-kit-usage.md)
+
 ## Basic Configuration
 
 ### 1. Service Configuration

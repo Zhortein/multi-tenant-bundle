@@ -2,6 +2,8 @@
 
 This document provides practical examples of using the tenant-aware mailer functionality with the enhanced templated email support.
 
+> 📖 **Navigation**: [← DNS TXT Resolver Usage](dns-txt-resolver-usage.md) | [Back to Documentation Index](../index.md) | [Messenger Usage →](messenger-usage.md)
+
 ## Basic Configuration
 
 ### 1. Configure Tenant Settings

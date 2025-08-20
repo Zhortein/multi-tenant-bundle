@@ -2,6 +2,8 @@
 
 The Zhortein Multi-Tenant Bundle provides comprehensive tenant-aware email functionality through its mailer integration. This allows you to send emails with tenant-specific configurations, templates, and branding.
 
+> 📖 **Navigation**: [← Tenant Settings](tenant-settings.md) | [Back to Documentation Index](index.md) | [Messenger →](messenger.md)
+
 ## Overview
 
 The tenant-aware mailer system consists of several components:

@@ -2,6 +2,8 @@
 
 The resolver chain allows you to configure multiple tenant resolution strategies that are tried in a specific order. This provides flexibility and fallback mechanisms for tenant resolution in complex multi-tenant applications.
 
+> 📖 **Navigation**: [← Tenant Resolution](tenant-resolution.md) | [Back to Documentation Index](index.md) | [Domain Resolvers →](domain-resolvers.md)
+
 ## Overview
 
 The chain resolver iterates through configured resolvers in the specified order and returns the first successful resolution. It supports strict mode for error handling and provides comprehensive logging and diagnostics.
@@ -370,3 +372,7 @@ monolog:
 ```
 
 The chain resolver provides a powerful and flexible way to handle tenant resolution in complex multi-tenant applications while maintaining security and providing comprehensive diagnostics.
+
+---
+
+> 📖 **Navigation**: [← Tenant Resolution](tenant-resolution.md) | [Back to Documentation Index](index.md) | [Domain Resolvers →](domain-resolvers.md)

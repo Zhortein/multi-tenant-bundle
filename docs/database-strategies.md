@@ -2,6 +2,8 @@
 
 The multi-tenant bundle supports two primary database strategies for tenant data isolation: **Shared Database** and **Multi-Database**. Each strategy has its own advantages, trade-offs, and use cases.
 
+> 📖 **Navigation**: [← CLI Commands](cli.md) | [Back to Documentation Index](index.md) | [Doctrine Tenant Filter →](doctrine-tenant-filter.md)
+
 ## Overview
 
 | Aspect | Shared Database | Multi-Database |
@@ -785,3 +787,7 @@ php bin/console tenant:database:status
 # Verify schema consistency
 php bin/console tenant:schema:validate --all-tenants
 ```
+
+---
+
+> 📖 **Navigation**: [← CLI Commands](cli.md) | [Back to Documentation Index](index.md) | [Doctrine Tenant Filter →](doctrine-tenant-filter.md)

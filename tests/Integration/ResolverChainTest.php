@@ -66,7 +66,7 @@ class ResolverChainTest extends TenantWebTestCase
             ]
         );
 
-        $tenant = $resolverChain->resolve($request);
+        $tenant = $resolverChain->resolveTenant($request);
 
         // Subdomain should win (highest precedence)
         $this->assertNotNull($tenant);
@@ -103,7 +103,7 @@ class ResolverChainTest extends TenantWebTestCase
             ]
         );
 
-        $tenant = $resolverChain->resolve($request);
+        $tenant = $resolverChain->resolveTenant($request);
 
         // Header should be used as fallback
         $this->assertNotNull($tenant);
@@ -142,7 +142,7 @@ class ResolverChainTest extends TenantWebTestCase
 
         // In strict mode, this should throw an exception
         try {
-            $tenant = $resolverChain->resolve($request);
+            $tenant = $resolverChain->resolveTenant($request);
 
             // If no exception is thrown, either strict mode is disabled
             // or there's a default tenant configured
@@ -185,7 +185,7 @@ class ResolverChainTest extends TenantWebTestCase
             ]
         );
 
-        $tenant = $headerResolver->resolve($requestAllowed);
+        $tenant = $headerResolver->resolveTenant($requestAllowed);
         $this->assertNotNull($tenant);
         $this->assertSame(self::TENANT_A_SLUG, $tenant->getSlug());
 
@@ -201,7 +201,7 @@ class ResolverChainTest extends TenantWebTestCase
             ]
         );
 
-        $tenant = $headerResolver->resolve($requestNotAllowed);
+        $tenant = $headerResolver->resolveTenant($requestNotAllowed);
         $this->assertNull($tenant, 'Non-allowed header should be ignored');
     }
 
@@ -255,7 +255,7 @@ class ResolverChainTest extends TenantWebTestCase
                 ['HTTP_HOST' => 'tenant-a.lvh.me']
             );
 
-            $tenant = $resolverChain->resolve($request);
+            $tenant = $resolverChain->resolveTenant($request);
             $this->assertNotNull($tenant);
         }
 
@@ -295,7 +295,7 @@ class ResolverChainTest extends TenantWebTestCase
 
         // DNS resolution might fail in test environment, so we just verify the resolver exists
         try {
-            $tenant = $dnsResolver->resolve($request);
+            $tenant = $dnsResolver->resolveTenant($request);
             // If it succeeds, great. If it fails, that's also expected in test environment.
             $this->assertTrue(true, 'DNS TXT resolver executed');
         } catch (\Exception $e) {
@@ -330,7 +330,7 @@ class ResolverChainTest extends TenantWebTestCase
             ['HTTP_HOST' => 'custom-domain.com']
         );
 
-        $tenant = $hybridResolver->resolve($request);
+        $tenant = $hybridResolver->resolveTenant($request);
 
         // Result depends on hybrid resolver configuration
         // We just verify the resolver can handle the request
@@ -358,7 +358,7 @@ class ResolverChainTest extends TenantWebTestCase
         $request = Request::create('', 'GET');
 
         try {
-            $tenant = $resolverChain->resolve($request);
+            $tenant = $resolverChain->resolveTenant($request);
             $this->assertTrue(true, 'Resolver chain handled malformed request gracefully');
         } catch (\Exception $e) {
             $this->assertTrue(true, 'Resolver chain threw expected exception for malformed request');

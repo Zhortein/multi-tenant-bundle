@@ -1,44 +1,333 @@
-# Example configuration for PostgreSQL Row-Level Security (RLS)
-# config/packages/zhortein_multi_tenant.yaml
+# PostgreSQL Row-Level Security (RLS) Configuration Examples
+# This file demonstrates various RLS configurations for the Zhortein Multi-Tenant Bundle
 
-zhortein_multi_tenant:
-    # Tenant entity configuration
-    tenant_entity: 'App\Entity\Tenant'
-    
-    # Tenant resolution strategy
-    resolver: 'subdomain'
-    subdomain:
-        base_domain: 'myapp.com'
-        excluded_subdomains: ['www', 'api', 'admin']
-    
-    # Database configuration with RLS enabled
+# Basic RLS Configuration
+basic_rls:
+  zhortein_multi_tenant:
     database:
-        strategy: 'shared_db'
-        enable_filter: true
-        auto_tenant_id: true
-        
-        # PostgreSQL Row-Level Security configuration
-        rls:
-            enabled: true                           # Enable RLS for defense-in-depth
-            session_variable: 'app.tenant_id'       # PostgreSQL session variable name
-            policy_name_prefix: 'tenant_isolation'  # Prefix for RLS policy names
+      strategy: 'shared_db'
+      enable_filter: true
+      auto_tenant_id: true
+      rls:
+        enabled: true
+        session_variable: 'app.tenant_id'
+        policy_name_prefix: 'tenant_isolation'
+
+# Production RLS Configuration with Enhanced Security
+production_rls:
+  zhortein_multi_tenant:
+    database:
+      strategy: 'shared_db'
+      enable_filter: true
+      auto_tenant_id: true
+      rls:
+        enabled: true
+        session_variable: 'app.current_tenant_id'
+        policy_name_prefix: 'secure_tenant_policy'
     
-    # Cache configuration
+    # Additional security settings
+    require_tenant: true
     cache:
-        pool: 'cache.app'
-        ttl: 3600
+      pool: 'cache.redis'
+      ttl: 1800  # 30 minutes
+
+# Development RLS Configuration
+development_rls:
+  zhortein_multi_tenant:
+    database:
+      strategy: 'shared_db'
+      enable_filter: true
+      auto_tenant_id: true
+      rls:
+        enabled: false  # Disabled for easier debugging
+        session_variable: 'app.tenant_id'
+        policy_name_prefix: 'dev_tenant_policy'
     
-    # Event listeners
-    listeners:
-        request_listener: true
-        doctrine_filter_listener: true
-    
-    # Optional: Mailer configuration
-    mailer:
+    require_tenant: false
+    default_tenant: 'dev_tenant'
+
+# Testing RLS Configuration
+testing_rls:
+  zhortein_multi_tenant:
+    database:
+      strategy: 'shared_db'
+      enable_filter: true
+      auto_tenant_id: true
+      rls:
         enabled: true
+        session_variable: 'test.tenant_id'
+        policy_name_prefix: 'test_isolation'
     
-    # Optional: Messenger configuration
-    messenger:
+    require_tenant: false
+    resolver: 'header'
+    header:
+      name: 'X-Test-Tenant-Id'
+
+# Multi-Environment RLS Setup
+multi_environment:
+  # Development
+  dev:
+    zhortein_multi_tenant:
+      database:
+        rls:
+          enabled: false
+          session_variable: 'dev.tenant_id'
+  
+  # Staging
+  staging:
+    zhortein_multi_tenant:
+      database:
+        rls:
+          enabled: true
+          session_variable: 'staging.tenant_id'
+          policy_name_prefix: 'staging_policy'
+  
+  # Production
+  prod:
+    zhortein_multi_tenant:
+      database:
+        rls:
+          enabled: true
+          session_variable: 'prod.tenant_id'
+          policy_name_prefix: 'prod_secure_policy'
+
+# Advanced RLS with Custom Policies
+advanced_rls:
+  zhortein_multi_tenant:
+    database:
+      strategy: 'shared_db'
+      rls:
         enabled: true
-        default_transport: 'async'
-        add_tenant_headers: true
+        session_variable: 'app.tenant_context'
+        policy_name_prefix: 'advanced_tenant'
+        # Custom policy configurations would be handled by custom services
+        custom_policies:
+          - name: 'admin_bypass'
+            condition: 'current_setting(''app.user_role'') = ''admin'''
+          - name: 'read_only_access'
+            condition: 'current_setting(''app.access_level'') = ''readonly'''
+
+# RLS with Audit Logging
+audit_rls:
+  zhortein_multi_tenant:
+    database:
+      strategy: 'shared_db'
+      rls:
+        enabled: true
+        session_variable: 'audit.tenant_id'
+        policy_name_prefix: 'audit_tenant'
+        enable_audit_logging: true
+        audit_table: 'tenant_access_log'
+
+# Performance-Optimized RLS
+performance_rls:
+  zhortein_multi_tenant:
+    database:
+      strategy: 'shared_db'
+      rls:
+        enabled: true
+        session_variable: 'perf.tenant_id'
+        policy_name_prefix: 'perf_tenant'
+        # Optimize for performance
+        use_prepared_statements: true
+        cache_policies: true
+    
+    cache:
+      pool: 'cache.redis'
+      ttl: 3600
+
+# RLS with Hierarchical Tenants
+hierarchical_rls:
+  zhortein_multi_tenant:
+    database:
+      strategy: 'shared_db'
+      rls:
+        enabled: true
+        session_variable: 'hierarchy.tenant_path'
+        policy_name_prefix: 'hierarchical_tenant'
+        # Support for tenant hierarchies
+        support_hierarchy: true
+        hierarchy_separator: '/'
+
+# Disaster Recovery RLS Configuration
+disaster_recovery_rls:
+  zhortein_multi_tenant:
+    database:
+      strategy: 'shared_db'
+      rls:
+        enabled: true
+        session_variable: 'dr.tenant_id'
+        policy_name_prefix: 'dr_tenant'
+        # Disaster recovery settings
+        backup_policies: true
+        cross_region_replication: true
+        emergency_bypass_role: 'disaster_recovery_admin'
+
+# Compliance-Focused RLS (GDPR, HIPAA, etc.)
+compliance_rls:
+  zhortein_multi_tenant:
+    database:
+      strategy: 'shared_db'
+      rls:
+        enabled: true
+        session_variable: 'compliance.tenant_id'
+        policy_name_prefix: 'compliance_tenant'
+        # Compliance features
+        data_residency_enforcement: true
+        audit_all_access: true
+        encryption_at_rest: true
+        pii_protection: true
+
+# Microservices RLS Configuration
+microservices_rls:
+  zhortein_multi_tenant:
+    database:
+      strategy: 'shared_db'
+      rls:
+        enabled: true
+        session_variable: 'microservice.tenant_id'
+        policy_name_prefix: 'ms_tenant'
+        # Microservices-specific settings
+        service_isolation: true
+        cross_service_policies: true
+        distributed_session: true
+
+# High-Availability RLS Setup
+ha_rls:
+  zhortein_multi_tenant:
+    database:
+      strategy: 'shared_db'
+      rls:
+        enabled: true
+        session_variable: 'ha.tenant_id'
+        policy_name_prefix: 'ha_tenant'
+        # High availability settings
+        failover_policies: true
+        read_replica_support: true
+        connection_pooling: true
+        health_checks: true
+
+# Example SQL Policies Generated by Bundle
+sql_examples: |
+  -- Basic tenant isolation policy
+  CREATE POLICY tenant_isolation_select ON products
+    FOR SELECT
+    USING (tenant_id = current_setting('app.tenant_id')::integer);
+  
+  CREATE POLICY tenant_isolation_insert ON products
+    FOR INSERT
+    WITH CHECK (tenant_id = current_setting('app.tenant_id')::integer);
+  
+  CREATE POLICY tenant_isolation_update ON products
+    FOR UPDATE
+    USING (tenant_id = current_setting('app.tenant_id')::integer)
+    WITH CHECK (tenant_id = current_setting('app.tenant_id')::integer);
+  
+  CREATE POLICY tenant_isolation_delete ON products
+    FOR DELETE
+    USING (tenant_id = current_setting('app.tenant_id')::integer);
+  
+  -- Enable RLS on table
+  ALTER TABLE products ENABLE ROW LEVEL SECURITY;
+  
+  -- Admin bypass policy (optional)
+  CREATE POLICY admin_bypass ON products
+    FOR ALL
+    TO admin_role
+    USING (true);
+  
+  -- Hierarchical tenant policy example
+  CREATE POLICY hierarchical_tenant_access ON products
+    FOR SELECT
+    USING (
+      tenant_id = current_setting('app.tenant_id')::integer
+      OR tenant_id IN (
+        SELECT id FROM tenants 
+        WHERE path LIKE current_setting('app.tenant_path') || '%'
+      )
+    );
+
+# Environment Variables for RLS
+environment_variables: |
+  # PostgreSQL connection with RLS support
+  DATABASE_URL=postgresql://app_user:password@localhost:5432/app_db?options=--search_path=public
+  
+  # RLS-specific settings
+  RLS_ENABLED=true
+  RLS_SESSION_VARIABLE=app.tenant_id
+  RLS_POLICY_PREFIX=tenant_isolation
+  
+  # Security settings
+  RLS_ADMIN_BYPASS_ROLE=rls_admin
+  RLS_AUDIT_ENABLED=true
+  RLS_ENCRYPTION_KEY=your-encryption-key-here
+  
+  # Performance settings
+  RLS_CACHE_POLICIES=true
+  RLS_PREPARED_STATEMENTS=true
+  RLS_CONNECTION_POOL_SIZE=20
+
+# Docker Compose Example with RLS
+docker_compose_example: |
+  version: '3.8'
+  services:
+    postgres:
+      image: postgres:16
+      environment:
+        POSTGRES_DB: multi_tenant_app
+        POSTGRES_USER: app_user
+        POSTGRES_PASSWORD: secure_password
+        # Enable RLS by default
+        POSTGRES_INITDB_ARGS: "--auth-host=md5"
+      volumes:
+        - postgres_data:/var/lib/postgresql/data
+        - ./sql/init-rls.sql:/docker-entrypoint-initdb.d/01-init-rls.sql
+      ports:
+        - "5432:5432"
+      command: >
+        postgres
+        -c shared_preload_libraries=pg_stat_statements
+        -c log_statement=all
+        -c log_min_duration_statement=0
+        -c row_security=on
+    
+    app:
+      build: .
+      environment:
+        DATABASE_URL: postgresql://app_user:secure_password@postgres:5432/multi_tenant_app
+        RLS_ENABLED: "true"
+      depends_on:
+        - postgres
+  
+  volumes:
+    postgres_data:
+
+# Monitoring and Alerting for RLS
+monitoring_config: |
+  # Prometheus metrics for RLS
+  rls_policy_violations_total: Counter for RLS policy violations
+  rls_query_duration_seconds: Histogram for RLS query performance
+  rls_active_sessions_total: Gauge for active RLS sessions
+  rls_tenant_isolation_errors_total: Counter for tenant isolation failures
+  
+  # Grafana dashboard queries
+  rate(rls_policy_violations_total[5m]): Policy violation rate
+  histogram_quantile(0.95, rls_query_duration_seconds): 95th percentile query time
+  rls_active_sessions_total: Current active sessions with RLS
+  
+  # Alerting rules
+  - alert: RLSPolicyViolation
+    expr: rate(rls_policy_violations_total[5m]) > 0.1
+    for: 1m
+    labels:
+      severity: critical
+    annotations:
+      summary: "RLS policy violations detected"
+  
+  - alert: RLSPerformanceDegradation
+    expr: histogram_quantile(0.95, rls_query_duration_seconds) > 1.0
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: "RLS queries are taking too long"

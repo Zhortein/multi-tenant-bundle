@@ -2,6 +2,8 @@
 
 The multi-tenant bundle provides comprehensive console commands for managing tenants, databases, migrations, fixtures, and settings. All tenant-aware commands support global tenant context options.
 
+> 📖 **Navigation**: [← Back to Documentation Index](index.md) | [Database Strategies →](database-strategies.md)
+
 ## Global Tenant Context Options
 
 All tenant-aware commands support these global options for specifying tenant context:
@@ -353,3 +355,7 @@ php bin/console tenant:migrate --dry-run
 8. **Implement proper error handling** in automation scripts
 9. **Use JSON output format** for parsing in scripts
 10. **Test commands in staging** before production deployment
+
+---
+
+> 📖 **Navigation**: [← Back to Documentation Index](index.md) | [Database Strategies →](database-strategies.md)

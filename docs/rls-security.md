@@ -2,6 +2,8 @@
 
 The multi-tenant bundle supports PostgreSQL Row-Level Security (RLS) as an additional layer of defense-in-depth protection when using the `shared_db` database strategy.
 
+> 📖 **Navigation**: [← Migrations](migrations.md) | [Back to Documentation Index](index.md) | [Decorators →](decorators.md)
+
 ## Overview
 
 Row-Level Security provides database-level tenant isolation by creating policies that automatically filter rows based on the current tenant context. This works alongside Doctrine filters to provide multiple layers of protection.
