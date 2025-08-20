@@ -46,7 +46,7 @@ final readonly class TenantSessionConfigurator implements MiddlewareInterface
     public function onKernelRequest(RequestEvent $event): void
     {
         // Only process main requests and when RLS is enabled
-        if (!$event->isMainRequest() || !$this->rlsEnabled) {
+        if (!$this->rlsEnabled || !$event->isMainRequest()) {
             return;
         }
 
@@ -176,6 +176,6 @@ final readonly class TenantSessionConfigurator implements MiddlewareInterface
      */
     private function isPostgreSQL(): bool
     {
-        return str_contains($this->connection->getDatabasePlatform()->getName(), 'postgresql');
+        return str_contains($this->connection->getDatabasePlatform()?->getName(), 'postgresql');
     }
 }
