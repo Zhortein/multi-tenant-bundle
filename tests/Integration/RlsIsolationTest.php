@@ -50,7 +50,7 @@ class RlsIsolationTest extends TenantWebTestCase
             $this->assertCount(
                 self::TENANT_A_PRODUCTS,
                 $products,
-                'Tenant A should see exactly ' . self::TENANT_A_PRODUCTS . ' products'
+                'Tenant A should see exactly '.self::TENANT_A_PRODUCTS.' products'
             );
 
             foreach ($products as $product) {
@@ -68,7 +68,7 @@ class RlsIsolationTest extends TenantWebTestCase
             $this->assertCount(
                 self::TENANT_B_PRODUCTS,
                 $products,
-                'Tenant B should see exactly ' . self::TENANT_B_PRODUCTS . ' product'
+                'Tenant B should see exactly '.self::TENANT_B_PRODUCTS.' product'
             );
 
             foreach ($products as $product) {
@@ -100,7 +100,7 @@ class RlsIsolationTest extends TenantWebTestCase
                 $this->assertCount(
                     self::TENANT_A_PRODUCTS,
                     $products,
-                    'RLS should ensure tenant A sees only ' . self::TENANT_A_PRODUCTS . ' products (not all ' . (self::TENANT_A_PRODUCTS + self::TENANT_B_PRODUCTS) . ')'
+                    'RLS should ensure tenant A sees only '.self::TENANT_A_PRODUCTS.' products (not all '.(self::TENANT_A_PRODUCTS + self::TENANT_B_PRODUCTS).')'
                 );
 
                 foreach ($products as $product) {
@@ -122,7 +122,7 @@ class RlsIsolationTest extends TenantWebTestCase
                 $this->assertCount(
                     self::TENANT_B_PRODUCTS,
                     $products,
-                    'RLS should ensure tenant B sees only ' . self::TENANT_B_PRODUCTS . ' product (not all ' . (self::TENANT_A_PRODUCTS + self::TENANT_B_PRODUCTS) . ')'
+                    'RLS should ensure tenant B sees only '.self::TENANT_B_PRODUCTS.' product (not all '.(self::TENANT_A_PRODUCTS + self::TENANT_B_PRODUCTS).')'
                 );
 
                 foreach ($products as $product) {
@@ -147,7 +147,7 @@ class RlsIsolationTest extends TenantWebTestCase
         $this->withTenant(self::TENANT_A_SLUG, function () use ($entityManager) {
             $this->withoutDoctrineTenantFilter(function () use ($entityManager) {
                 $query = $entityManager->createQuery(
-                    'SELECT p FROM ' . TestProduct::class . ' p ORDER BY p.id'
+                    'SELECT p FROM '.TestProduct::class.' p ORDER BY p.id'
                 );
 
                 $products = $query->getResult();
@@ -172,7 +172,7 @@ class RlsIsolationTest extends TenantWebTestCase
         $this->withTenant(self::TENANT_B_SLUG, function () use ($entityManager) {
             $this->withoutDoctrineTenantFilter(function () use ($entityManager) {
                 $query = $entityManager->createQuery(
-                    'SELECT p FROM ' . TestProduct::class . ' p ORDER BY p.id'
+                    'SELECT p FROM '.TestProduct::class.' p ORDER BY p.id'
                 );
 
                 $products = $query->getResult();

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 /*
  * Test Kit Bootstrap
- * 
+ *
  * This bootstrap file is specifically designed for the Multi-Tenant Bundle Test Kit.
  * It sets up the environment for integration testing with PostgreSQL and RLS.
  */
@@ -38,9 +38,9 @@ if (!isset($_ENV['DATABASE_URL'])) {
 }
 
 // Verify PostgreSQL is available if required
-if ($_ENV['TESTKIT_POSTGRES_REQUIRED'] === '1') {
+if ('1' === $_ENV['TESTKIT_POSTGRES_REQUIRED']) {
     $postgresAvailable = checkPostgreSqlAvailability();
-    
+
     if (!$postgresAvailable) {
         echo "\n";
         echo "❌ PostgreSQL is required for Test Kit but not available.\n";
@@ -52,14 +52,14 @@ if ($_ENV['TESTKIT_POSTGRES_REQUIRED'] === '1') {
         echo "\n";
         exit(1);
     }
-    
+
     echo "✅ PostgreSQL is available for Test Kit\n";
 }
 
 // Verify RLS is enabled if required
-if ($_ENV['TESTKIT_ENABLE_RLS'] === '1' && $postgresAvailable ?? false) {
+if ('1' === $_ENV['TESTKIT_ENABLE_RLS'] && $postgresAvailable ?? false) {
     $rlsEnabled = checkRowLevelSecurityEnabled();
-    
+
     if (!$rlsEnabled) {
         echo "\n";
         echo "⚠️  Row-Level Security (RLS) is not properly configured.\n";
@@ -83,11 +83,11 @@ function checkPostgreSqlAvailability(): bool
         $dsn = $_ENV['DATABASE_URL'];
         $pdo = new PDO($dsn);
         $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-        
+
         // Test connection with a simple query
         $stmt = $pdo->query('SELECT version()');
         $version = $stmt->fetchColumn();
-        
+
         return str_contains($version, 'PostgreSQL');
     } catch (Exception $e) {
         return false;
@@ -103,20 +103,20 @@ function checkRowLevelSecurityEnabled(): bool
         $dsn = $_ENV['DATABASE_URL'];
         $pdo = new PDO($dsn);
         $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-        
+
         // Check if test_products table exists and has RLS enabled
         $stmt = $pdo->query("
             SELECT relrowsecurity 
             FROM pg_class 
             WHERE relname = 'test_products'
         ");
-        
+
         $rlsEnabled = $stmt->fetchColumn();
-        
+
         if (!$rlsEnabled) {
             return false;
         }
-        
+
         // Check if RLS policy exists
         $stmt = $pdo->query("
             SELECT COUNT(*) 
@@ -124,9 +124,9 @@ function checkRowLevelSecurityEnabled(): bool
             WHERE tablename = 'test_products' 
             AND policyname = 'tenant_isolation_policy'
         ");
-        
+
         $policyCount = $stmt->fetchColumn();
-        
+
         return $policyCount > 0;
     } catch (Exception $e) {
         return false;
@@ -142,6 +142,6 @@ date_default_timezone_set('UTC');
 
 echo "🧪 Test Kit Bootstrap Complete\n";
 echo "   Environment: {$_ENV['APP_ENV']}\n";
-echo "   Database: " . (str_contains($_ENV['DATABASE_URL'], 'postgresql') ? 'PostgreSQL' : 'Other') . "\n";
-echo "   RLS Enabled: " . ($_ENV['TESTKIT_ENABLE_RLS'] === '1' ? 'Yes' : 'No') . "\n";
+echo '   Database: '.(str_contains($_ENV['DATABASE_URL'], 'postgresql') ? 'PostgreSQL' : 'Other')."\n";
+echo '   RLS Enabled: '.('1' === $_ENV['TESTKIT_ENABLE_RLS'] ? 'Yes' : 'No')."\n";
 echo "\n";

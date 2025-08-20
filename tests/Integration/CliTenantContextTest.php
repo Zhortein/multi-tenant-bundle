@@ -62,7 +62,7 @@ class CliTenantContextTest extends TenantCliTestCase
         );
 
         // If the command exists, it should show tenant A context
-        if ($commandTester->getStatusCode() !== 1) { // Command not found
+        if (1 !== $commandTester->getStatusCode()) { // Command not found
             $this->assertCommandIsSuccessful($commandTester);
             $this->assertCommandOutputContainsTenant($commandTester, self::TENANT_A_SLUG);
         } else {
@@ -81,7 +81,7 @@ class CliTenantContextTest extends TenantCliTestCase
         );
 
         // If the command exists, it should show tenant B context
-        if ($commandTester->getStatusCode() !== 1) { // Command not found
+        if (1 !== $commandTester->getStatusCode()) { // Command not found
             $this->assertCommandIsSuccessful($commandTester);
             $this->assertCommandOutputContainsTenant($commandTester, self::TENANT_B_SLUG);
         } else {
@@ -251,7 +251,7 @@ class CliTenantContextTest extends TenantCliTestCase
         );
 
         // If the command exists, it should execute successfully
-        if ($commandTester->getStatusCode() !== 1) { // Command not found
+        if (1 !== $commandTester->getStatusCode()) { // Command not found
             $this->assertCommandIsSuccessful($commandTester);
             $this->assertCommandOutputContainsTenant($commandTester, self::TENANT_A_SLUG);
         } else {
@@ -267,7 +267,7 @@ class CliTenantContextTest extends TenantCliTestCase
         $commandTester = $this->executeCommand('tenant:settings:clear-cache');
 
         // If the command exists, it should execute successfully
-        if ($commandTester->getStatusCode() !== 1) { // Command not found
+        if (1 !== $commandTester->getStatusCode()) { // Command not found
             $this->assertCommandIsSuccessful($commandTester);
         } else {
             $this->markTestSkipped('tenant:settings:clear-cache command not available');

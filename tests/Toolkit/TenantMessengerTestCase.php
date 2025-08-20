@@ -8,7 +8,6 @@ use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use Symfony\Component\Messenger\Envelope;
 use Symfony\Component\Messenger\MessageBusInterface;
-use Symfony\Component\Messenger\Stamp\StampInterface;
 use Symfony\Component\Messenger\Transport\InMemoryTransport;
 use Symfony\Component\Messenger\Transport\TransportInterface;
 use Zhortein\MultiTenantBundle\Context\TenantContextInterface;
@@ -224,8 +223,8 @@ abstract class TenantMessengerTestCase extends KernelTestCase
     /**
      * Assert that a transport has received a specific number of messages.
      *
-     * @param string $transportName    The transport name
-     * @param int    $expectedCount    The expected message count
+     * @param string $transportName The transport name
+     * @param int    $expectedCount The expected message count
      */
     protected function assertTransportMessageCount(string $transportName, int $expectedCount): void
     {

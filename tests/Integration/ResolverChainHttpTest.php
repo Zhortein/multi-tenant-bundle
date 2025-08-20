@@ -217,7 +217,7 @@ class ResolverChainHttpTest extends TenantWebTestCase
         // Create a client with both subdomain and header set to different tenants
         // The resolver with higher precedence should win
         $client = static::createClient([], [
-            'HTTP_HOST' => self::TENANT_A_SLUG . '.lvh.me',
+            'HTTP_HOST' => self::TENANT_A_SLUG.'.lvh.me',
             'HTTP_X_TENANT_ID' => self::TENANT_B_SLUG,
         ]);
 

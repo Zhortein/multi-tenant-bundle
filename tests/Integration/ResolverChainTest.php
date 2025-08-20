@@ -21,8 +21,8 @@ use Zhortein\MultiTenantBundle\Tests\Toolkit\TenantWebTestCase;
  */
 class ResolverChainTest extends TenantWebTestCase
 {
-    private const TENANT_A_SLUG = 'tenant-a';
-    private const TENANT_B_SLUG = 'tenant-b';
+    private const string TENANT_A_SLUG = 'tenant-a';
+    private const string TENANT_B_SLUG = 'tenant-b';
 
     protected function setUp(): void
     {
@@ -146,7 +146,7 @@ class ResolverChainTest extends TenantWebTestCase
 
             // If no exception is thrown, either strict mode is disabled
             // or there's a default tenant configured
-            if ($tenant === null) {
+            if (null === $tenant) {
                 $this->assertTrue(true, 'No tenant resolved and no exception thrown (non-strict mode)');
             } else {
                 $this->assertTrue(true, 'Default tenant was resolved');

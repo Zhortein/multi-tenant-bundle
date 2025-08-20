@@ -52,10 +52,10 @@ abstract class TenantWebTestCase extends WebTestCase
     /**
      * Create a client configured for subdomain-based tenant resolution.
      *
-     * @param string $tenantSlug  The tenant slug to use as subdomain
-     * @param string $baseDomain  The base domain (default: 'lvh.me')
-     * @param array  $options     Additional client options
-     * @param array  $server      Additional server parameters
+     * @param string $tenantSlug The tenant slug to use as subdomain
+     * @param string $baseDomain The base domain (default: 'lvh.me')
+     * @param array  $options    Additional client options
+     * @param array  $server     Additional server parameters
      *
      * @return KernelBrowser The configured client
      */
@@ -63,7 +63,7 @@ abstract class TenantWebTestCase extends WebTestCase
         string $tenantSlug,
         string $baseDomain = 'lvh.me',
         array $options = [],
-        array $server = []
+        array $server = [],
     ): KernelBrowser {
         $server['HTTP_HOST'] = sprintf('%s.%s', $tenantSlug, $baseDomain);
 
@@ -84,9 +84,9 @@ abstract class TenantWebTestCase extends WebTestCase
         string $tenantSlug,
         string $headerName = 'X-Tenant-ID',
         array $options = [],
-        array $server = []
+        array $server = [],
     ): KernelBrowser {
-        $server['HTTP_' . str_replace('-', '_', strtoupper($headerName))] = $tenantSlug;
+        $server['HTTP_'.str_replace('-', '_', strtoupper($headerName))] = $tenantSlug;
 
         return static::createClient($options, $server);
     }
@@ -129,7 +129,7 @@ abstract class TenantWebTestCase extends WebTestCase
     protected function createDomainClient(
         string $domain,
         array $options = [],
-        array $server = []
+        array $server = [],
     ): KernelBrowser {
         $server['HTTP_HOST'] = $domain;
 
@@ -139,17 +139,15 @@ abstract class TenantWebTestCase extends WebTestCase
     /**
      * Make a request with tenant context in the path.
      *
-     * @param KernelBrowser $client     The client to use
-     * @param string        $method     HTTP method
-     * @param string        $tenantSlug The tenant slug
-     * @param string        $uri        The URI (without tenant prefix)
-     * @param array         $parameters Request parameters
-     * @param array         $files      Files to upload
-     * @param array         $server     Server parameters
-     * @param string|null   $content    Request content
+     * @param KernelBrowser $client        The client to use
+     * @param string        $method        HTTP method
+     * @param string        $tenantSlug    The tenant slug
+     * @param string        $uri           The URI (without tenant prefix)
+     * @param array         $parameters    Request parameters
+     * @param array         $files         Files to upload
+     * @param array         $server        Server parameters
+     * @param string|null   $content       Request content
      * @param bool          $changeHistory Whether to change history
-     *
-     * @return \Symfony\Component\DomCrawler\Crawler
      */
     protected function requestWithTenantPath(
         KernelBrowser $client,
@@ -160,7 +158,7 @@ abstract class TenantWebTestCase extends WebTestCase
         array $files = [],
         array $server = [],
         ?string $content = null,
-        bool $changeHistory = true
+        bool $changeHistory = true,
     ): \Symfony\Component\DomCrawler\Crawler {
         $tenantUri = sprintf('/%s%s', $tenantSlug, $uri);
 
@@ -170,18 +168,16 @@ abstract class TenantWebTestCase extends WebTestCase
     /**
      * Make a request with tenant context in query parameters.
      *
-     * @param KernelBrowser $client     The client to use
-     * @param string        $method     HTTP method
-     * @param string        $tenantSlug The tenant slug
-     * @param string        $uri        The URI
-     * @param string        $paramName  The query parameter name (default: 'tenant')
-     * @param array         $parameters Additional request parameters
-     * @param array         $files      Files to upload
-     * @param array         $server     Server parameters
-     * @param string|null   $content    Request content
+     * @param KernelBrowser $client        The client to use
+     * @param string        $method        HTTP method
+     * @param string        $tenantSlug    The tenant slug
+     * @param string        $uri           The URI
+     * @param string        $paramName     The query parameter name (default: 'tenant')
+     * @param array         $parameters    Additional request parameters
+     * @param array         $files         Files to upload
+     * @param array         $server        Server parameters
+     * @param string|null   $content       Request content
      * @param bool          $changeHistory Whether to change history
-     *
-     * @return \Symfony\Component\DomCrawler\Crawler
      */
     protected function requestWithTenantQuery(
         KernelBrowser $client,
@@ -193,7 +189,7 @@ abstract class TenantWebTestCase extends WebTestCase
         array $files = [],
         array $server = [],
         ?string $content = null,
-        bool $changeHistory = true
+        bool $changeHistory = true,
     ): \Symfony\Component\DomCrawler\Crawler {
         $parameters[$paramName] = $tenantSlug;
 

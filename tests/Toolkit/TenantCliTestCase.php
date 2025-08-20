@@ -68,7 +68,7 @@ abstract class TenantCliTestCase extends KernelTestCase
         string $commandName,
         string $tenantSlug,
         array $input = [],
-        array $options = []
+        array $options = [],
     ): CommandTester {
         return $this->withTenant($tenantSlug, function () use ($commandName, $input, $options) {
             return $this->executeCommand($commandName, $input, $options);
@@ -108,7 +108,7 @@ abstract class TenantCliTestCase extends KernelTestCase
         string $commandName,
         string $tenantSlug,
         array $input = [],
-        array $options = []
+        array $options = [],
     ): CommandTester {
         $input['--tenant'] = $tenantSlug;
 
@@ -129,7 +129,7 @@ abstract class TenantCliTestCase extends KernelTestCase
         string $commandName,
         string $tenantSlug,
         array $input = [],
-        array $options = []
+        array $options = [],
     ): CommandTester {
         $originalEnv = $_ENV['TENANT_ID'] ?? null;
 
@@ -139,7 +139,7 @@ abstract class TenantCliTestCase extends KernelTestCase
 
             return $this->executeCommand($commandName, $input, $options);
         } finally {
-            if ($originalEnv !== null) {
+            if (null !== $originalEnv) {
                 $_ENV['TENANT_ID'] = $originalEnv;
                 putenv("TENANT_ID={$originalEnv}");
             } else {
@@ -220,7 +220,7 @@ abstract class TenantCliTestCase extends KernelTestCase
     /**
      * Assert that command output does not contain specific text.
      *
-     * @param CommandTester $commandTester The command tester
+     * @param CommandTester $commandTester  The command tester
      * @param string        $unexpectedText The text that should not be present
      */
     protected function assertCommandOutputDoesNotContain(CommandTester $commandTester, string $unexpectedText): void

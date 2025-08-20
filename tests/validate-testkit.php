@@ -3,16 +3,16 @@
 declare(strict_types=1);
 
 /**
- * Test Kit Validation Script
- * 
+ * Test Kit Validation Script.
+ *
  * This script validates that the Test Kit is properly set up and ready to use.
  * It checks for required dependencies, PostgreSQL availability, and RLS configuration.
  */
 
-require_once __DIR__ . '/../vendor/autoload.php';
+require_once __DIR__.'/../vendor/autoload.php';
 
-use Symfony\Component\Console\Output\ConsoleOutput;
 use Symfony\Component\Console\Helper\Table;
+use Symfony\Component\Console\Output\ConsoleOutput;
 
 $output = new ConsoleOutput();
 
@@ -31,7 +31,7 @@ foreach ($requiredExtensions as $extension) {
     $checks[] = [
         'Check' => "PHP Extension: {$extension}",
         'Status' => $loaded ? '✅ OK' : '❌ MISSING',
-        'Details' => $loaded ? 'Loaded' : 'Required for Test Kit'
+        'Details' => $loaded ? 'Loaded' : 'Required for Test Kit',
     ];
     if (!$loaded) {
         $allPassed = false;
@@ -52,11 +52,11 @@ $requiredFiles = [
 ];
 
 foreach ($requiredFiles as $file => $description) {
-    $exists = file_exists(__DIR__ . '/../' . $file);
+    $exists = file_exists(__DIR__.'/../'.$file);
     $checks[] = [
         'Check' => "File: {$file}",
         'Status' => $exists ? '✅ OK' : '❌ MISSING',
-        'Details' => $exists ? $description : 'Required file missing'
+        'Details' => $exists ? $description : 'Required file missing',
     ];
     if (!$exists) {
         $allPassed = false;
@@ -72,7 +72,7 @@ $requiredPackages = [
     'symfony/messenger' => 'Symfony Messenger',
 ];
 
-$composerLock = json_decode(file_get_contents(__DIR__ . '/../composer.lock'), true);
+$composerLock = json_decode(file_get_contents(__DIR__.'/../composer.lock'), true);
 $installedPackages = [];
 foreach ($composerLock['packages'] as $package) {
     $installedPackages[$package['name']] = $package['version'];
@@ -84,7 +84,7 @@ foreach ($requiredPackages as $package => $description) {
     $checks[] = [
         'Check' => "Package: {$package}",
         'Status' => $installed ? '✅ OK' : '❌ MISSING',
-        'Details' => $installed ? "Version: {$version}" : $description
+        'Details' => $installed ? "Version: {$version}" : $description,
     ];
     if (!$installed) {
         $allPassed = false;
@@ -100,17 +100,17 @@ try {
     $dsn = $_ENV['DATABASE_URL'] ?? 'postgresql://test_user:test_password@localhost:5432/multi_tenant_test';
     $pdo = new PDO($dsn);
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-    
+
     $stmt = $pdo->query('SELECT version()');
     $version = $stmt->fetchColumn();
-    
+
     if (str_contains($version, 'PostgreSQL')) {
         $postgresAvailable = true;
         $postgresVersion = preg_match('/PostgreSQL ([\d.]+)/', $version, $matches) ? $matches[1] : 'Unknown';
         $checks[] = [
             'Check' => 'PostgreSQL Connection',
             'Status' => '✅ OK',
-            'Details' => "Version: {$postgresVersion}"
+            'Details' => "Version: {$postgresVersion}",
         ];
     }
 } catch (Exception $e) {
@@ -118,47 +118,47 @@ try {
     $checks[] = [
         'Check' => 'PostgreSQL Connection',
         'Status' => '⚠️  UNAVAILABLE',
-        'Details' => 'Optional for basic tests, required for RLS tests'
+        'Details' => 'Optional for basic tests, required for RLS tests',
     ];
 }
 
 // Check 5: RLS Configuration (if PostgreSQL is available)
 if ($postgresAvailable) {
     $output->writeln('<comment>Checking Row-Level Security Configuration...</comment>');
-    
+
     try {
         // Check if test tables exist
         $stmt = $pdo->query("SELECT COUNT(*) FROM information_schema.tables WHERE table_name IN ('test_tenants', 'test_products')");
         $tableCount = $stmt->fetchColumn();
-        
+
         $checks[] = [
             'Check' => 'Test Tables',
             'Status' => $tableCount >= 2 ? '✅ OK' : '⚠️  MISSING',
-            'Details' => $tableCount >= 2 ? 'test_tenants and test_products exist' : 'Run tests/sql/init.sql'
+            'Details' => $tableCount >= 2 ? 'test_tenants and test_products exist' : 'Run tests/sql/init.sql',
         ];
-        
+
         if ($tableCount >= 2) {
             // Check RLS enabled
             $stmt = $pdo->query("SELECT relrowsecurity FROM pg_class WHERE relname = 'test_products'");
             $rlsEnabled = $stmt->fetchColumn();
-            
+
             $checks[] = [
                 'Check' => 'RLS Enabled on test_products',
                 'Status' => $rlsEnabled ? '✅ OK' : '❌ DISABLED',
-                'Details' => $rlsEnabled ? 'Row-Level Security enabled' : 'RLS not enabled'
+                'Details' => $rlsEnabled ? 'Row-Level Security enabled' : 'RLS not enabled',
             ];
-            
+
             // Check RLS policy
             $stmt = $pdo->query("SELECT COUNT(*) FROM pg_policies WHERE tablename = 'test_products' AND policyname = 'tenant_isolation_policy'");
             $policyCount = $stmt->fetchColumn();
-            
+
             $checks[] = [
                 'Check' => 'RLS Policy',
                 'Status' => $policyCount > 0 ? '✅ OK' : '❌ MISSING',
-                'Details' => $policyCount > 0 ? 'tenant_isolation_policy exists' : 'Policy not found'
+                'Details' => $policyCount > 0 ? 'tenant_isolation_policy exists' : 'Policy not found',
             ];
-            
-            if (!$rlsEnabled || $policyCount === 0) {
+
+            if (!$rlsEnabled || 0 === $policyCount) {
                 $allPassed = false;
             }
         } else {
@@ -168,7 +168,7 @@ if ($postgresAvailable) {
         $checks[] = [
             'Check' => 'RLS Configuration',
             'Status' => '❌ ERROR',
-            'Details' => $e->getMessage()
+            'Details' => $e->getMessage(),
         ];
         $allPassed = false;
     }
@@ -187,9 +187,9 @@ $testKitClasses = [
 foreach ($testKitClasses as $class => $description) {
     $exists = class_exists($class) || trait_exists($class);
     $checks[] = [
-        'Check' => "Class: " . basename(str_replace('\\', '/', $class)),
+        'Check' => 'Class: '.basename(str_replace('\\', '/', $class)),
         'Status' => $exists ? '✅ OK' : '❌ MISSING',
-        'Details' => $exists ? $description : 'Class not found'
+        'Details' => $exists ? $description : 'Class not found',
     ];
     if (!$exists) {
         $allPassed = false;

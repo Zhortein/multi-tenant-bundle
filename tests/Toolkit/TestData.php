@@ -137,8 +137,8 @@ class TestData
     public function clearAll(): void
     {
         // Clear products first due to potential foreign key constraints
-        $this->entityManager->createQuery('DELETE FROM ' . TestProduct::class)->execute();
-        $this->entityManager->createQuery('DELETE FROM ' . TestTenant::class)->execute();
+        $this->entityManager->createQuery('DELETE FROM '.TestProduct::class)->execute();
+        $this->entityManager->createQuery('DELETE FROM '.TestTenant::class)->execute();
     }
 
     /**
@@ -153,7 +153,7 @@ class TestData
         $tenant = $this->resolveTenant($tenantId);
 
         $this->entityManager->createQuery(
-            'DELETE FROM ' . TestProduct::class . ' p WHERE p.tenant = :tenant'
+            'DELETE FROM '.TestProduct::class.' p WHERE p.tenant = :tenant'
         )->setParameter('tenant', $tenant)->execute();
     }
 
@@ -171,7 +171,7 @@ class TestData
         $tenant = $this->resolveTenant($tenantId);
 
         return $this->entityManager->createQuery(
-            'SELECT p FROM ' . TestProduct::class . ' p WHERE p.tenant = :tenant ORDER BY p.id'
+            'SELECT p FROM '.TestProduct::class.' p WHERE p.tenant = :tenant ORDER BY p.id'
         )->setParameter('tenant', $tenant)->getResult();
     }
 
@@ -189,7 +189,7 @@ class TestData
         $tenant = $this->resolveTenant($tenantId);
 
         return (int) $this->entityManager->createQuery(
-            'SELECT COUNT(p.id) FROM ' . TestProduct::class . ' p WHERE p.tenant = :tenant'
+            'SELECT COUNT(p.id) FROM '.TestProduct::class.' p WHERE p.tenant = :tenant'
         )->setParameter('tenant', $tenant)->getSingleScalarResult();
     }
 
