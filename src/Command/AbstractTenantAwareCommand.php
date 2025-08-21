@@ -155,11 +155,23 @@ abstract class AbstractTenantAwareCommand extends Command
     }
 
     /**
-     * Clears tenant context on command completion.
+     * Execute the command.
+     *
+     * This method wraps the actual execution to ensure tenant context is cleared afterwards.
      */
-    protected function finalize(InputInterface $input, OutputInterface $output): void
+    protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        $this->tenantContext->clear();
-        parent::finalize($input, $output);
+        try {
+            return $this->doExecute($input, $output);
+        } finally {
+            // Always clear tenant context after command execution
+            $this->tenantContext->clear();
+        }
     }
+
+    /**
+     * The actual command execution logic.
+     * Subclasses should override this method instead of execute().
+     */
+    abstract protected function doExecute(InputInterface $input, OutputInterface $output): int;
 }

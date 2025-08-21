@@ -9,7 +9,7 @@ use Symfony\Component\EventDispatcher\EventDispatcher;
 use Zhortein\MultiTenantBundle\Context\TenantContext;
 use Zhortein\MultiTenantBundle\Observability\Event\TenantContextEndedEvent;
 use Zhortein\MultiTenantBundle\Observability\Event\TenantContextStartedEvent;
-use Zhortein\MultiTenantBundle\Tests\Fixtures\Entity\Tenant;
+use Zhortein\MultiTenantBundle\Tests\Fixtures\Entity\TestTenant;
 
 /**
  * @covers \Zhortein\MultiTenantBundle\Context\TenantContext
@@ -39,7 +39,7 @@ final class EventDispatchTest extends TestCase
 
     public function testSetTenantDispatchesStartedEvent(): void
     {
-        $tenant = new Tenant();
+        $tenant = new TestTenant();
         $tenant->setId(123);
         $tenant->setSlug('test-tenant');
 
@@ -52,11 +52,11 @@ final class EventDispatchTest extends TestCase
 
     public function testSetTenantDispatchesEndedEventForPreviousTenant(): void
     {
-        $tenant1 = new Tenant();
+        $tenant1 = new TestTenant();
         $tenant1->setId(123);
         $tenant1->setSlug('tenant-1');
 
-        $tenant2 = new Tenant();
+        $tenant2 = new TestTenant();
         $tenant2->setId(456);
         $tenant2->setSlug('tenant-2');
 
@@ -66,11 +66,11 @@ final class EventDispatchTest extends TestCase
         $this->tenantContext->setTenant($tenant2);
 
         $this->assertCount(2, $this->dispatchedEvents);
-        
+
         // First event should be context ended for previous tenant
         $this->assertInstanceOf(TenantContextEndedEvent::class, $this->dispatchedEvents[0]);
         $this->assertSame('123', $this->dispatchedEvents[0]->getTenantId());
-        
+
         // Second event should be context started for new tenant
         $this->assertInstanceOf(TenantContextStartedEvent::class, $this->dispatchedEvents[1]);
         $this->assertSame('456', $this->dispatchedEvents[1]->getTenantId());
@@ -78,7 +78,7 @@ final class EventDispatchTest extends TestCase
 
     public function testClearDispatchesEndedEvent(): void
     {
-        $tenant = new Tenant();
+        $tenant = new TestTenant();
         $tenant->setId(123);
         $tenant->setSlug('test-tenant');
 
@@ -102,12 +102,12 @@ final class EventDispatchTest extends TestCase
     public function testWithoutEventDispatcherDoesNotThrow(): void
     {
         $tenantContext = new TenantContext();
-        $tenant = new Tenant();
+        $tenant = new TestTenant();
         $tenant->setId(123);
         $tenant->setSlug('test-tenant');
 
         $this->expectNotToPerformAssertions();
-        
+
         $tenantContext->setTenant($tenant);
         $tenantContext->clear();
     }

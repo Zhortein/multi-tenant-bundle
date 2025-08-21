@@ -22,7 +22,7 @@ final class NullMetricsAdapterTest extends TestCase
     public function testCounterDoesNotThrow(): void
     {
         $this->expectNotToPerformAssertions();
-        
+
         $this->adapter->counter('test_counter');
         $this->adapter->counter('test_counter', ['label' => 'value'], 5);
     }
@@ -30,7 +30,7 @@ final class NullMetricsAdapterTest extends TestCase
     public function testGaugeDoesNotThrow(): void
     {
         $this->expectNotToPerformAssertions();
-        
+
         $this->adapter->gauge('test_gauge', 42.5);
         $this->adapter->gauge('test_gauge', 100.0, ['label' => 'value']);
     }
@@ -38,7 +38,7 @@ final class NullMetricsAdapterTest extends TestCase
     public function testHistogramDoesNotThrow(): void
     {
         $this->expectNotToPerformAssertions();
-        
+
         $this->adapter->histogram('test_histogram', 0.5);
         $this->adapter->histogram('test_histogram', 1.2, ['label' => 'value']);
     }
@@ -46,7 +46,7 @@ final class NullMetricsAdapterTest extends TestCase
     public function testTimingDoesNotThrow(): void
     {
         $this->expectNotToPerformAssertions();
-        
+
         $this->adapter->timing('test_timing', 0.123);
         $this->adapter->timing('test_timing', 0.456, ['label' => 'value']);
     }

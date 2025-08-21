@@ -41,6 +41,10 @@ use Zhortein\MultiTenantBundle\Manager\TenantSettingsManagerInterface;
 use Zhortein\MultiTenantBundle\Messenger\TenantMessengerConfigurator;
 use Zhortein\MultiTenantBundle\Messenger\TenantMessengerTransportFactory;
 use Zhortein\MultiTenantBundle\Messenger\TenantMessengerTransportResolver;
+use Zhortein\MultiTenantBundle\Observability\EventSubscriber\TenantLoggingSubscriber;
+use Zhortein\MultiTenantBundle\Observability\EventSubscriber\TenantMetricsSubscriber;
+use Zhortein\MultiTenantBundle\Observability\Metrics\MetricsAdapterInterface;
+use Zhortein\MultiTenantBundle\Observability\Metrics\NullMetricsAdapter;
 use Zhortein\MultiTenantBundle\Registry\DoctrineTenantRegistry;
 use Zhortein\MultiTenantBundle\Registry\TenantRegistryInterface;
 use Zhortein\MultiTenantBundle\Resolver\ChainTenantResolver;
@@ -55,10 +59,6 @@ use Zhortein\MultiTenantBundle\Resolver\TenantResolverInterface;
 use Zhortein\MultiTenantBundle\Storage\LocalStorage;
 use Zhortein\MultiTenantBundle\Storage\S3Storage;
 use Zhortein\MultiTenantBundle\Storage\TenantFileStorageInterface;
-use Zhortein\MultiTenantBundle\Observability\EventSubscriber\TenantLoggingSubscriber;
-use Zhortein\MultiTenantBundle\Observability\EventSubscriber\TenantMetricsSubscriber;
-use Zhortein\MultiTenantBundle\Observability\Metrics\MetricsAdapterInterface;
-use Zhortein\MultiTenantBundle\Observability\Metrics\NullMetricsAdapter;
 
 /**
  * Extension class for the multi-tenant bundle.
@@ -71,9 +71,12 @@ final class ZhorteinMultiTenantExtension extends Extension
     public function load(array $configs, ContainerBuilder $container): void
     {
         $configuration = new Configuration();
+        /**
+         * @var array<string, mixed> $config
+         */
         $config = $this->processConfiguration($configuration, $configs);
 
-        // Set configuration parameters
+        // Set Configuration parameters
         $this->setConfigurationParameters($container, $config);
 
         // Register core services
@@ -675,10 +678,11 @@ final class ZhorteinMultiTenantExtension extends Extension
      *
      * @param ContainerBuilder     $container The container builder
      * @param array<string, mixed> $config    The processed configuration
+     *
+     * @phpstan-param array<string, mixed> $config
      */
     private function registerObservabilityServices(ContainerBuilder $container, array $config): void
     {
-        // @phpstan-ignore-next-line argument.type
         unset($config); // Config parameter not used in this method
         // Register metrics adapter (default to null adapter)
         $container->register(NullMetricsAdapter::class)

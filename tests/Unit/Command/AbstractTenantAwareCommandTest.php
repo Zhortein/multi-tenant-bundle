@@ -28,7 +28,7 @@ final class AbstractTenantAwareCommandTest extends TestCase
         $this->tenantContext = $this->createMock(TenantContextInterface::class);
 
         $this->command = new class($this->tenantRegistry, $this->tenantContext) extends AbstractTenantAwareCommand {
-            protected function execute(InputInterface $input, OutputInterface $output): int
+            protected function doExecute(InputInterface $input, OutputInterface $output): int
             {
                 return self::SUCCESS;
             }
@@ -216,7 +216,7 @@ final class AbstractTenantAwareCommandTest extends TestCase
         $io = $this->createMock(SymfonyStyle::class);
 
         $command = new class($this->tenantRegistry, $this->tenantContext) extends AbstractTenantAwareCommand {
-            protected function execute(InputInterface $input, OutputInterface $output): int
+            protected function doExecute(InputInterface $input, OutputInterface $output): int
             {
                 return self::SUCCESS;
             }
@@ -244,7 +244,7 @@ final class AbstractTenantAwareCommandTest extends TestCase
             ->with('This command requires a tenant context. Use --tenant option or set TENANT_ID environment variable.');
 
         $command = new class($this->tenantRegistry, $this->tenantContext) extends AbstractTenantAwareCommand {
-            protected function execute(InputInterface $input, OutputInterface $output): int
+            protected function doExecute(InputInterface $input, OutputInterface $output): int
             {
                 return self::SUCCESS;
             }

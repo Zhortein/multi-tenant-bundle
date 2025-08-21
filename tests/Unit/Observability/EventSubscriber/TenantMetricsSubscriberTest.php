@@ -6,8 +6,8 @@ namespace Zhortein\MultiTenantBundle\Tests\Unit\Observability\EventSubscriber;
 
 use PHPUnit\Framework\TestCase;
 use Zhortein\MultiTenantBundle\Observability\Event\TenantHeaderRejectedEvent;
-use Zhortein\MultiTenantBundle\Observability\Event\TenantResolvedEvent;
 use Zhortein\MultiTenantBundle\Observability\Event\TenantResolutionFailedEvent;
+use Zhortein\MultiTenantBundle\Observability\Event\TenantResolvedEvent;
 use Zhortein\MultiTenantBundle\Observability\Event\TenantRlsAppliedEvent;
 use Zhortein\MultiTenantBundle\Observability\EventSubscriber\TenantMetricsSubscriber;
 use Zhortein\MultiTenantBundle\Tests\Unit\Observability\Metrics\MockMetricsAdapter;

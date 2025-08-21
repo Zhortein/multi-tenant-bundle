@@ -12,6 +12,7 @@ use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 use Zhortein\MultiTenantBundle\Context\TenantContextInterface;
+use Zhortein\MultiTenantBundle\Entity\TenantInterface;
 use Zhortein\MultiTenantBundle\Registry\TenantRegistryInterface;
 
 /**
@@ -69,7 +70,7 @@ EOT
             );
     }
 
-    protected function execute(InputInterface $input, OutputInterface $output): int
+    protected function doExecute(InputInterface $input, OutputInterface $output): int
     {
         $io = new SymfonyStyle($input, $output);
 
@@ -136,7 +137,7 @@ EOT
     /**
      * Shows tenant configuration in a safe manner.
      */
-    private function showTenantConfiguration(SymfonyStyle $io, object $tenant): void
+    private function showTenantConfiguration(SymfonyStyle $io, TenantInterface $tenant): void
     {
         $io->section('Tenant Configuration');
 
@@ -148,20 +149,18 @@ EOT
 
         // Add name if available
         if (method_exists($tenant, 'getName')) {
-            $config[] = ['Name', $tenant->getName() ?? 'N/A'];
+            $name = $tenant->getName();
+            $nameStr = is_string($name) ? $name : 'N/A';
+            $config[] = ['Name', $nameStr];
         }
 
-        // Add mailer DSN if available (masked for security)
-        if (method_exists($tenant, 'getMailerDsn')) {
-            $mailerDsn = $tenant->getMailerDsn();
-            $config[] = ['Mailer DSN', $mailerDsn ? $this->maskSensitiveData($mailerDsn) : 'N/A'];
-        }
+        // Add mailer DSN (masked for security)
+        $mailerDsn = $tenant->getMailerDsn();
+        $config[] = ['Mailer DSN', $mailerDsn ? $this->maskSensitiveData($mailerDsn) : 'N/A'];
 
-        // Add messenger DSN if available (masked for security)
-        if (method_exists($tenant, 'getMessengerDsn')) {
-            $messengerDsn = $tenant->getMessengerDsn();
-            $config[] = ['Messenger DSN', $messengerDsn ? $this->maskSensitiveData($messengerDsn) : 'N/A'];
-        }
+        // Add messenger DSN (masked for security)
+        $messengerDsn = $tenant->getMessengerDsn();
+        $config[] = ['Messenger DSN', $messengerDsn ? $this->maskSensitiveData($messengerDsn) : 'N/A'];
 
         $io->table([], $config);
     }
@@ -199,7 +198,7 @@ EOT
     /**
      * Starts interactive mode with tenant context.
      */
-    private function startInteractiveMode(SymfonyStyle $io, object $tenant): int
+    private function startInteractiveMode(SymfonyStyle $io, TenantInterface $tenant): int
     {
         $io->section('Interactive Tenant Mode');
         $io->note(sprintf('You are now in interactive mode for tenant: %s', $tenant->getSlug()));
