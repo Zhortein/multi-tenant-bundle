@@ -36,14 +36,21 @@ class TestTenant implements TenantInterface
         $this->createdAt = new \DateTimeImmutable();
     }
 
-    public function getId(): ?int
+    public function getId(): string|int
     {
-        return $this->id;
+        return $this->id ?? 0;
     }
 
-    public function getSlug(): ?string
+    public function setId(int $id): static
     {
-        return $this->slug;
+        $this->id = $id;
+
+        return $this;
+    }
+
+    public function getSlug(): string
+    {
+        return $this->slug ?? '';
     }
 
     public function setSlug(string $slug): static

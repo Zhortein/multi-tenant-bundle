@@ -13,8 +13,10 @@ use Symfony\Component\HttpKernel\KernelEvents;
 use Symfony\Component\Messenger\Envelope;
 use Symfony\Component\Messenger\Middleware\MiddlewareInterface;
 use Symfony\Component\Messenger\Middleware\StackInterface;
+use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
 use Zhortein\MultiTenantBundle\Context\TenantContextInterface;
 use Zhortein\MultiTenantBundle\Messenger\TenantStamp;
+use Zhortein\MultiTenantBundle\Observability\Event\TenantRlsAppliedEvent;
 use Zhortein\MultiTenantBundle\Registry\TenantRegistryInterface;
 
 /**
@@ -33,6 +35,7 @@ final readonly class TenantSessionConfigurator implements MiddlewareInterface
         private bool $rlsEnabled,
         private string $sessionVariable = 'app.tenant_id',
         private ?LoggerInterface $logger = null,
+        private ?EventDispatcherInterface $eventDispatcher = null,
     ) {
     }
 
@@ -138,12 +141,22 @@ final readonly class TenantSessionConfigurator implements MiddlewareInterface
                 'tenant_slug' => $tenant->getSlug(),
                 'session_variable' => $this->sessionVariable,
             ]);
+
+            // Dispatch RLS applied success event
+            $this->eventDispatcher?->dispatch(
+                new TenantRlsAppliedEvent($tenantId, true)
+            );
         } catch (Exception $exception) {
             $this->logger?->error('Failed to configure PostgreSQL session variable for RLS', [
                 'exception' => $exception->getMessage(),
                 'tenant_id' => $tenant->getId(),
                 'session_variable' => $this->sessionVariable,
             ]);
+
+            // Dispatch RLS applied failure event
+            $this->eventDispatcher?->dispatch(
+                new TenantRlsAppliedEvent((string) $tenant->getId(), false, $exception->getMessage())
+            );
         }
     }
 
@@ -176,6 +189,6 @@ final readonly class TenantSessionConfigurator implements MiddlewareInterface
      */
     private function isPostgreSQL(): bool
     {
-        return str_contains($this->connection->getDatabasePlatform()?->getName(), 'postgresql');
+        return str_contains($this->connection->getDatabasePlatform()->getName(), 'postgresql');
     }
 }

@@ -55,6 +55,10 @@ use Zhortein\MultiTenantBundle\Resolver\TenantResolverInterface;
 use Zhortein\MultiTenantBundle\Storage\LocalStorage;
 use Zhortein\MultiTenantBundle\Storage\S3Storage;
 use Zhortein\MultiTenantBundle\Storage\TenantFileStorageInterface;
+use Zhortein\MultiTenantBundle\Observability\EventSubscriber\TenantLoggingSubscriber;
+use Zhortein\MultiTenantBundle\Observability\EventSubscriber\TenantMetricsSubscriber;
+use Zhortein\MultiTenantBundle\Observability\Metrics\MetricsAdapterInterface;
+use Zhortein\MultiTenantBundle\Observability\Metrics\NullMetricsAdapter;
 
 /**
  * Extension class for the multi-tenant bundle.
@@ -89,6 +93,9 @@ final class ZhorteinMultiTenantExtension extends Extension
 
         // Register decorators
         $this->registerDecorators($container, $config);
+
+        // Register observability services
+        $this->registerObservabilityServices($container, $config);
 
         // Load service definitions from YAML
         $this->loadServiceDefinitions($container);
@@ -661,6 +668,36 @@ final class ZhorteinMultiTenantExtension extends Extension
                     ->setArgument('$enabled', '%zhortein_multi_tenant.decorators.cache.enabled%');
             }
         }
+    }
+
+    /**
+     * Registers observability services.
+     *
+     * @param ContainerBuilder     $container The container builder
+     * @param array<string, mixed> $config    The processed configuration
+     */
+    private function registerObservabilityServices(ContainerBuilder $container, array $config): void
+    {
+        // @phpstan-ignore-next-line argument.type
+        unset($config); // Config parameter not used in this method
+        // Register metrics adapter (default to null adapter)
+        $container->register(NullMetricsAdapter::class)
+            ->setAutowired(true)
+            ->setAutoconfigured(true);
+
+        $container->setAlias(MetricsAdapterInterface::class, NullMetricsAdapter::class);
+
+        // Register metrics subscriber
+        $container->register(TenantMetricsSubscriber::class)
+            ->setAutowired(true)
+            ->setAutoconfigured(true)
+            ->addTag('kernel.event_subscriber');
+
+        // Register logging subscriber
+        $container->register(TenantLoggingSubscriber::class)
+            ->setAutowired(true)
+            ->setAutoconfigured(true)
+            ->addTag('kernel.event_subscriber');
     }
 
     /**

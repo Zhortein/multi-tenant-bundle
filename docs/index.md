@@ -37,6 +37,7 @@ Welcome to the comprehensive documentation for the Zhortein Multi-Tenant Bundle,
 - [Mailer](mailer.md) - Tenant-aware email configuration and sending
 - [Messenger](messenger.md) - Tenant-aware message queues and processing
 - [Storage](storage.md) - Tenant-specific file storage mechanisms
+- [Observability](observability.md) - Monitoring, metrics, and logging for tenant operations
 
 ### Database Management
 - [Migrations](migrations.md) - Running migrations for each tenant
@@ -57,6 +58,7 @@ Welcome to the comprehensive documentation for the Zhortein Multi-Tenant Bundle,
 - [Messenger Usage Examples](examples/messenger-usage.md) - Message queue examples
 - [Storage Usage Examples](examples/storage-usage.md) - File storage examples
 - [Database Usage Examples](examples/database-usage.md) - Entity and repository examples
+- [Observability Usage Examples](examples/observability-usage.md) - Monitoring and metrics examples
 
 ## Overview
 
@@ -74,6 +76,7 @@ The Zhortein Multi-Tenant Bundle provides a comprehensive, production-ready solu
 - **🛠️ Enhanced Console Commands**: Comprehensive tenant-aware CLI with global `--tenant` option, environment variable support, and admin impersonation
 - **🧪 Comprehensive Test Kit**: First-class testing utilities with RLS isolation verification, tenant context management, and defense-in-depth testing
 - **🔒 RLS Integration**: PostgreSQL Row-Level Security for bulletproof tenant isolation
+- **📊 Observability & Monitoring**: Built-in events, metrics collection, and structured logging for production monitoring
 - **📚 Complete Documentation**: Extensive documentation with examples
 
 ### Technical Requirements

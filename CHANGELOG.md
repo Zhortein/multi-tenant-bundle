@@ -8,6 +8,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Observability and Monitoring**
+  - PSR-14 compatible events for tenant operations monitoring:
+    - `TenantResolvedEvent` - dispatched when tenant is successfully resolved
+    - `TenantResolutionFailedEvent` - dispatched when tenant resolution fails
+    - `TenantContextStartedEvent` - dispatched when tenant context is initialized
+    - `TenantContextEndedEvent` - dispatched when tenant context is cleared
+    - `TenantRlsAppliedEvent` - dispatched when PostgreSQL RLS is applied
+    - `TenantHeaderRejectedEvent` - dispatched when header is rejected by allow-list
+  - Vendor-neutral metrics collection system:
+    - `MetricsAdapterInterface` for APM integration (Prometheus, StatsD, DataDog, etc.)
+    - `NullMetricsAdapter` as default no-op implementation
+    - Automatic metrics collection for tenant resolution, RLS application, and header rejections
+    - Counter metrics: `tenant_resolution_total`, `tenant_rls_apply_total`, `tenant_header_rejected_total`
+  - Comprehensive logging with structured context:
+    - `TenantLoggingSubscriber` for automatic event logging
+    - INFO/WARNING/ERROR log levels with tenant_id context
+    - Detailed failure reasons and context information
+  - Event dispatch integration in core components:
+    - `TenantContext` dispatches context lifecycle events
+    - `ChainTenantResolver` dispatches resolution and header rejection events
+    - `TenantSessionConfigurator` dispatches RLS application events
+  - Complete test coverage with mock adapters and event verification
+  - Documentation in `docs/observability.md` with Prometheus and StatsD examples
+
 - **Comprehensive Test Kit**
   - `WithTenantTrait` for tenant context management in tests with `withTenant()` and `withoutDoctrineTenantFilter()` methods
   - `TestData` lightweight test data builders for tenant-aware entities with seeding and counting methods

@@ -31,7 +31,7 @@ zhortein_multi_tenant:
 | `header_allow_list` | array | `[X-Tenant-Id, X-Tenant-Slug]` | Allowed header names for header resolvers |
 
 ### Individual Resolver Configuration
-
+   
 Each resolver in the chain can be configured independently:
 
 ```yaml

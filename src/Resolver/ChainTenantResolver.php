@@ -6,9 +6,13 @@ namespace Zhortein\MultiTenantBundle\Resolver;
 
 use Psr\Log\LoggerInterface;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
 use Zhortein\MultiTenantBundle\Entity\TenantInterface;
 use Zhortein\MultiTenantBundle\Exception\AmbiguousTenantResolutionException;
 use Zhortein\MultiTenantBundle\Exception\TenantResolutionException;
+use Zhortein\MultiTenantBundle\Observability\Event\TenantHeaderRejectedEvent;
+use Zhortein\MultiTenantBundle\Observability\Event\TenantResolvedEvent;
+use Zhortein\MultiTenantBundle\Observability\Event\TenantResolutionFailedEvent;
 
 /**
  * Chain resolver that tries multiple tenant resolvers in order.
@@ -30,6 +34,7 @@ final class ChainTenantResolver implements TenantResolverInterface
         private readonly bool $strict = true,
         private readonly array $headerAllowList = [],
         private readonly ?LoggerInterface $logger = null,
+        private readonly ?EventDispatcherInterface $eventDispatcher = null,
     ) {
     }
 
@@ -70,6 +75,12 @@ final class ChainTenantResolver implements TenantResolverInterface
                     'header_name' => $resolver->getHeaderName(),
                     'allow_list' => $this->headerAllowList,
                 ]);
+
+                // Dispatch header rejected event
+                $this->eventDispatcher?->dispatch(
+                    new TenantHeaderRejectedEvent($resolver->getHeaderName())
+                );
+
                 continue;
             }
 
@@ -92,10 +103,24 @@ final class ChainTenantResolver implements TenantResolverInterface
                         'position_in_chain' => array_search($resolverName, $this->order, true),
                     ]);
 
+                    // Dispatch tenant resolved event
+                    $this->eventDispatcher?->dispatch(
+                        new TenantResolvedEvent($resolverName, (string) $tenant->getId())
+                    );
+
                     // In non-strict mode, return first match
                     if (!$this->strict) {
                         return $tenant;
                     }
+                } else {
+                    // Dispatch tenant resolution failed event
+                    $this->eventDispatcher?->dispatch(
+                        new TenantResolutionFailedEvent(
+                            $resolverName,
+                            'no_tenant_found',
+                            ['request_uri' => $request->getRequestUri()]
+                        )
+                    );
                 }
             } catch (\Throwable $e) {
                 $diagnostics['resolvers_tried'][] = [
@@ -110,6 +135,18 @@ final class ChainTenantResolver implements TenantResolverInterface
                     'exception' => $e->getMessage(),
                     'exception_class' => $e::class,
                 ]);
+
+                // Dispatch tenant resolution failed event
+                $this->eventDispatcher?->dispatch(
+                    new TenantResolutionFailedEvent(
+                        $resolverName,
+                        'exception_thrown',
+                        [
+                            'exception_message' => $e->getMessage(),
+                            'exception_class' => $e::class,
+                        ]
+                    )
+                );
 
                 if ($this->strict) {
                     throw new TenantResolutionException(sprintf('Resolver "%s" failed: %s', $resolverName, $e->getMessage()), $diagnostics, 0, $e);
