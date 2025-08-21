@@ -2,6 +2,19 @@
 
 Welcome to the comprehensive documentation for the Zhortein Multi-Tenant Bundle, a powerful Symfony 7+ solution for building multi-tenant applications with PostgreSQL 16 support.
 
+> 📖 **Quick Start**: New to the bundle? Check out the [main README](../README.md) for installation and quick start guide.
+
+## Navigation
+
+- [🏠 Main README](../README.md) - Installation, quick start, and overview
+- [📋 Table of Contents](#table-of-contents) - Complete documentation index
+- [🚀 Getting Started](#getting-started) - Step-by-step setup guides
+- [🏗️ Core Concepts](#core-concepts) - Understanding multi-tenancy concepts
+- [🔧 Service Integration](#service-integration) - Integrating with Symfony services
+- [🗄️ Database Management](#database-management) - Database strategies and management
+- [🛠️ Development & Testing](#development--testing) - Development tools and testing
+- [📖 Examples](#examples) - Practical code examples
+
 ## Table of Contents
 
 ### Getting Started
@@ -13,33 +26,39 @@ Welcome to the comprehensive documentation for the Zhortein Multi-Tenant Bundle,
 ### Core Concepts
 - [Tenant Context](tenant-context.md) - How tenant resolution and access works
 - [Tenant Resolution](tenant-resolution.md) - Subdomain, path, header, and custom resolvers
+- [Resolver Chain](resolver-chain.md) - Configurable multi-strategy resolution with fallbacks
 - [DNS TXT Resolver](dns-txt-resolver.md) - DNS-based tenant resolution with TXT records
 - [Domain Resolvers](domain-resolvers.md) - Domain-based and hybrid resolvers
 - [Doctrine Tenant Filter](doctrine-tenant-filter.md) - Automatic database filtering
 - [Tenant Settings](tenant-settings.md) - Configuration system with fallback rules
 
 ### Service Integration
+- [Decorators](decorators.md) - Tenant-aware decorators for caching, logging, and storage
 - [Mailer](mailer.md) - Tenant-aware email configuration and sending
 - [Messenger](messenger.md) - Tenant-aware message queues and processing
 - [Storage](storage.md) - Tenant-specific file storage mechanisms
+- [Observability](observability.md) - Monitoring, metrics, and logging for tenant operations
 
 ### Database Management
 - [Migrations](migrations.md) - Running migrations for each tenant
 - [Fixtures](fixtures.md) - Creating and loading fixtures per tenant
 
-### Development
+### Development & Testing
 - [CLI Commands](cli.md) - Console commands with examples
-- [Testing](testing.md) - Unit and functional testing for multi-tenant apps
+- [Testing & Test Kit](testing.md) - Comprehensive testing utilities and strategies for multi-tenant apps
+- [Test Kit Usage Examples](examples/test-kit-usage.md) - Detailed Test Kit examples and best practices
 - [FAQ](faq.md) - Frequently asked questions
 
 ### Examples
 - [Basic Usage Examples](examples/basic-usage.md) - Practical code examples
+- [Resolver Chain Usage](examples/resolver-chain-usage.md) - Multi-strategy resolution examples
 - [DNS TXT Resolver Usage](examples/dns-txt-resolver-usage.md) - DNS-based resolution examples
 - [Domain Resolver Usage](examples/domain-resolver-usage.md) - Domain and hybrid resolver examples
 - [Mailer Usage Examples](examples/mailer-usage.md) - Email configuration examples
 - [Messenger Usage Examples](examples/messenger-usage.md) - Message queue examples
 - [Storage Usage Examples](examples/storage-usage.md) - File storage examples
 - [Database Usage Examples](examples/database-usage.md) - Entity and repository examples
+- [Observability Usage Examples](examples/observability-usage.md) - Monitoring and metrics examples
 
 ## Overview
 
@@ -47,14 +66,17 @@ The Zhortein Multi-Tenant Bundle provides a comprehensive, production-ready solu
 
 ### Key Features
 
-- **🏢 Multiple Resolution Strategies**: Path-based, subdomain-based, header-based, domain-based, DNS TXT, hybrid, and custom resolvers
+- **🏢 Multiple Resolution Strategies**: Path-based, subdomain-based, header-based, query-based, domain-based, DNS TXT, hybrid, and custom resolvers
+- **🔗 Resolver Chain**: Configurable multi-strategy resolution with strict mode, fallbacks, and comprehensive diagnostics
 - **🗄️ Database Strategies**: Shared database with filtering or separate databases per tenant
 - **⚡ Performance Optimized**: Built-in caching for tenant settings and configurations
 - **🔧 Doctrine Integration**: Automatic tenant filtering with Doctrine ORM
-- **📧 Service Integrations**: Tenant-aware mailer, messenger, and file storage
+- **📧 Service Integrations**: Tenant-aware decorators, mailer, messenger, and file storage
 - **🎯 Event-Driven Architecture**: Automatic tenant context resolution via event listeners
-- **🛠️ Console Commands**: Management commands for tenant operations
-- **🧪 Comprehensive Testing**: Full test suite with PHPUnit 12 and PHPStan level max
+- **🛠️ Enhanced Console Commands**: Comprehensive tenant-aware CLI with global `--tenant` option, environment variable support, and admin impersonation
+- **🧪 Comprehensive Test Kit**: First-class testing utilities with RLS isolation verification, tenant context management, and defense-in-depth testing
+- **🔒 RLS Integration**: PostgreSQL Row-Level Security for bulletproof tenant isolation
+- **📊 Observability & Monitoring**: Built-in events, metrics collection, and structured logging for production monitoring
 - **📚 Complete Documentation**: Extensive documentation with examples
 
 ### Technical Requirements
@@ -113,6 +135,39 @@ class DashboardController extends AbstractController
     }
 }
 ```
+
+## Test Kit Highlights
+
+The bundle includes a **comprehensive Test Kit** that makes testing multi-tenant applications easy and reliable:
+
+### 🎯 **Core Features**
+- **WithTenantTrait**: Execute code within specific tenant contexts
+- **TestData Builder**: Lightweight test data creation for tenant-aware entities
+- **Base Test Classes**: Pre-configured for HTTP, CLI, and Messenger testing
+- **RLS Isolation Tests**: Prove PostgreSQL Row-Level Security works as defense-in-depth
+
+### 🔒 **Critical Security Testing**
+```php
+// The CRITICAL test - proves RLS works even when Doctrine filters are disabled
+$this->withTenant('tenant-a', function () {
+    $this->withoutDoctrineTenantFilter(function () {
+        $products = $this->repository->findAll();
+        // Should still see only tenant A products due to RLS
+        $this->assertCount(2, $products);
+    });
+});
+```
+
+### 🚀 **Quick Start**
+```bash
+make dev-setup          # Setup development environment
+make validate-testkit   # Validate Test Kit configuration
+make postgres-start     # Start PostgreSQL for testing
+make test-kit          # Run all Test Kit tests
+make test-rls          # Run critical RLS isolation tests
+```
+
+**📖 Learn More**: [Testing & Test Kit Documentation](testing.md) | [Test Kit Usage Examples](examples/test-kit-usage.md)
 
 ## Getting Help
 

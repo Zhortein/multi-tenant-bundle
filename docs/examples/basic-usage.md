@@ -2,6 +2,8 @@
 
 This document provides practical examples of using the Zhortein Multi-Tenant Bundle in common scenarios.
 
+> 📖 **Navigation**: [← Back to Documentation Index](../index.md) | [Database Usage →](database-usage.md)
+
 ## Controller Examples
 
 ### Basic Tenant Access

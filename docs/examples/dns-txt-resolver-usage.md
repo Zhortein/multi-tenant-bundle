@@ -1,853 +1,483 @@
 # DNS TXT Resolver Usage Examples
 
-This document provides practical examples of using the DNS TXT Resolver in real-world scenarios.
+> 📖 **Navigation**: [← Domain Resolver Usage](domain-resolver-usage.md) | [Back to Documentation Index](../index.md) | [Mailer Usage →](mailer-usage.md)
 
-## Basic Setup
+This document provides practical examples of using the DNS TXT resolver in the Zhortein Multi-Tenant Bundle.
 
-### 1. Configuration
+## Basic Configuration
 
 ```yaml
 # config/packages/zhortein_multi_tenant.yaml
 zhortein_multi_tenant:
     resolver: 'dns_txt'
     dns_txt:
-        timeout: 5
-        enable_cache: true
+        timeout: 5  # DNS query timeout in seconds
+        enable_cache: true  # Enable DNS result caching
 ```
 
-### 2. DNS Records Setup
+## DNS Record Setup
 
-#### BIND DNS Configuration
-
-```bind
-; Zone file for example.com
-$TTL 300
-
-; Main tenant domains
-_tenant.acme.com.           IN TXT "acme"
-_tenant.bio-corp.org.       IN TXT "bio"
-_tenant.startup-inc.io.     IN TXT "startup"
-
-; Subdomain tenants
-_tenant.client1.saas.com.   IN TXT "client1"
-_tenant.client2.saas.com.   IN TXT "client2"
-_tenant.demo.platform.com.  IN TXT "demo"
-
-; Environment-specific
-_tenant.dev.acme.com.       IN TXT "acme_dev"
-_tenant.staging.acme.com.   IN TXT "acme_staging"
-```
-
-#### Cloudflare DNS Setup
+### Example 1: Basic TXT Record
 
 ```bash
-# Production domains
-curl -X POST "https://api.cloudflare.com/client/v4/zones/{zone_id}/dns_records" \
-  -H "Authorization: Bearer {api_token}" \
-  -H "Content-Type: application/json" \
-  --data '{
-    "type": "TXT",
-    "name": "_tenant.acme",
-    "content": "acme",
-    "ttl": 300
-  }'
-
-# Development domains
-curl -X POST "https://api.cloudflare.com/client/v4/zones/{zone_id}/dns_records" \
-  -H "Authorization: Bearer {api_token}" \
-  -H "Content-Type: application/json" \
-  --data '{
-    "type": "TXT",
-    "name": "_tenant.dev.acme",
-    "content": "acme_dev",
-    "ttl": 60
-  }'
+# DNS TXT record for example.com
+_tenant.example.com. IN TXT "tenant-slug=acme"
 ```
 
-## Real-World Examples
+**How it works:**
+- Request to `https://example.com/dashboard`
+- Bundle queries `_tenant.example.com` TXT record
+- Finds `tenant-slug=acme`
+- Resolves to tenant with slug `acme`
 
-### E-commerce Platform
+### Example 2: Multiple Domains
 
-#### DNS Setup
-```bind
-; Customer stores
-_tenant.acme-store.com.     IN TXT "acme"
-_tenant.bio-shop.org.       IN TXT "bio"
-_tenant.startup-market.io.  IN TXT "startup"
+```bash
+# For client1.com
+_tenant.client1.com. IN TXT "tenant-slug=client1"
 
-; Regional stores
-_tenant.acme-eu.com.        IN TXT "acme_eu"
-_tenant.acme-us.com.        IN TXT "acme_us"
-_tenant.bio-canada.org.     IN TXT "bio_ca"
+# For client2.com  
+_tenant.client2.com. IN TXT "tenant-slug=client2"
+
+# For subdomain
+_tenant.app.client1.com. IN TXT "tenant-slug=client1-app"
 ```
 
-#### Controller Implementation
+### Example 3: Complex TXT Records
+
+```bash
+# Multiple tenant information in one record
+_tenant.example.com. IN TXT "tenant-slug=acme;tenant-id=123;environment=production"
+
+# Hierarchical tenant structure
+_tenant.app.acme.com. IN TXT "tenant-slug=acme-app;parent=acme"
+
+# Geographic distribution
+_tenant.us.example.com. IN TXT "tenant-slug=acme-us;region=us-east-1"
+_tenant.eu.example.com. IN TXT "tenant-slug=acme-eu;region=eu-west-1"
+```
+
+## Code Examples
+
+### Example 4: Using DNS TXT Resolver in Controller
+
 ```php
 <?php
 
 namespace App\Controller;
 
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
-use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Attribute\Route;
-use Zhortein\MultiTenantBundle\Context\TenantContextInterface;
-
-class StoreController extends AbstractController
-{
-    #[Route('/products', name: 'store_products')]
-    public function products(TenantContextInterface $tenantContext): Response
-    {
-        $tenant = $tenantContext->getTenant();
-        
-        if (!$tenant) {
-            throw $this->createNotFoundException('Store not found');
-        }
-        
-        // Load tenant-specific products
-        $products = $this->getProductsForTenant($tenant);
-        
-        return $this->render('store/products.html.twig', [
-            'tenant' => $tenant,
-            'products' => $products,
-            'store_name' => $tenant->getName(),
-        ]);
-    }
-    
-    private function getProductsForTenant($tenant): array
-    {
-        // Implementation depends on your product entity structure
-        return [];
-    }
-}
-```
-
-### SaaS Platform with Custom Domains
-
-#### DNS Setup
-```bind
-; Premium clients with custom domains
-_tenant.portal.acme-corp.com.    IN TXT "acme"
-_tenant.app.bio-tech.org.        IN TXT "bio"
-_tenant.dashboard.startup.io.    IN TXT "startup"
-
-; Standard clients on shared domain
-_tenant.client1.platform.com.    IN TXT "client1"
-_tenant.client2.platform.com.    IN TXT "client2"
-_tenant.trial.platform.com.      IN TXT "trial_tenant"
-```
-
-#### Service Implementation
-```php
-<?php
-
-namespace App\Service;
-
-use Zhortein\MultiTenantBundle\Context\TenantContextInterface;
 use Zhortein\MultiTenantBundle\Resolver\DnsTxtTenantResolver;
 
-class TenantBrandingService
+class TenantController extends AbstractController
 {
-    public function __construct(
-        private TenantContextInterface $tenantContext,
-        private DnsTxtTenantResolver $dnsResolver
-    ) {}
-
-    public function getBrandingConfig(string $domain): array
+    #[Route('/api/tenant/dns-info', name: 'tenant_dns_info')]
+    public function getDnsInfo(Request $request, DnsTxtTenantResolver $dnsResolver): JsonResponse
     {
-        $tenant = $this->tenantContext->getTenant();
-        
-        if (!$tenant) {
-            return $this->getDefaultBranding();
-        }
-        
-        // Check if this is a custom domain
-        $isCustomDomain = $this->isCustomDomain($domain);
-        
-        return [
-            'tenant_slug' => $tenant->getSlug(),
-            'tenant_name' => $tenant->getName(),
-            'is_custom_domain' => $isCustomDomain,
-            'logo_url' => $this->getLogoUrl($tenant, $isCustomDomain),
-            'primary_color' => $this->getPrimaryColor($tenant),
-            'custom_css' => $this->getCustomCss($tenant),
-        ];
-    }
-    
-    private function isCustomDomain(string $domain): bool
-    {
-        // Check if domain is not on our platform domains
-        $platformDomains = ['platform.com', 'saas.io'];
-        
-        foreach ($platformDomains as $platformDomain) {
-            if (str_ends_with($domain, $platformDomain)) {
-                return false;
-            }
-        }
-        
-        return true;
-    }
-    
-    private function getDefaultBranding(): array
-    {
-        return [
-            'tenant_slug' => null,
-            'tenant_name' => 'Platform',
-            'is_custom_domain' => false,
-            'logo_url' => '/assets/default-logo.png',
-            'primary_color' => '#007bff',
-            'custom_css' => null,
-        ];
-    }
-    
-    // ... other branding methods
-}
-```
-
-### Multi-Environment Setup
-
-#### DNS Configuration
-```bind
-; Production
-_tenant.acme.com.           IN TXT "acme"
-_tenant.bio.org.            IN TXT "bio"
-
-; Staging
-_tenant.staging.acme.com.   IN TXT "acme_staging"
-_tenant.staging.bio.org.    IN TXT "bio_staging"
-
-; Development
-_tenant.dev.acme.local.     IN TXT "acme_dev"
-_tenant.dev.bio.local.      IN TXT "bio_dev"
-
-; Testing
-_tenant.test.acme.local.    IN TXT "acme_test"
-_tenant.test.bio.local.     IN TXT "bio_test"
-```
-
-#### Environment-Aware Service
-```php
-<?php
-
-namespace App\Service;
-
-use Zhortein\MultiTenantBundle\Context\TenantContextInterface;
-
-class EnvironmentAwareTenantService
-{
-    public function __construct(
-        private TenantContextInterface $tenantContext,
-        private string $environment
-    ) {}
-
-    public function getTenantConfig(): array
-    {
-        $tenant = $this->tenantContext->getTenant();
-        
-        if (!$tenant) {
-            return [];
-        }
-        
-        $config = [
-            'tenant_slug' => $tenant->getSlug(),
-            'environment' => $this->environment,
-            'is_production' => $this->isProduction($tenant),
-        ];
-        
-        // Environment-specific configuration
-        switch ($this->environment) {
-            case 'prod':
-                $config['debug'] = false;
-                $config['cache_ttl'] = 3600;
-                break;
-                
-            case 'staging':
-                $config['debug'] = true;
-                $config['cache_ttl'] = 300;
-                break;
-                
-            case 'dev':
-                $config['debug'] = true;
-                $config['cache_ttl'] = 0;
-                break;
-        }
-        
-        return $config;
-    }
-    
-    private function isProduction($tenant): bool
-    {
-        // Check if tenant slug doesn't contain environment suffixes
-        return !str_contains($tenant->getSlug(), '_dev') 
-            && !str_contains($tenant->getSlug(), '_staging')
-            && !str_contains($tenant->getSlug(), '_test');
-    }
-}
-```
-
-## DNS Management Services
-
-### DNS Validation Service
-
-```php
-<?php
-
-namespace App\Service;
-
-use Zhortein\MultiTenantBundle\Resolver\DnsTxtTenantResolver;
-
-class DnsValidationService
-{
-    public function __construct(
-        private DnsTxtTenantResolver $dnsResolver
-    ) {}
-
-    public function validateTenantDns(string $domain, string $expectedTenant): array
-    {
-        $result = [
-            'domain' => $domain,
-            'expected_tenant' => $expectedTenant,
-            'is_valid' => false,
-            'errors' => [],
-            'warnings' => [],
-        ];
-
         try {
-            // Check if DNS record exists
-            if (!$this->dnsResolver->hasDnsTxtRecord($domain)) {
-                $result['errors'][] = 'No DNS TXT record found';
-                return $result;
-            }
-
-            // Get actual tenant from DNS
-            $actualTenant = $this->dnsResolver->getTenantIdentifierFromDns($domain);
+            $tenant = $dnsResolver->resolveTenant($request);
             
-            if ($actualTenant === null) {
-                $result['errors'][] = 'DNS TXT record exists but contains invalid data';
-                return $result;
+            if (!$tenant) {
+                return new JsonResponse(['error' => 'No tenant found via DNS'], 404);
             }
-
-            if ($actualTenant !== $expectedTenant) {
-                $result['errors'][] = sprintf(
-                    'DNS TXT record contains "%s" but expected "%s"',
-                    $actualTenant,
-                    $expectedTenant
-                );
-                return $result;
-            }
-
-            $result['is_valid'] = true;
-            $result['actual_tenant'] = $actualTenant;
-
+            
+            return new JsonResponse([
+                'tenant_id' => $tenant->getId(),
+                'tenant_slug' => $tenant->getSlug(),
+                'resolution_method' => 'dns_txt',
+                'domain' => $request->getHost(),
+            ]);
+            
         } catch (\Exception $e) {
-            $result['errors'][] = 'DNS query failed: ' . $e->getMessage();
+            return new JsonResponse([
+                'error' => 'DNS resolution failed',
+                'message' => $e->getMessage(),
+            ], 500);
         }
+    }
+}
+```
 
+### Example 5: Custom DNS TXT Resolver
+
+```php
+<?php
+
+namespace App\Resolver;
+
+use Zhortein\MultiTenantBundle\Resolver\DnsTxtTenantResolver;
+use Zhortein\MultiTenantBundle\Entity\TenantInterface;
+use Symfony\Component\HttpFoundation\Request;
+
+class CustomDnsTxtResolver extends DnsTxtTenantResolver
+{
+    protected function buildDnsQuery(string $domain): string
+    {
+        // Custom DNS query format - use different prefix
+        return "_app-tenant.{$domain}";
+    }
+    
+    protected function parseTxtRecord(string $record): ?string
+    {
+        // Support multiple formats
+        if (preg_match('/tenant-id=([a-zA-Z0-9-_]+)/', $record, $matches)) {
+            return $matches[1];
+        }
+        
+        if (preg_match('/app-slug=([a-zA-Z0-9-_]+)/', $record, $matches)) {
+            return $matches[1];
+        }
+        
+        return parent::parseTxtRecord($record);
+    }
+    
+    public function resolveTenant(Request $request): ?TenantInterface
+    {
+        // Add custom logging
+        $domain = $request->getHost();
+        $this->logger?->info('Attempting DNS TXT resolution', ['domain' => $domain]);
+        
+        $result = parent::resolveTenant($request);
+        
+        if ($result) {
+            $this->logger?->info('DNS TXT resolution successful', [
+                'domain' => $domain,
+                'tenant_slug' => $result->getSlug(),
+            ]);
+        } else {
+            $this->logger?->debug('DNS TXT resolution failed', ['domain' => $domain]);
+        }
+        
         return $result;
     }
-
-    public function validateMultipleDomains(array $domainMappings): array
-    {
-        $results = [];
-        
-        foreach ($domainMappings as $domain => $expectedTenant) {
-            $results[$domain] = $this->validateTenantDns($domain, $expectedTenant);
-        }
-        
-        return $results;
-    }
-
-    public function generateDnsInstructions(string $domain, string $tenant): array
-    {
-        $dnsQuery = $this->dnsResolver->getDnsQueryForHost($domain);
-        
-        return [
-            'domain' => $domain,
-            'tenant' => $tenant,
-            'dns_record' => [
-                'name' => $dnsQuery,
-                'type' => 'TXT',
-                'value' => $tenant,
-                'ttl' => 300,
-            ],
-            'instructions' => [
-                'bind' => sprintf('%s IN TXT "%s"', $dnsQuery, $tenant),
-                'cloudflare' => [
-                    'name' => str_replace('.' . $this->extractBaseDomain($domain), '', $dnsQuery),
-                    'content' => $tenant,
-                    'type' => 'TXT',
-                    'ttl' => 300,
-                ],
-                'route53' => [
-                    'Name' => $dnsQuery,
-                    'Type' => 'TXT',
-                    'TTL' => 300,
-                    'ResourceRecords' => [['Value' => '"' . $tenant . '"']],
-                ],
-            ],
-        ];
-    }
-
-    private function extractBaseDomain(string $domain): string
-    {
-        $parts = explode('.', $domain);
-        return implode('.', array_slice($parts, -2));
-    }
 }
 ```
 
-### DNS Health Monitoring
+### Example 6: DNS with Fallback Strategy
 
 ```php
 <?php
 
-namespace App\Service;
+namespace App\Resolver;
 
+use Zhortein\MultiTenantBundle\Resolver\TenantResolverInterface;
 use Zhortein\MultiTenantBundle\Resolver\DnsTxtTenantResolver;
+use Zhortein\MultiTenantBundle\Resolver\SubdomainTenantResolver;
+use Zhortein\MultiTenantBundle\Entity\TenantInterface;
+use Symfony\Component\HttpFoundation\Request;
+use Psr\Log\LoggerInterface;
 
-class DnsHealthMonitorService
+class DnsWithFallbackResolver implements TenantResolverInterface
 {
     public function __construct(
-        private DnsTxtTenantResolver $dnsResolver
+        private DnsTxtTenantResolver $dnsResolver,
+        private SubdomainTenantResolver $subdomainResolver,
+        private ?LoggerInterface $logger = null
     ) {}
-
-    public function checkDnsHealth(array $expectedMappings): array
+    
+    public function resolveTenant(Request $request): ?TenantInterface
     {
-        $results = [
-            'overall_status' => 'healthy',
-            'total_domains' => count($expectedMappings),
-            'healthy_domains' => 0,
-            'unhealthy_domains' => 0,
-            'details' => [],
-        ];
-
-        foreach ($expectedMappings as $domain => $expectedTenant) {
-            $domainResult = $this->checkSingleDomain($domain, $expectedTenant);
-            $results['details'][$domain] = $domainResult;
-
-            if ($domainResult['status'] === 'healthy') {
-                $results['healthy_domains']++;
-            } else {
-                $results['unhealthy_domains']++;
-                $results['overall_status'] = 'unhealthy';
-            }
-        }
-
-        return $results;
-    }
-
-    private function checkSingleDomain(string $domain, string $expectedTenant): array
-    {
-        $startTime = microtime(true);
-        
+        // Try DNS first
         try {
-            $hasRecord = $this->dnsResolver->hasDnsTxtRecord($domain);
-            $actualTenant = $this->dnsResolver->getTenantIdentifierFromDns($domain);
-            $responseTime = (microtime(true) - $startTime) * 1000;
-
-            $result = [
-                'status' => 'healthy',
-                'has_record' => $hasRecord,
-                'expected_tenant' => $expectedTenant,
-                'actual_tenant' => $actualTenant,
-                'is_correct' => $actualTenant === $expectedTenant,
-                'response_time_ms' => round($responseTime, 2),
-                'errors' => [],
-            ];
-
-            if (!$hasRecord) {
-                $result['status'] = 'unhealthy';
-                $result['errors'][] = 'No DNS TXT record found';
-            } elseif ($actualTenant !== $expectedTenant) {
-                $result['status'] = 'unhealthy';
-                $result['errors'][] = sprintf(
-                    'DNS record mismatch: expected "%s", got "%s"',
-                    $expectedTenant,
-                    $actualTenant
-                );
+            $tenant = $this->dnsResolver->resolveTenant($request);
+            if ($tenant) {
+                $this->logger?->info('Tenant resolved via DNS TXT', [
+                    'tenant_slug' => $tenant->getSlug(),
+                    'domain' => $request->getHost(),
+                ]);
+                return $tenant;
             }
-
-            return $result;
-
         } catch (\Exception $e) {
-            return [
-                'status' => 'error',
+            $this->logger?->warning('DNS TXT resolution failed, trying fallback', [
+                'domain' => $request->getHost(),
                 'error' => $e->getMessage(),
-                'response_time_ms' => round((microtime(true) - $startTime) * 1000, 2),
-            ];
+            ]);
         }
-    }
-}
-```
-
-## Console Commands
-
-### DNS Debug Command
-
-```php
-<?php
-
-namespace App\Command;
-
-use Symfony\Component\Console\Attribute\AsCommand;
-use Symfony\Component\Console\Command\Command;
-use Symfony\Component\Console\Input\InputArgument;
-use Symfony\Component\Console\Input\InputInterface;
-use Symfony\Component\Console\Output\OutputInterface;
-use Symfony\Component\Console\Style\SymfonyStyle;
-use Zhortein\MultiTenantBundle\Resolver\DnsTxtTenantResolver;
-
-#[AsCommand(
-    name: 'tenant:debug:dns',
-    description: 'Debug DNS TXT record resolution for a domain'
-)]
-class DebugDnsCommand extends Command
-{
-    public function __construct(
-        private DnsTxtTenantResolver $dnsResolver
-    ) {
-        parent::__construct();
-    }
-
-    protected function configure(): void
-    {
-        $this->addArgument('domain', InputArgument::REQUIRED, 'Domain to test');
-    }
-
-    protected function execute(InputInterface $input, OutputInterface $output): int
-    {
-        $io = new SymfonyStyle($input, $output);
-        $domain = $input->getArgument('domain');
-
-        $io->title("DNS TXT Record Debug for: {$domain}");
-
-        // Basic info
-        $dnsQuery = $this->dnsResolver->getDnsQueryForHost($domain);
-        $io->section('DNS Query Information');
-        $io->definitionList(
-            ['Domain' => $domain],
-            ['DNS Query' => $dnsQuery],
-            ['Timeout' => $this->dnsResolver->getDnsTimeout() . ' seconds'],
-            ['Cache Enabled' => $this->dnsResolver->isCacheEnabled() ? 'Yes' : 'No']
-        );
-
-        // DNS resolution test
-        $io->section('DNS Resolution Test');
         
-        try {
-            $hasRecord = $this->dnsResolver->hasDnsTxtRecord($domain);
-            $tenantId = $this->dnsResolver->getTenantIdentifierFromDns($domain);
-
-            if ($hasRecord && $tenantId) {
-                $io->success("DNS TXT record found: {$tenantId}");
-            } elseif ($hasRecord) {
-                $io->warning('DNS TXT record exists but contains invalid data');
-            } else {
-                $io->error('No DNS TXT record found');
-            }
-
-            // Additional DNS details
-            $io->section('Raw DNS Query Results');
-            $this->performRawDnsQuery($io, $dnsQuery);
-
-        } catch (\Exception $e) {
-            $io->error('DNS query failed: ' . $e->getMessage());
-            return Command::FAILURE;
+        // Fallback to subdomain
+        $tenant = $this->subdomainResolver->resolveTenant($request);
+        if ($tenant) {
+            $this->logger?->info('Tenant resolved via subdomain fallback', [
+                'tenant_slug' => $tenant->getSlug(),
+                'domain' => $request->getHost(),
+            ]);
         }
-
-        return Command::SUCCESS;
-    }
-
-    private function performRawDnsQuery(SymfonyStyle $io, string $dnsQuery): void
-    {
-        try {
-            $records = dns_get_record($dnsQuery, DNS_TXT);
-            
-            if (empty($records)) {
-                $io->text('No TXT records found');
-                return;
-            }
-
-            $io->text('Found TXT records:');
-            foreach ($records as $record) {
-                $io->text("  - {$record['txt']} (TTL: {$record['ttl']})");
-            }
-
-        } catch (\Exception $e) {
-            $io->text('Raw DNS query failed: ' . $e->getMessage());
-        }
-    }
-}
-```
-
-### DNS Health Check Command
-
-```php
-<?php
-
-namespace App\Command;
-
-use App\Service\DnsHealthMonitorService;
-use Symfony\Component\Console\Attribute\AsCommand;
-use Symfony\Component\Console\Command\Command;
-use Symfony\Component\Console\Input\InputInterface;
-use Symfony\Component\Console\Output\OutputInterface;
-use Symfony\Component\Console\Style\SymfonyStyle;
-
-#[AsCommand(
-    name: 'tenant:dns:health-check',
-    description: 'Check DNS health for all configured tenant domains'
-)]
-class DnsHealthCheckCommand extends Command
-{
-    public function __construct(
-        private DnsHealthMonitorService $healthMonitor
-    ) {
-        parent::__construct();
-    }
-
-    protected function execute(InputInterface $input, OutputInterface $output): int
-    {
-        $io = new SymfonyStyle($input, $output);
-
-        // Define expected domain mappings (could be loaded from config)
-        $expectedMappings = [
-            'acme.com' => 'acme',
-            'bio.org' => 'bio',
-            'startup.io' => 'startup',
-            'client1.saas.com' => 'client1',
-            'client2.saas.com' => 'client2',
-        ];
-
-        $io->title('DNS Health Check');
-        $io->text('Checking DNS TXT records for tenant domains...');
-
-        $results = $this->healthMonitor->checkDnsHealth($expectedMappings);
-
-        // Overall status
-        $io->section('Overall Status');
-        $statusStyle = $results['overall_status'] === 'healthy' ? 'success' : 'error';
-        $io->$statusStyle("Status: {$results['overall_status']}");
         
-        $io->definitionList(
-            ['Total Domains' => $results['total_domains']],
-            ['Healthy Domains' => $results['healthy_domains']],
-            ['Unhealthy Domains' => $results['unhealthy_domains']]
-        );
-
-        // Detailed results
-        $io->section('Domain Details');
-        
-        foreach ($results['details'] as $domain => $details) {
-            $status = $details['status'];
-            $statusIcon = $status === 'healthy' ? '✅' : '❌';
-            
-            $io->text("{$statusIcon} {$domain}");
-            
-            if ($status === 'healthy') {
-                $io->text("  Tenant: {$details['actual_tenant']} ({$details['response_time_ms']}ms)");
-            } else {
-                foreach ($details['errors'] ?? [$details['error'] ?? 'Unknown error'] as $error) {
-                    $io->text("  Error: {$error}");
-                }
-            }
-        }
-
-        return $results['overall_status'] === 'healthy' ? Command::SUCCESS : Command::FAILURE;
+        return $tenant;
     }
 }
 ```
 
 ## Testing Examples
 
-### Unit Tests
+### Example 7: Unit Testing DNS Resolution
 
 ```php
 <?php
 
-namespace App\Tests\Service;
+namespace App\Tests\Unit\Resolver;
 
-use App\Service\DnsValidationService;
 use PHPUnit\Framework\TestCase;
 use Zhortein\MultiTenantBundle\Resolver\DnsTxtTenantResolver;
+use Zhortein\MultiTenantBundle\Registry\TenantRegistryInterface;
+use Symfony\Component\HttpFoundation\Request;
 
-class DnsValidationServiceTest extends TestCase
+class DnsTxtResolverTest extends TestCase
 {
-    private DnsTxtTenantResolver $dnsResolver;
-    private DnsValidationService $validationService;
-
-    protected function setUp(): void
+    public function testDnsResolution(): void
     {
-        $this->dnsResolver = $this->createMock(DnsTxtTenantResolver::class);
-        $this->validationService = new DnsValidationService($this->dnsResolver);
+        $mockTenantRegistry = $this->createMock(TenantRegistryInterface::class);
+        $mockTenant = $this->createMockTenant('test-tenant');
+        
+        $mockTenantRegistry->expects($this->once())
+            ->method('getBySlug')
+            ->with('test-tenant')
+            ->willReturn($mockTenant);
+            
+        // Mock DNS resolver would need to be injected
+        $resolver = new DnsTxtTenantResolver($mockTenantRegistry, 5, true);
+        
+        $request = Request::create('https://example.com/page');
+        
+        // In real test, you'd mock the DNS query
+        // This is a simplified example
+        $this->markTestSkipped('Requires DNS mocking setup');
     }
-
-    public function testValidateTenantDnsSuccess(): void
+    
+    private function createMockTenant(string $slug): object
     {
-        // Arrange
-        $domain = 'acme.com';
-        $expectedTenant = 'acme';
-
-        $this->dnsResolver->method('hasDnsTxtRecord')
-            ->with($domain)
-            ->willReturn(true);
-
-        $this->dnsResolver->method('getTenantIdentifierFromDns')
-            ->with($domain)
-            ->willReturn($expectedTenant);
-
-        // Act
-        $result = $this->validationService->validateTenantDns($domain, $expectedTenant);
-
-        // Assert
-        $this->assertTrue($result['is_valid']);
-        $this->assertEmpty($result['errors']);
-        $this->assertSame($expectedTenant, $result['actual_tenant']);
-    }
-
-    public function testValidateTenantDnsNoRecord(): void
-    {
-        // Arrange
-        $domain = 'unknown.com';
-        $expectedTenant = 'unknown';
-
-        $this->dnsResolver->method('hasDnsTxtRecord')
-            ->with($domain)
-            ->willReturn(false);
-
-        // Act
-        $result = $this->validationService->validateTenantDns($domain, $expectedTenant);
-
-        // Assert
-        $this->assertFalse($result['is_valid']);
-        $this->assertContains('No DNS TXT record found', $result['errors']);
-    }
-
-    public function testValidateTenantDnsMismatch(): void
-    {
-        // Arrange
-        $domain = 'acme.com';
-        $expectedTenant = 'acme';
-        $actualTenant = 'wrong_tenant';
-
-        $this->dnsResolver->method('hasDnsTxtRecord')
-            ->with($domain)
-            ->willReturn(true);
-
-        $this->dnsResolver->method('getTenantIdentifierFromDns')
-            ->with($domain)
-            ->willReturn($actualTenant);
-
-        // Act
-        $result = $this->validationService->validateTenantDns($domain, $expectedTenant);
-
-        // Assert
-        $this->assertFalse($result['is_valid']);
-        $this->assertStringContainsString('wrong_tenant', $result['errors'][0]);
-        $this->assertStringContainsString('acme', $result['errors'][0]);
+        $tenant = $this->createMock(\Zhortein\MultiTenantBundle\Entity\TenantInterface::class);
+        $tenant->method('getSlug')->willReturn($slug);
+        $tenant->method('getId')->willReturn(123);
+        return $tenant;
     }
 }
 ```
 
-### Integration Tests
+### Example 8: Integration Testing with Test Kit
 
 ```php
 <?php
 
 namespace App\Tests\Integration;
 
-use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
+use Zhortein\MultiTenantBundle\Test\TenantWebTestCase;
 
-class DnsTxtResolverIntegrationTest extends WebTestCase
+class DnsTxtIntegrationTest extends TenantWebTestCase
 {
-    public function testDnsBasedTenantResolution(): void
+    public function testDnsTxtResolution(): void
     {
+        // Create test tenant
+        $tenant = $this->createTestTenant('dns-test-tenant');
+        
+        // Mock DNS response (implementation depends on your DNS mocking strategy)
+        $this->mockDnsResponse('_tenant.test.local', 'tenant-slug=dns-test-tenant');
+        
         $client = static::createClient();
-
-        // Test with a domain that should have DNS TXT record
-        $client->request('GET', '/api/tenant/current', [], [], [
-            'HTTP_HOST' => 'test.example.com'
-        ]);
-
+        $client->request('GET', 'https://test.local/api/tenant');
+        
+        $response = $client->getResponse();
         $this->assertResponseIsSuccessful();
         
-        $response = json_decode($client->getResponse()->getContent(), true);
-        
-        // Verify tenant was resolved (adjust based on your test DNS setup)
-        $this->assertArrayHasKey('tenant', $response);
+        $data = json_decode($response->getContent(), true);
+        $this->assertEquals('dns-test-tenant', $data['tenant_slug']);
     }
-
-    public function testDnsResolutionWithUnknownDomain(): void
+    
+    private function mockDnsResponse(string $query, string $response): void
     {
-        $client = static::createClient();
-
-        // Test with a domain that has no DNS TXT record
-        $client->request('GET', '/api/tenant/current', [], [], [
-            'HTTP_HOST' => 'unknown-domain-12345.invalid'
-        ]);
-
-        // Should handle gracefully (either 404 or default behavior)
-        $this->assertResponseStatusCodeSame(404);
+        // Implementation depends on your DNS mocking strategy
+        // This could use a test DNS server or mock the DNS resolver service
     }
 }
 ```
 
 ## Performance Optimization
 
-### DNS Caching Service
+### Example 9: Caching Configuration
+
+```yaml
+# config/packages/cache.yaml
+framework:
+    cache:
+        pools:
+            dns_tenant_cache:
+                adapter: cache.adapter.redis
+                default_lifetime: 300  # 5 minutes
+                
+# config/packages/zhortein_multi_tenant.yaml
+zhortein_multi_tenant:
+    resolver: 'dns_txt'
+    dns_txt:
+        timeout: 5
+        enable_cache: true
+    cache:
+        pool: 'dns_tenant_cache'
+        ttl: 300
+```
+
+### Example 10: Monitoring DNS Performance
 
 ```php
 <?php
 
-namespace App\Service;
+namespace App\Resolver;
 
-use Psr\Cache\CacheItemPoolInterface;
 use Zhortein\MultiTenantBundle\Resolver\DnsTxtTenantResolver;
+use Symfony\Component\Stopwatch\Stopwatch;
+use Symfony\Component\HttpFoundation\Request;
+use Zhortein\MultiTenantBundle\Entity\TenantInterface;
 
-class CachedDnsResolverService
+class MonitoredDnsTxtResolver extends DnsTxtTenantResolver
 {
     public function __construct(
-        private DnsTxtTenantResolver $dnsResolver,
-        private CacheItemPoolInterface $cache,
-        private int $cacheTtl = 300
-    ) {}
-
-    public function getTenantIdentifierFromDns(string $domain): ?string
-    {
-        $cacheKey = 'dns_tenant_' . md5($domain);
-        $cacheItem = $this->cache->getItem($cacheKey);
-
-        if ($cacheItem->isHit()) {
-            return $cacheItem->get();
-        }
-
-        $tenantId = $this->dnsResolver->getTenantIdentifierFromDns($domain);
-        
-        $cacheItem->set($tenantId);
-        $cacheItem->expiresAfter($this->cacheTtl);
-        $this->cache->save($cacheItem);
-
-        return $tenantId;
+        private Stopwatch $stopwatch,
+        // ... other dependencies from parent
+    ) {
+        parent::__construct(/* ... parent constructor args ... */);
     }
-
-    public function clearDnsCache(string $domain = null): void
+    
+    public function resolveTenant(Request $request): ?TenantInterface
     {
-        if ($domain) {
-            $cacheKey = 'dns_tenant_' . md5($domain);
-            $this->cache->deleteItem($cacheKey);
-        } else {
-            $this->cache->clear();
+        $domain = $request->getHost();
+        $this->stopwatch->start('dns_resolution');
+        
+        try {
+            $result = parent::resolveTenant($request);
+            
+            $event = $this->stopwatch->stop('dns_resolution');
+            $this->logger?->info('DNS resolution completed', [
+                'duration_ms' => $event->getDuration(),
+                'memory_bytes' => $event->getMemory(),
+                'domain' => $domain,
+                'success' => $result !== null,
+                'tenant_slug' => $result?->getSlug(),
+            ]);
+            
+            return $result;
+        } catch (\Exception $e) {
+            $event = $this->stopwatch->stop('dns_resolution');
+            $this->logger?->error('DNS resolution failed', [
+                'duration_ms' => $event->getDuration(),
+                'domain' => $domain,
+                'error' => $e->getMessage(),
+            ]);
+            throw $e;
         }
     }
 }
 ```
 
-## Best Practices Summary
+## Error Handling
 
-1. **DNS TTL Management**: Use appropriate TTL values (300s for production, 60s for development)
-2. **Error Handling**: Always handle DNS query failures gracefully
-3. **Caching**: Implement DNS result caching for better performance
-4. **Monitoring**: Set up health checks for critical DNS records
-5. **Testing**: Test DNS resolution in different environments
-6. **Documentation**: Document all DNS records and their purposes
-7. **Security**: Use DNSSEC when possible for production environments
-8. **Fallback**: Consider fallback strategies for DNS failures
+### Example 11: Graceful DNS Failures
+
+```php
+<?php
+
+namespace App\Resolver;
+
+use Zhortein\MultiTenantBundle\Resolver\DnsTxtTenantResolver;
+use Zhortein\MultiTenantBundle\Entity\TenantInterface;
+use Symfony\Component\HttpFoundation\Request;
+
+class RobustDnsTxtResolver extends DnsTxtTenantResolver
+{
+    public function resolveTenant(Request $request): ?TenantInterface
+    {
+        try {
+            return parent::resolveTenant($request);
+        } catch (\Exception $e) {
+            $domain = $request->getHost();
+            
+            // Log different types of DNS failures
+            if (str_contains($e->getMessage(), 'timeout')) {
+                $this->logger?->warning('DNS timeout, using fallback', [
+                    'domain' => $domain,
+                    'timeout' => $this->getTimeout(),
+                ]);
+            } elseif (str_contains($e->getMessage(), 'not found')) {
+                $this->logger?->debug('No DNS TXT record found', [
+                    'domain' => $domain,
+                ]);
+            } else {
+                $this->logger?->error('DNS resolution error', [
+                    'domain' => $domain,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+            
+            return $this->getFallbackTenant($request);
+        }
+    }
+    
+    private function getFallbackTenant(Request $request): ?TenantInterface
+    {
+        // Implement fallback logic based on your needs
+        // Could return a default tenant, null, or try another resolution method
+        return null;
+    }
+    
+    private function getTimeout(): int
+    {
+        // Return configured timeout value
+        return 5; // or get from configuration
+    }
+}
+```
+
+## Production Considerations
+
+### Example 12: DNS TXT Record Management
+
+```bash
+#!/bin/bash
+# Script to manage DNS TXT records for tenants
+
+DOMAIN="$1"
+TENANT_SLUG="$2"
+ACTION="$3"
+
+case $ACTION in
+    "add")
+        # Add DNS TXT record
+        aws route53 change-resource-record-sets \
+            --hosted-zone-id Z123456789 \
+            --change-batch '{
+                "Changes": [{
+                    "Action": "CREATE",
+                    "ResourceRecordSet": {
+                        "Name": "_tenant.'$DOMAIN'",
+                        "Type": "TXT",
+                        "TTL": 300,
+                        "ResourceRecords": [{"Value": "\"tenant-slug='$TENANT_SLUG'\""}]
+                    }
+                }]
+            }'
+        ;;
+    "remove")
+        # Remove DNS TXT record
+        aws route53 change-resource-record-sets \
+            --hosted-zone-id Z123456789 \
+            --change-batch '{
+                "Changes": [{
+                    "Action": "DELETE",
+                    "ResourceRecordSet": {
+                        "Name": "_tenant.'$DOMAIN'",
+                        "Type": "TXT",
+                        "TTL": 300,
+                        "ResourceRecords": [{"Value": "\"tenant-slug='$TENANT_SLUG'\""}]
+                    }
+                }]
+            }'
+        ;;
+esac
+```
+
+The DNS TXT resolver provides a flexible, external way to resolve tenants using DNS records, particularly useful for scenarios where you want to avoid hardcoding tenant mappings in your application configuration and need dynamic tenant-to-domain associations.
+
+---
+
+> 📖 **Navigation**: [← Back to Examples](../examples/) | [Resolver Chain Usage →](resolver-chain-usage.md)

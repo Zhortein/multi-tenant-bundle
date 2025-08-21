@@ -2,6 +2,8 @@
 
 The tenant settings system provides a flexible way to store and retrieve tenant-specific configuration values. It supports hierarchical settings with fallback rules, caching for performance, and type-safe value handling.
 
+> 📖 **Navigation**: [← Tenant Context](tenant-context.md) | [Back to Documentation Index](index.md) | [Mailer →](mailer.md)
+
 ## Overview
 
 The tenant settings system consists of:

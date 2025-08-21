@@ -23,6 +23,7 @@
     "doctrine/annotations": "^2.0",
     "doctrine/doctrine-bundle": "^2.7",
     "doctrine/doctrine-migrations-bundle": "^3.0",
+    "monolog/monolog": "*",
     "symfony/cache": "^7.0",
     "symfony/config": " ^7.0",
     "symfony/contracts": " ^3.0",
@@ -32,17 +33,18 @@
     "symfony/orm-pack": "^2.0"
   },
   "require-dev": {
+    "friendsofphp/php-cs-fixer": "^v3.75.0",
     "phpstan/phpstan": "^2.1",
     "phpstan/phpstan-doctrine": "^2.0",
     "phpstan/phpstan-symfony": "^2.0",
     "phpunit/php-code-coverage": "^12.3.1",
     "phpunit/phpunit": "^12.2.5",
-    "friendsofphp/php-cs-fixer": "^v3.75.0",
-    "symfony/phpunit-bridge": "^7.3",
+    "psr/simple-cache": "*",
     "roave/security-advisories": "dev-latest",
-    "symfony/test-pack": "^1.0",
     "symfony/mailer": "^7.0",
     "symfony/messenger": "^7.0",
+    "symfony/phpunit-bridge": "^7.3",
+    "symfony/test-pack": "^1.0",
     "symfony/twig-bundle": "^7.0"
   },
   "config": {

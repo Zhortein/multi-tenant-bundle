@@ -2,6 +2,8 @@
 
 This document provides a comprehensive overview of the Zhortein Multi-Tenant Bundle architecture, implementation details, and project statistics.
 
+> 📖 **Navigation**: [← FAQ](faq.md) | [Back to Documentation Index](index.md) | [RLS Implementation Summary →](rls-implementation-summary.md)
+
 ## 🎯 Project Status: ✅ COMPLETE
 
 The Zhortein Multi-Tenant Bundle is a production-ready, comprehensive solution for building multi-tenant applications with Symfony 7+ and PostgreSQL 16.

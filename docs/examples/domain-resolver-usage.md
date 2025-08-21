@@ -1,10 +1,14 @@
-# Domain-Based Resolver Usage Examples
+# Domain Resolver Usage Examples
 
-This document provides practical examples of using the Domain-Based and Hybrid Domain-Subdomain resolvers in real-world scenarios.
+> 📖 **Navigation**: [← Resolver Chain Usage](resolver-chain-usage.md) | [Back to Documentation Index](../index.md) | [DNS TXT Resolver Usage →](dns-txt-resolver-usage.md)
 
-## Domain-Based Resolver Examples
+This document provides practical examples of using the domain and hybrid domain resolvers in the Zhortein Multi-Tenant Bundle.
 
-### Basic E-commerce Platform
+## Domain Resolver
+
+The domain resolver maps full domain names to tenant slugs, perfect for white-label applications where each tenant has their own domain.
+
+### Basic Configuration
 
 ```yaml
 # config/packages/zhortein_multi_tenant.yaml
@@ -12,591 +16,552 @@ zhortein_multi_tenant:
     resolver: 'domain'
     domain:
         domain_mapping:
-            # Client stores
-            acme-store.com: acme
-            bio-shop.org: bio
-            startup-market.io: startup
-            
-            # Regional domains
-            acme-eu.com: acme
-            acme-us.com: acme
-            bio-canada.org: bio
+            'acme-corp.com': 'acme'
+            'beta-client.com': 'beta'
+            'demo-company.org': 'demo'
 ```
 
-### Multi-Brand Corporate Setup
+### Example 1: Simple Domain Mapping
 
 ```yaml
 zhortein_multi_tenant:
     resolver: 'domain'
     domain:
         domain_mapping:
-            # Main brands
-            acme-corp.com: acme
-            acme-solutions.com: acme
-            bio-technologies.org: bio
-            bio-research.org: bio
-            
-            # Subsidiary brands
-            acme-consulting.net: acme_consulting
-            bio-pharma.com: bio_pharma
-            
-            # Partner portals
-            partners.acme.com: acme_partners
-            suppliers.bio.org: bio_suppliers
+            'client1.com': 'client_one'
+            'client2.com': 'client_two'
+            'mycorp.net': 'corporate'
+            'startup.io': 'startup_tenant'
 ```
 
-### Development and Staging Environments
+**How it works:**
+- `https://client1.com/dashboard` → tenant slug: `client_one`
+- `https://client2.com/api/users` → tenant slug: `client_two`
+- `https://mycorp.net/products` → tenant slug: `corporate`
+- `https://unknown.com/page` → no tenant (not in mapping)
 
-```yaml
-zhortein_multi_tenant:
-    resolver: 'domain'
-    domain:
-        domain_mapping:
-            # Production
-            acme.com: acme
-            bio.org: bio
-            
-            # Staging
-            staging-acme.com: acme
-            staging-bio.org: bio
-            
-            # Development
-            dev-acme.local: acme
-            dev-bio.local: bio
-            
-            # Testing
-            test-acme.local: acme
-            test-bio.local: bio
-```
-
-## Hybrid Resolver Examples
-
-### SaaS Platform with Custom Domains
-
-```yaml
-zhortein_multi_tenant:
-    resolver: 'hybrid'
-    hybrid:
-        # Premium clients with custom domains
-        domain_mapping:
-            # Enterprise clients
-            portal.acme-corp.com: acme
-            dashboard.bio-tech.org: bio
-            app.startup-inc.io: startup
-            
-            # White-label solutions
-            client-app.acme.com: acme
-            partner-portal.bio.org: bio
-            
-        # Standard clients on shared domain
-        subdomain_mapping:
-            '*.myplatform.com': use_subdomain_as_slug
-            '*.saas-app.io': use_subdomain_as_slug
-            
-        excluded_subdomains:
-            - www
-            - api
-            - admin
-            - support
-            - help
-            - docs
-```
-
-**Resolution Examples:**
-- `portal.acme-corp.com` → `acme` (domain mapping)
-- `acme.myplatform.com` → `acme` (subdomain pattern)
-- `bio.saas-app.io` → `bio` (subdomain pattern)
-- `www.myplatform.com` → `null` (excluded subdomain)
-
-### Multi-Environment SaaS
-
-```yaml
-zhortein_multi_tenant:
-    resolver: 'hybrid'
-    hybrid:
-        domain_mapping:
-            # Production custom domains
-            app.acme.com: acme
-            portal.bio.org: bio
-            
-            # Staging custom domains
-            staging-app.acme.com: acme
-            staging-portal.bio.org: bio
-            
-        subdomain_mapping:
-            # Production shared domain
-            '*.platform.com': use_subdomain_as_slug
-            
-            # Staging shared domain
-            '*.staging.platform.com': use_subdomain_as_slug
-            
-            # Development environment
-            '*.dev.platform.com': use_subdomain_as_slug
-            
-            # Demo environment - all use demo tenant
-            '*.demo.platform.com': demo_tenant
-            
-        excluded_subdomains:
-            - www
-            - api
-            - admin
-            - cdn
-            - static
-            - assets
-```
-
-### Educational Platform
-
-```yaml
-zhortein_multi_tenant:
-    resolver: 'hybrid'
-    hybrid:
-        domain_mapping:
-            # University partnerships
-            learn.harvard.edu: harvard
-            courses.mit.edu: mit
-            training.stanford.edu: stanford
-            
-            # Corporate training
-            academy.acme.com: acme_academy
-            learning.bio.org: bio_learning
-            
-        subdomain_mapping:
-            # Schools on shared domain
-            '*.eduplatform.com': use_subdomain_as_slug
-            
-            # Districts
-            '*.k12.eduplatform.com': use_subdomain_as_slug
-            
-            # Demo schools
-            '*.demo.eduplatform.com': demo_school
-```
-
-## Advanced Configuration Examples
-
-### Geographic Distribution
-
-```yaml
-zhortein_multi_tenant:
-    resolver: 'hybrid'
-    hybrid:
-        domain_mapping:
-            # Regional domains
-            acme-us.com: acme
-            acme-eu.com: acme
-            acme-asia.com: acme
-            bio-americas.org: bio
-            bio-europe.org: bio
-            
-            # Country-specific
-            acme.co.uk: acme_uk
-            acme.de: acme_germany
-            bio.fr: bio_france
-            
-        subdomain_mapping:
-            # Regional subdomains
-            '*.us.platform.com': use_subdomain_as_slug
-            '*.eu.platform.com': use_subdomain_as_slug
-            '*.asia.platform.com': use_subdomain_as_slug
-```
-
-### Microservices Architecture
-
-```yaml
-zhortein_multi_tenant:
-    resolver: 'hybrid'
-    hybrid:
-        domain_mapping:
-            # API gateways
-            api.acme.com: acme
-            api.bio.org: bio
-            
-            # Service-specific domains
-            auth.acme.com: acme
-            billing.acme.com: acme
-            analytics.bio.org: bio
-            reports.bio.org: bio
-            
-        subdomain_mapping:
-            # Tenant-specific services
-            '*.services.platform.com': use_subdomain_as_slug
-            '*.api.platform.com': use_subdomain_as_slug
-            
-        excluded_subdomains:
-            - www
-            - cdn
-            - static
-            - health
-            - status
-            - monitoring
-```
-
-## Service Integration Examples
-
-### Controller Usage
+### Example 2: Using Domain Resolver in Controller
 
 ```php
+<?php
+
+namespace App\Controller;
+
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
-use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Routing\Attribute\Route;
 use Zhortein\MultiTenantBundle\Context\TenantContextInterface;
 
-class TenantInfoController extends AbstractController
+class DomainController extends AbstractController
 {
-    public function __construct(
-        private TenantContextInterface $tenantContext
-    ) {}
-
-    public function getCurrentTenant(Request $request): Response
+    #[Route('/api/domain-info', name: 'domain_info')]
+    public function getDomainInfo(Request $request, TenantContextInterface $tenantContext): JsonResponse
     {
-        $tenant = $this->tenantContext->getTenant();
+        $tenant = $tenantContext->getTenant();
         
         if (!$tenant) {
-            return $this->json(['error' => 'No tenant resolved'], 404);
+            return new JsonResponse([
+                'error' => 'No tenant found for domain',
+                'domain' => $request->getHost(),
+            ], 404);
         }
         
-        return $this->json([
-            'tenant' => [
-                'slug' => $tenant->getSlug(),
-                'name' => $tenant->getName(),
-                'domain' => $request->getHost(),
-            ],
-            'resolution' => [
-                'strategy' => 'domain', // or 'hybrid'
-                'host' => $request->getHost(),
-                'normalized_host' => strtolower($request->getHost()),
-            ]
+        return new JsonResponse([
+            'tenant_id' => $tenant->getId(),
+            'tenant_slug' => $tenant->getSlug(),
+            'tenant_name' => $tenant->getName(),
+            'domain' => $request->getHost(),
+            'resolution_method' => 'domain_mapping',
         ]);
     }
 }
 ```
 
-### Custom Domain Service
+## Hybrid Domain Resolver
+
+The hybrid resolver combines domain mapping with subdomain resolution, providing maximum flexibility.
+
+### Basic Configuration
+
+```yaml
+zhortein_multi_tenant:
+    resolver: 'hybrid'
+    hybrid:
+        domain_mapping:
+            'acme-client.com': 'acme'
+            'beta-corp.com': 'beta'
+        subdomain_mapping:
+            '*.myplatform.com': 'use_subdomain_as_slug'
+            '*.saas-app.net': 'use_subdomain_as_slug'
+        excluded_subdomains: ['www', 'api', 'admin', 'mail', 'ftp', 'cdn', 'static']
+```
+
+### Example 3: Comprehensive Hybrid Configuration
+
+```yaml
+zhortein_multi_tenant:
+    resolver: 'hybrid'
+    hybrid:
+        # Direct domain mappings (highest priority)
+        domain_mapping:
+            'enterprise-client.com': 'enterprise'
+            'premium-customer.org': 'premium'
+            'legacy-system.net': 'legacy'
+        
+        # Subdomain patterns (lower priority)
+        subdomain_mapping:
+            '*.myapp.com': 'use_subdomain_as_slug'
+            '*.platform.io': 'use_subdomain_as_slug'
+            '*.dev.myapp.com': 'use_subdomain_as_slug'
+        
+        # Excluded subdomains (no tenant resolution)
+        excluded_subdomains: 
+            - 'www'
+            - 'api'
+            - 'admin'
+            - 'mail'
+            - 'ftp'
+            - 'cdn'
+            - 'static'
+            - 'assets'
+```
+
+**Resolution Examples:**
+- `https://enterprise-client.com/page` → tenant: `enterprise` (domain mapping)
+- `https://tenant1.myapp.com/dashboard` → tenant: `tenant1` (subdomain)
+- `https://demo.platform.io/api` → tenant: `demo` (subdomain)
+- `https://www.myapp.com/page` → no tenant (excluded subdomain)
+
+### Example 4: Custom Hybrid Resolver
 
 ```php
-use Zhortein\MultiTenantBundle\Resolver\DomainBasedTenantResolver;
+<?php
+
+namespace App\Resolver;
+
 use Zhortein\MultiTenantBundle\Resolver\HybridDomainSubdomainResolver;
+use Zhortein\MultiTenantBundle\Entity\TenantInterface;
+use Symfony\Component\HttpFoundation\Request;
 
-class CustomDomainService
+class CustomHybridResolver extends HybridDomainSubdomainResolver
 {
-    public function __construct(
-        private DomainBasedTenantResolver|HybridDomainSubdomainResolver $resolver
-    ) {}
-
-    public function validateCustomDomain(string $domain, string $tenantSlug): bool
+    public function resolveTenant(Request $request): ?TenantInterface
     {
-        // Check if domain is already mapped
-        if ($this->resolver->isDomainMapped($domain)) {
-            $existingSlug = $this->resolver->getTenantSlugForDomain($domain);
-            return $existingSlug === $tenantSlug;
+        $host = $request->getHost();
+        $this->logger?->info('Attempting hybrid resolution', ['host' => $host]);
+        
+        // Try parent resolution first
+        $tenant = parent::resolveTenant($request);
+        
+        if ($tenant) {
+            $this->logger?->info('Hybrid resolution successful', [
+                'host' => $host,
+                'tenant_slug' => $tenant->getSlug(),
+                'resolution_type' => $this->getLastResolutionType(),
+            ]);
+        } else {
+            $this->logger?->debug('Hybrid resolution failed', ['host' => $host]);
         }
         
-        // Domain is available for mapping
-        return true;
+        return $tenant;
     }
     
-    public function getDomainInfo(string $domain): array
+    private function getLastResolutionType(): string
     {
-        $info = [
-            'domain' => $domain,
-            'is_mapped' => false,
-            'tenant_slug' => null,
-            'resolution_type' => 'none',
-        ];
-        
-        if ($this->resolver instanceof DomainBasedTenantResolver) {
-            $info['is_mapped'] = $this->resolver->isDomainMapped($domain);
-            $info['tenant_slug'] = $this->resolver->getTenantSlugForDomain($domain);
-            $info['resolution_type'] = $info['is_mapped'] ? 'domain' : 'none';
-        } elseif ($this->resolver instanceof HybridDomainSubdomainResolver) {
-            if ($this->resolver->isDomainMapped($domain)) {
-                $info['is_mapped'] = true;
-                $info['resolution_type'] = 'domain';
-            } elseif ($this->resolver->matchesSubdomainPattern($domain)) {
-                $info['is_mapped'] = true;
-                $info['resolution_type'] = 'subdomain_pattern';
-            }
-        }
-        
-        return $info;
+        // Custom logic to track how the tenant was resolved
+        // This would need to be implemented based on your needs
+        return 'unknown';
     }
 }
 ```
 
-### Tenant Analytics Service
+### Example 5: Dynamic Domain Mapping
 
 ```php
-use Zhortein\MultiTenantBundle\Resolver\HybridDomainSubdomainResolver;
+<?php
 
-class TenantAnalyticsService
+namespace App\Service;
+
+use Zhortein\MultiTenantBundle\Registry\TenantRegistryInterface;
+use Doctrine\ORM\EntityManagerInterface;
+
+class DynamicDomainMappingService
 {
     public function __construct(
-        private HybridDomainSubdomainResolver $resolver
+        private EntityManagerInterface $entityManager,
+        private TenantRegistryInterface $tenantRegistry
     ) {}
-
-    public function getResolutionStats(): array
+    
+    public function addDomainMapping(string $domain, string $tenantSlug): void
     {
-        $domainMappings = $this->resolver->getDomainMapping();
-        $subdomainMappings = $this->resolver->getSubdomainMapping();
+        // Store domain mapping in database
+        $mapping = new DomainMapping();
+        $mapping->setDomain($domain);
+        $mapping->setTenantSlug($tenantSlug);
         
-        return [
-            'total_domain_mappings' => count($domainMappings),
-            'total_subdomain_patterns' => count($subdomainMappings),
-            'tenants_by_domain' => array_count_values($domainMappings),
-            'subdomain_strategies' => array_count_values($subdomainMappings),
-            'excluded_subdomains' => $this->resolver->getExcludedSubdomains(),
-        ];
+        $this->entityManager->persist($mapping);
+        $this->entityManager->flush();
+        
+        // Clear any caches
+        $this->clearDomainMappingCache();
     }
     
-    public function analyzeTraffic(array $requestLogs): array
+    public function removeDomainMapping(string $domain): void
     {
-        $stats = [
-            'domain_resolutions' => 0,
-            'subdomain_resolutions' => 0,
-            'failed_resolutions' => 0,
-            'top_domains' => [],
-        ];
-        
-        foreach ($requestLogs as $log) {
-            $domain = $log['host'];
+        $mapping = $this->entityManager->getRepository(DomainMapping::class)
+            ->findOneBy(['domain' => $domain]);
             
-            if ($this->resolver->isDomainMapped($domain)) {
-                $stats['domain_resolutions']++;
-            } elseif ($this->resolver->matchesSubdomainPattern($domain)) {
-                $stats['subdomain_resolutions']++;
-            } else {
-                $stats['failed_resolutions']++;
-            }
-            
-            $stats['top_domains'][$domain] = ($stats['top_domains'][$domain] ?? 0) + 1;
+        if ($mapping) {
+            $this->entityManager->remove($mapping);
+            $this->entityManager->flush();
+            $this->clearDomainMappingCache();
         }
-        
-        arsort($stats['top_domains']);
-        $stats['top_domains'] = array_slice($stats['top_domains'], 0, 10, true);
-        
-        return $stats;
+    }
+    
+    public function getDomainMappings(): array
+    {
+        return $this->entityManager->getRepository(DomainMapping::class)
+            ->findAll();
+    }
+    
+    private function clearDomainMappingCache(): void
+    {
+        // Clear relevant caches
+        // Implementation depends on your caching strategy
     }
 }
 ```
 
 ## Testing Examples
 
-### Functional Tests
+### Example 6: Unit Testing Domain Resolution
 
 ```php
-use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
+<?php
 
-class DomainResolutionTest extends WebTestCase
+namespace App\Tests\Unit\Resolver;
+
+use PHPUnit\Framework\TestCase;
+use Zhortein\MultiTenantBundle\Resolver\DomainBasedTenantResolver;
+use Zhortein\MultiTenantBundle\Registry\TenantRegistryInterface;
+use Symfony\Component\HttpFoundation\Request;
+
+class DomainResolverTest extends TestCase
 {
-    public function testDomainBasedResolution(): void
+    public function testDomainMapping(): void
     {
-        $client = static::createClient();
+        $domainMapping = [
+            'client1.com' => 'client_one',
+            'client2.com' => 'client_two',
+        ];
         
-        // Test exact domain mapping
-        $client->request('GET', '/api/tenant/current', [], [], [
-            'HTTP_HOST' => 'acme-client.com'
+        $mockTenant = $this->createMockTenant('client_one');
+        $mockRegistry = $this->createMock(TenantRegistryInterface::class);
+        $mockRegistry->expects($this->once())
+            ->method('getBySlug')
+            ->with('client_one')
+            ->willReturn($mockTenant);
+        
+        $resolver = new DomainBasedTenantResolver($mockRegistry, $domainMapping);
+        
+        $request = Request::create('https://client1.com/page');
+        $tenant = $resolver->resolveTenant($request);
+        
+        $this->assertNotNull($tenant);
+        $this->assertEquals('client_one', $tenant->getSlug());
+    }
+    
+    public function testUnmappedDomain(): void
+    {
+        $domainMapping = ['client1.com' => 'client_one'];
+        $mockRegistry = $this->createMock(TenantRegistryInterface::class);
+        
+        $resolver = new DomainBasedTenantResolver($mockRegistry, $domainMapping);
+        
+        $request = Request::create('https://unknown.com/page');
+        $tenant = $resolver->resolveTenant($request);
+        
+        $this->assertNull($tenant);
+    }
+    
+    private function createMockTenant(string $slug): object
+    {
+        $tenant = $this->createMock(\Zhortein\MultiTenantBundle\Entity\TenantInterface::class);
+        $tenant->method('getSlug')->willReturn($slug);
+        $tenant->method('getId')->willReturn(123);
+        return $tenant;
+    }
+}
+```
+
+### Example 7: Integration Testing
+
+```php
+<?php
+
+namespace App\Tests\Integration;
+
+use Zhortein\MultiTenantBundle\Test\TenantWebTestCase;
+
+class DomainResolverIntegrationTest extends TenantWebTestCase
+{
+    public function testDomainResolution(): void
+    {
+        // Create test tenant
+        $tenant = $this->createTestTenant('domain-test-tenant');
+        
+        // Configure domain mapping for test
+        $this->configureDomainMapping([
+            'test-domain.local' => 'domain-test-tenant'
         ]);
         
+        $client = static::createClient();
+        $client->request('GET', 'https://test-domain.local/api/tenant');
+        
+        $response = $client->getResponse();
         $this->assertResponseIsSuccessful();
-        $response = json_decode($client->getResponse()->getContent(), true);
-        $this->assertSame('acme', $response['tenant']['slug']);
+        
+        $data = json_decode($response->getContent(), true);
+        $this->assertEquals('domain-test-tenant', $data['tenant_slug']);
     }
     
     public function testHybridResolution(): void
     {
+        // Test both domain mapping and subdomain resolution
+        $tenant1 = $this->createTestTenant('mapped-tenant');
+        $tenant2 = $this->createTestTenant('subdomain-tenant');
+        
+        $this->configureHybridMapping([
+            'domain_mapping' => ['mapped.local' => 'mapped-tenant'],
+            'subdomain_mapping' => ['*.test.local' => 'use_subdomain_as_slug'],
+        ]);
+        
         $client = static::createClient();
-        
-        // Test domain mapping priority
-        $client->request('GET', '/api/tenant/current', [], [], [
-            'HTTP_HOST' => 'portal.acme-corp.com'
-        ]);
-        
-        $this->assertResponseIsSuccessful();
-        $response = json_decode($client->getResponse()->getContent(), true);
-        $this->assertSame('acme', $response['tenant']['slug']);
-        
-        // Test subdomain pattern
-        $client->request('GET', '/api/tenant/current', [], [], [
-            'HTTP_HOST' => 'bio.myplatform.com'
-        ]);
-        
-        $this->assertResponseIsSuccessful();
-        $response = json_decode($client->getResponse()->getContent(), true);
-        $this->assertSame('bio', $response['tenant']['slug']);
-    }
-    
-    public function testExcludedSubdomain(): void
-    {
-        $client = static::createClient();
-        
-        $client->request('GET', '/api/tenant/current', [], [], [
-            'HTTP_HOST' => 'www.myplatform.com'
-        ]);
-        
-        $this->assertResponseStatusCodeSame(404);
-    }
-}
-```
-
-### Unit Tests for Custom Services
-
-```php
-use PHPUnit\Framework\TestCase;
-use Zhortein\MultiTenantBundle\Resolver\HybridDomainSubdomainResolver;
-
-class CustomDomainServiceTest extends TestCase
-{
-    private HybridDomainSubdomainResolver $resolver;
-    private CustomDomainService $service;
-    
-    protected function setUp(): void
-    {
-        $this->resolver = $this->createMock(HybridDomainSubdomainResolver::class);
-        $this->service = new CustomDomainService($this->resolver);
-    }
-    
-    public function testValidateCustomDomainAvailable(): void
-    {
-        $this->resolver->method('isDomainMapped')
-            ->with('new-domain.com')
-            ->willReturn(false);
-            
-        $result = $this->service->validateCustomDomain('new-domain.com', 'acme');
-        
-        $this->assertTrue($result);
-    }
-    
-    public function testValidateCustomDomainAlreadyMapped(): void
-    {
-        $this->resolver->method('isDomainMapped')
-            ->with('existing-domain.com')
-            ->willReturn(true);
-            
-        $this->resolver->method('getTenantSlugForDomain')
-            ->with('existing-domain.com')
-            ->willReturn('acme');
-            
-        $result = $this->service->validateCustomDomain('existing-domain.com', 'acme');
-        
-        $this->assertTrue($result);
-    }
-}
-```
-
-## Performance Testing
-
-### Load Testing Script
-
-```php
-use Symfony\Component\HttpFoundation\Request;
-
-class DomainResolverPerformanceTest
-{
-    private array $testDomains = [
-        'acme-client.com',
-        'bio-portal.org',
-        'tenant1.myplatform.com',
-        'tenant2.myplatform.com',
-        'www.myplatform.com', // Should be excluded
-        'unknown-domain.com', // Should not resolve
-    ];
-    
-    public function benchmarkResolution(int $iterations = 10000): array
-    {
-        $results = [];
-        
-        foreach ($this->testDomains as $domain) {
-            $start = microtime(true);
-            
-            for ($i = 0; $i < $iterations; $i++) {
-                $request = Request::create("https://{$domain}/test");
-                $this->resolver->resolveTenant($request);
-            }
-            
-            $end = microtime(true);
-            $results[$domain] = [
-                'total_time' => $end - $start,
-                'avg_time' => ($end - $start) / $iterations,
-                'requests_per_second' => $iterations / ($end - $start),
-            ];
-        }
-        
-        return $results;
-    }
-}
-```
-
-## Monitoring and Debugging
-
-### Custom Debug Command
-
-```php
-use Symfony\Component\Console\Command\Command;
-use Symfony\Component\Console\Input\InputArgument;
-use Symfony\Component\Console\Input\InputInterface;
-use Symfony\Component\Console\Output\OutputInterface;
-
-class DebugDomainResolutionCommand extends Command
-{
-    protected static $defaultName = 'tenant:debug:domain';
-    
-    public function __construct(
-        private HybridDomainSubdomainResolver $resolver
-    ) {
-        parent::__construct();
-    }
-    
-    protected function configure(): void
-    {
-        $this->setDescription('Debug domain resolution for a given domain')
-            ->addArgument('domain', InputArgument::REQUIRED, 'Domain to test');
-    }
-    
-    protected function execute(InputInterface $input, OutputInterface $output): int
-    {
-        $domain = $input->getArgument('domain');
-        
-        $output->writeln("Debugging domain resolution for: {$domain}");
-        $output->writeln('');
         
         // Test domain mapping
-        $isDomainMapped = $this->resolver->isDomainMapped($domain);
-        $output->writeln("Domain mapped: " . ($isDomainMapped ? 'YES' : 'NO'));
+        $client->request('GET', 'https://mapped.local/api/tenant');
+        $response = $client->getResponse();
+        $data = json_decode($response->getContent(), true);
+        $this->assertEquals('mapped-tenant', $data['tenant_slug']);
         
-        if ($isDomainMapped) {
-            $tenantSlug = $this->resolver->getTenantSlugForDomain($domain);
-            $output->writeln("Mapped to tenant: {$tenantSlug}");
-        }
-        
-        // Test subdomain pattern
-        $matchesPattern = $this->resolver->matchesSubdomainPattern($domain);
-        $output->writeln("Matches subdomain pattern: " . ($matchesPattern ? 'YES' : 'NO'));
-        
-        // Show configuration
-        $output->writeln('');
-        $output->writeln('Domain mappings:');
-        foreach ($this->resolver->getDomainMapping() as $d => $slug) {
-            $output->writeln("  {$d} -> {$slug}");
-        }
-        
-        $output->writeln('');
-        $output->writeln('Subdomain patterns:');
-        foreach ($this->resolver->getSubdomainMapping() as $pattern => $strategy) {
-            $output->writeln("  {$pattern} -> {$strategy}");
-        }
-        
-        return Command::SUCCESS;
+        // Test subdomain resolution
+        $client->request('GET', 'https://subdomain-tenant.test.local/api/tenant');
+        $response = $client->getResponse();
+        $data = json_decode($response->getContent(), true);
+        $this->assertEquals('subdomain-tenant', $data['tenant_slug']);
     }
 }
 ```
 
-## Best Practices Summary
+## Advanced Use Cases
 
-1. **Domain Mapping Priority**: Use exact domain mapping for known, stable domains
-2. **Pattern Efficiency**: Keep subdomain patterns simple and specific
-3. **Testing Coverage**: Test all domain/subdomain combinations
-4. **Performance Monitoring**: Monitor resolution times and success rates
-5. **Configuration Management**: Use environment-specific configurations
-6. **Security**: Validate and sanitize domain inputs
-7. **Documentation**: Document your domain strategy clearly
-8. **Caching**: Consider implementing tenant caching for high-traffic scenarios
+### Example 8: Multi-Environment Domain Mapping
+
+```yaml
+# config/packages/dev/zhortein_multi_tenant.yaml
+zhortein_multi_tenant:
+    resolver: 'hybrid'
+    hybrid:
+        domain_mapping:
+            'client1.local': 'client_one'
+            'client2.local': 'client_two'
+        subdomain_mapping:
+            '*.dev.local': 'use_subdomain_as_slug'
+
+# config/packages/prod/zhortein_multi_tenant.yaml
+zhortein_multi_tenant:
+    resolver: 'hybrid'
+    hybrid:
+        domain_mapping:
+            'client1.com': 'client_one'
+            'client2.com': 'client_two'
+            'enterprise.net': 'enterprise'
+        subdomain_mapping:
+            '*.myapp.com': 'use_subdomain_as_slug'
+```
+
+### Example 9: Domain Validation Service
+
+```php
+<?php
+
+namespace App\Service;
+
+use Symfony\Component\HttpFoundation\Request;
+
+class DomainValidationService
+{
+    public function __construct(
+        private array $allowedDomains = [],
+        private array $blockedDomains = []
+    ) {}
+    
+    public function isValidTenantDomain(string $domain): bool
+    {
+        // Check if domain is blocked
+        if (in_array($domain, $this->blockedDomains, true)) {
+            return false;
+        }
+        
+        // If allow list is configured, check it
+        if (!empty($this->allowedDomains)) {
+            return in_array($domain, $this->allowedDomains, true);
+        }
+        
+        // Additional validation logic
+        return $this->validateDomainFormat($domain);
+    }
+    
+    private function validateDomainFormat(string $domain): bool
+    {
+        // Basic domain format validation
+        return filter_var($domain, FILTER_VALIDATE_DOMAIN, FILTER_FLAG_HOSTNAME) !== false;
+    }
+    
+    public function extractTenantFromDomain(string $domain): ?string
+    {
+        // Custom logic to extract tenant identifier from domain
+        // This could involve database lookups, pattern matching, etc.
+        
+        if (preg_match('/^([a-z0-9-]+)\.myapp\.com$/', $domain, $matches)) {
+            return $matches[1];
+        }
+        
+        return null;
+    }
+}
+```
+
+### Example 10: Performance Monitoring
+
+```php
+<?php
+
+namespace App\EventSubscriber;
+
+use Symfony\Component\EventDispatcher\EventSubscriberInterface;
+use Zhortein\MultiTenantBundle\Event\TenantResolvedEvent;
+use Psr\Log\LoggerInterface;
+
+class DomainResolutionMonitoringSubscriber implements EventSubscriberInterface
+{
+    public function __construct(
+        private LoggerInterface $logger,
+        private array $performanceThresholds = []
+    ) {}
+    
+    public function onTenantResolved(TenantResolvedEvent $event): void
+    {
+        $request = $event->getRequest();
+        $tenant = $event->getTenant();
+        $resolver = $event->getResolverName();
+        
+        // Log domain resolution
+        $this->logger->info('Domain resolution completed', [
+            'resolver' => $resolver,
+            'domain' => $request->getHost(),
+            'tenant_slug' => $tenant->getSlug(),
+            'user_agent' => $request->headers->get('User-Agent'),
+            'ip' => $request->getClientIp(),
+        ]);
+        
+        // Check for suspicious patterns
+        $this->checkForSuspiciousActivity($request, $tenant);
+    }
+    
+    private function checkForSuspiciousActivity(Request $request, $tenant): void
+    {
+        $domain = $request->getHost();
+        
+        // Example: Check for domain spoofing attempts
+        if ($this->isPotentialSpoofing($domain)) {
+            $this->logger->warning('Potential domain spoofing detected', [
+                'domain' => $domain,
+                'tenant_slug' => $tenant->getSlug(),
+                'ip' => $request->getClientIp(),
+            ]);
+        }
+    }
+    
+    private function isPotentialSpoofing(string $domain): bool
+    {
+        // Implement spoofing detection logic
+        // This could check for similar-looking domains, etc.
+        return false;
+    }
+    
+    public static function getSubscribedEvents(): array
+    {
+        return [
+            TenantResolvedEvent::class => 'onTenantResolved',
+        ];
+    }
+}
+```
+
+## Production Considerations
+
+### SSL Certificate Management
+
+```bash
+#!/bin/bash
+# Script to manage SSL certificates for tenant domains
+
+DOMAIN="$1"
+ACTION="$2"
+
+case $ACTION in
+    "add")
+        # Add SSL certificate for new tenant domain
+        certbot certonly --webroot \
+            -w /var/www/html \
+            -d "$DOMAIN" \
+            --email admin@myapp.com \
+            --agree-tos \
+            --non-interactive
+        
+        # Update nginx configuration
+        nginx -s reload
+        ;;
+    "remove")
+        # Remove SSL certificate
+        certbot delete --cert-name "$DOMAIN" --non-interactive
+        ;;
+esac
+```
+
+### DNS Management
+
+```php
+<?php
+
+namespace App\Service;
+
+class DnsManagementService
+{
+    public function addDomainRecord(string $domain, string $ip): void
+    {
+        // Add A record for tenant domain
+        // Implementation depends on your DNS provider (Route53, Cloudflare, etc.)
+    }
+    
+    public function removeDomainRecord(string $domain): void
+    {
+        // Remove A record for tenant domain
+    }
+    
+    public function validateDomainOwnership(string $domain): bool
+    {
+        // Validate that the tenant owns the domain
+        // Could use DNS TXT record verification
+        return true;
+    }
+}
+```
+
+Domain and hybrid resolvers provide powerful, flexible tenant resolution for applications where tenants have their own domains or need sophisticated routing logic combining multiple resolution strategies.
+
+---
+
+> 📖 **Navigation**: [← Back to Examples](../examples/) | [DNS TXT Resolver Usage →](dns-txt-resolver-usage.md)

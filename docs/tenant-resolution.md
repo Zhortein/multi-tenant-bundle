@@ -2,6 +2,8 @@
 
 Tenant resolution is the process of determining which tenant is associated with an incoming HTTP request. The bundle provides multiple resolution strategies and allows you to create custom resolvers for specific needs.
 
+> 📖 **Navigation**: [← Doctrine Tenant Filter](doctrine-tenant-filter.md) | [Back to Documentation Index](index.md) | [Resolver Chain →](resolver-chain.md)
+
 ## Available Resolvers
 
 ### 1. Subdomain Resolver
@@ -965,3 +967,7 @@ php bin/console tenant:list
 # Test specific tenant
 php bin/console tenant:show acme
 ```
+
+---
+
+> 📖 **Navigation**: [← Doctrine Tenant Filter](doctrine-tenant-filter.md) | [Back to Documentation Index](index.md) | [Resolver Chain →](resolver-chain.md)

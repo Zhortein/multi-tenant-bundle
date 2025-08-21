@@ -2,6 +2,8 @@
 
 The Zhortein Multi-Tenant Bundle provides two advanced tenant resolvers that work with domain names: the **Domain-Based Resolver** and the **Hybrid Domain-Subdomain Resolver**. These resolvers enable sophisticated tenant resolution strategies based on full domain names and domain patterns.
 
+> 📖 **Navigation**: [← Resolver Chain](resolver-chain.md) | [Back to Documentation Index](index.md) | [DNS TXT Resolver →](dns-txt-resolver.md)
+
 ## Overview
 
 ### Domain-Based Resolver

@@ -22,27 +22,30 @@ use Zhortein\MultiTenantBundle\Registry\TenantRegistryInterface;
  *
  * This command allows loading fixtures for all tenants or a specific tenant
  * when using separate database strategy.
+ *
+ * Supports global --tenant option for per-tenant fixture loading.
  */
 #[AsCommand(
-    name: 'tenant:fixtures:load',
+    name: 'tenant:fixtures',
     description: 'Load Doctrine fixtures for tenants'
 )]
-class LoadTenantFixturesCommand extends Command
+class LoadTenantFixturesCommand extends AbstractTenantAwareCommand
 {
     public function __construct(
-        private readonly TenantRegistryInterface $tenantRegistry,
-        private readonly TenantContextInterface $tenantContext,
+        TenantRegistryInterface $tenantRegistry,
+        TenantContextInterface $tenantContext,
         private readonly TenantConnectionResolverInterface $connectionResolver,
         private readonly EntityManagerInterface $entityManager,
         private readonly ?object $fixturesLoader = null, // SymfonyFixturesLoader when available
     ) {
-        parent::__construct();
+        parent::__construct($tenantRegistry, $tenantContext);
     }
 
     protected function configure(): void
     {
+        parent::configure();
+
         $this
-            ->addOption('tenant', 't', InputOption::VALUE_OPTIONAL, 'Load fixtures for a specific tenant slug')
             ->addOption('append', null, InputOption::VALUE_NONE, 'Append the data fixtures instead of deleting all data from the database first')
             ->addOption('group', null, InputOption::VALUE_IS_ARRAY | InputOption::VALUE_REQUIRED, 'Only load fixtures that belong to this group')
             ->addOption('em', null, InputOption::VALUE_REQUIRED, 'The entity manager to use for this command')
@@ -65,6 +68,10 @@ You can also optionally append the fixtures instead of deleting all data first:
 You can also optionally specify groups of fixtures to load:
 
     <info>%command.full_name% --group=tenant --group=demo</info>
+
+The tenant can also be specified via TENANT_ID environment variable:
+
+    <info>TENANT_ID=acme %command.full_name%</info>
 EOT
             );
     }
@@ -72,11 +79,16 @@ EOT
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $io = new SymfonyStyle($input, $output);
-        $tenantSlug = $input->getOption('tenant');
         $append = $input->getOption('append');
         $groups = $input->getOption('group');
         $purgeExclusions = $input->getOption('purge-exclusions');
         $purgeWithTruncate = $input->getOption('purge-with-truncate');
+
+        // Show current tenant context if set
+        $currentTenant = $this->getCurrentTenant();
+        if (null !== $currentTenant) {
+            $this->displayTenantInfo($io, $currentTenant);
+        }
 
         try {
             if (null === $this->fixturesLoader) {
@@ -85,9 +97,7 @@ EOT
                 return Command::FAILURE;
             }
 
-            $tenants = (is_string($tenantSlug))
-                ? [$this->tenantRegistry->getBySlug($tenantSlug)]
-                : $this->tenantRegistry->getAll();
+            $tenants = $this->getTargetTenants();
 
             if (empty($tenants)) {
                 $io->warning('No tenants found to load fixtures for.');

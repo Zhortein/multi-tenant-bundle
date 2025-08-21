@@ -1,5 +1,7 @@
 # Frequently Asked Questions
 
+> 📖 **Navigation**: [← Decorators](decorators.md) | [Back to Documentation Index](index.md) | [Project Overview →](project-overview.md)
+
 ## Database Strategies
 
 ### Q: When should I use Shared Database vs Multi-Database?

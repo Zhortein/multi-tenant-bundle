@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/10.5/phpunit.xsd"
+         bootstrap="bootstrap.php"
+         cacheDirectory=".phpunit.cache"
+         executionOrder="depends,defects"
+         requireCoverageMetadata="true"
+         beStrictAboutCoverageMetadata="true"
+         beStrictAboutOutputDuringTests="true"
+         failOnRisky="true"
+         failOnWarning="true">
+
+    <testsuites>
+        <testsuite name="Test Kit Integration">
+            <directory>Integration</directory>
+        </testsuite>
+        <testsuite name="RLS Isolation">
+            <file>Integration/RlsIsolationTest.php</file>
+        </testsuite>
+        <testsuite name="Resolver Chain">
+            <file>Integration/ResolverChainHttpTest.php</file>
+            <file>Integration/ResolverChainTest.php</file>
+        </testsuite>
+        <testsuite name="Messenger">
+            <file>Integration/MessengerTenantPropagationTest.php</file>
+        </testsuite>
+        <testsuite name="CLI">
+            <file>Integration/CliTenantContextTest.php</file>
+        </testsuite>
+        <testsuite name="Decorators">
+            <file>Integration/DecoratorsTest.php</file>
+        </testsuite>
+    </testsuites>
+
+    <source restrictDeprecations="true" restrictNotices="true" restrictWarnings="true">
+        <include>
+            <directory>../src</directory>
+        </include>
+        <exclude>
+            <directory>../src/Resources</directory>
+        </exclude>
+    </source>
+
+    <php>
+        <env name="KERNEL_CLASS" value="Zhortein\MultiTenantBundle\Tests\Fixtures\TestKernel"/>
+        <env name="APP_ENV" value="test"/>
+        <env name="APP_DEBUG" value="1"/>
+        <env name="SHELL_VERBOSITY" value="-1"/>
+        
+        <!-- Database configuration for Test Kit -->
+        <env name="DATABASE_URL" value="postgresql://test_user:test_password@localhost:5432/multi_tenant_test"/>
+        
+        <!-- Test Kit specific settings -->
+        <env name="TESTKIT_ENABLE_RLS" value="1"/>
+        <env name="TESTKIT_POSTGRES_REQUIRED" value="1"/>
+        
+        <!-- Symfony test configuration -->
+        <env name="SYMFONY_DEPRECATIONS_HELPER" value="max[self]=0"/>
+    </php>
+
+    <extensions>
+        <!-- Add any PHPUnit extensions here -->
+    </extensions>
+
+    <logging>
+        <junit outputFile="var/log/junit-testkit.xml"/>
+        <testdoxHtml outputFile="var/log/testdox-testkit.html"/>
+    </logging>
+</phpunit>

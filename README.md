@@ -12,10 +12,11 @@ A comprehensive Symfony 7+ bundle for building multi-tenant applications with Po
 - 🗄️ **Database Strategies**: Shared database with filtering or separate databases per tenant
 - ⚡ **Performance Optimized**: Built-in caching for tenant settings and configurations
 - 🔧 **Doctrine Integration**: Automatic tenant filtering with Doctrine ORM
-- 📧 **Tenant-Aware Services**: Mailer, Messenger, and file storage integration
+- 📧 **Tenant-Aware Services**: Mailer with automatic tenant propagation, Messenger with context preservation, and file storage integration
 - 🎯 **Event-Driven**: Database switching events and automatic tenant context resolution
 - 🛠️ **Advanced Commands**: Schema management, migrations, and fixtures for tenants
-- 🧪 **Fully Tested**: Comprehensive test suite with PHPUnit 12
+- 🧪 **Comprehensive Test Kit**: First-class testing utilities to prove tenant isolation works
+- 🔒 **RLS Integration**: PostgreSQL Row-Level Security for defense-in-depth
 - 📊 **PHPStan Level Max**: Static analysis at maximum level
 
 ## Installation
@@ -176,7 +177,7 @@ class DashboardController extends AbstractController
 
 ### 🔧 Service Integration
 - [Mailer](docs/mailer.md) - Tenant-aware email with templated support
-- [Messenger](docs/messenger.md) - Tenant-aware queues with transport routing
+- [Messenger](docs/messenger.md) - Tenant-aware queues with automatic context propagation
 - [Storage](docs/storage.md) - File storage isolation
 
 ### 🗄️ Database Management
@@ -185,7 +186,7 @@ class DashboardController extends AbstractController
 
 ### 🛠️ Development Tools
 - [CLI Commands](docs/cli.md) - Console commands
-- [Testing](docs/testing.md) - Testing strategies
+- [Testing](docs/testing.md) - Testing strategies and Test Kit
 - [FAQ](docs/faq.md) - Common questions
 
 ### 📖 Examples
@@ -194,9 +195,51 @@ class DashboardController extends AbstractController
 - [Messenger Examples](docs/examples/messenger-usage.md) - Message routing and handling
 - [Service Integration](docs/examples/) - Practical implementations
 
-## Testing
+## Testing with the Bundle
 
-Run the test suite using the Makefile:
+The bundle includes a comprehensive **Test Kit** to make testing multi-tenant applications easy and reliable:
+
+### Test Kit Features
+
+- **WithTenantTrait**: Execute code within specific tenant contexts
+- **TestData**: Lightweight builders for tenant-aware test entities  
+- **Base Test Classes**: Pre-configured for HTTP, CLI, and Messenger testing
+- **RLS Isolation Tests**: Prove PostgreSQL Row-Level Security works as defense-in-depth
+
+### Quick Example
+
+```php
+<?php
+
+use Zhortein\MultiTenantBundle\Tests\Toolkit\TenantWebTestCase;
+
+class ProductControllerTest extends TenantWebTestCase
+{
+    public function testTenantIsolation(): void
+    {
+        // Seed test data
+        $this->getTestData()->seedProducts('tenant-a', 2);
+        $this->getTestData()->seedProducts('tenant-b', 1);
+        
+        // Test tenant A sees only its data
+        $this->withTenant('tenant-a', function () {
+            $products = $this->repository->findAll();
+            $this->assertCount(2, $products);
+        });
+        
+        // Test RLS isolation (critical test)
+        $this->withTenant('tenant-a', function () {
+            $this->withoutDoctrineTenantFilter(function () {
+                $products = $this->repository->findAll();
+                // Should still see only 2 products due to RLS
+                $this->assertCount(2, $products);
+            });
+        });
+    }
+}
+```
+
+### Running Tests
 
 ```bash
 # Run all tests
@@ -208,9 +251,14 @@ make test-unit
 # Run integration tests only
 make test-integration
 
+# Run Test Kit RLS isolation tests
+vendor/bin/phpunit tests/Integration/RlsIsolationTest.php
+
 # Run with coverage
 make test-coverage
 ```
+
+See the [Testing Documentation](docs/testing.md) for complete Test Kit usage.
 
 ## Code Quality
 

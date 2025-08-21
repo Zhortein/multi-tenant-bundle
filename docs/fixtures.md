@@ -2,6 +2,8 @@
 
 The tenant fixtures system allows you to load test data and seed data for each tenant independently. It integrates with Doctrine Fixtures Bundle to provide tenant-aware data loading capabilities.
 
+> 📖 **Navigation**: [← Storage](storage.md) | [Back to Documentation Index](index.md) | [Migrations →](migrations.md)
+
 ## Overview
 
 The fixtures system provides:

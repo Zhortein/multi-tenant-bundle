@@ -2,6 +2,8 @@
 
 This document provides practical examples of using the tenant-aware messenger functionality with automatic transport routing and tenant context preservation.
 
+> 📖 **Navigation**: [← Mailer Usage](mailer-usage.md) | [Back to Documentation Index](../index.md) | [Storage Usage →](storage-usage.md)
+
 ## Basic Configuration
 
 ### 1. Bundle Configuration

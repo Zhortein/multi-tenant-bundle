@@ -9,6 +9,7 @@ use Symfony\Component\Messenger\Middleware\MiddlewareInterface;
 use Symfony\Component\Messenger\Middleware\StackInterface;
 use Symfony\Component\Messenger\Stamp\TransportNamesStamp;
 use Zhortein\MultiTenantBundle\Context\TenantContextInterface;
+use Zhortein\MultiTenantBundle\Entity\TenantInterface;
 
 /**
  * Middleware that resolves tenant-specific message transports.
@@ -65,14 +66,14 @@ final readonly class TenantMessengerTransportResolver implements MiddlewareInter
     /**
      * Adds tenant information as stamps to the envelope.
      *
-     * @param Envelope $envelope The message envelope
-     * @param object   $tenant   The tenant object
+     * @param Envelope        $envelope The message envelope
+     * @param TenantInterface $tenant   The tenant object
      *
      * @return Envelope The envelope with tenant stamps
      */
-    private function addTenantStamps(Envelope $envelope, object $tenant): Envelope
+    private function addTenantStamps(Envelope $envelope, TenantInterface $tenant): Envelope
     {
         // Add tenant information as a custom stamp
-        return $envelope->with(new TenantStamp($tenant->getSlug(), $tenant->getName()));
+        return $envelope->with(new TenantStamp((string) $tenant->getId()));
     }
 }

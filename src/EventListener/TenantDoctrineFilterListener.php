@@ -10,6 +10,7 @@ use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 use Symfony\Component\HttpKernel\Event\RequestEvent;
 use Symfony\Component\HttpKernel\KernelEvents;
 use Zhortein\MultiTenantBundle\Context\TenantContextInterface;
+use Zhortein\MultiTenantBundle\Doctrine\TenantDoctrineFilter;
 
 /**
  * Event listener that automatically enables and configures the Doctrine
@@ -59,6 +60,11 @@ final readonly class TenantDoctrineFilterListener
             // Configure the filter with the current tenant ID
             $tenantFilter = $filters->getFilter('tenant');
             $tenantFilter->setParameter('tenant_id', $tenant->getId());
+
+            // Inject logger into the filter if it's our enhanced filter
+            if ($tenantFilter instanceof TenantDoctrineFilter) {
+                $tenantFilter->setLogger($this->logger);
+            }
 
             $this->logger?->debug('Doctrine tenant filter configured', [
                 'tenant_id' => $tenant->getId(),

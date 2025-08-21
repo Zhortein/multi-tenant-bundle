@@ -25,27 +25,30 @@ use Zhortein\MultiTenantBundle\Registry\TenantRegistryInterface;
  * This command supports both database strategies:
  * - shared_db: Runs migrations once on the shared database
  * - multi_db: Runs migrations on each tenant's separate database
+ *
+ * Supports global --tenant option for per-tenant migrations.
  */
 #[AsCommand(
     name: 'tenant:migrate',
     description: 'Execute Doctrine migrations for tenants'
 )]
-class MigrateTenantsCommand extends Command
+class MigrateTenantsCommand extends AbstractTenantAwareCommand
 {
     public function __construct(
-        private readonly TenantRegistryInterface $tenantRegistry,
-        private readonly TenantContextInterface $tenantContext,
+        TenantRegistryInterface $tenantRegistry,
+        TenantContextInterface $tenantContext,
         private readonly TenantConnectionResolverInterface $connectionResolver,
         private readonly Configuration $migrationConfiguration,
         private readonly string $databaseStrategy = 'shared_db',
     ) {
-        parent::__construct();
+        parent::__construct($tenantRegistry, $tenantContext);
     }
 
     protected function configure(): void
     {
+        parent::configure();
+
         $this
-            ->addOption('tenant', 't', InputOption::VALUE_OPTIONAL, 'Run migrations for a specific tenant slug')
             ->addOption('dry-run', null, InputOption::VALUE_NONE, 'Execute the migration as a dry run')
             ->addOption('allow-no-migration', null, InputOption::VALUE_NONE, 'Don\'t throw an exception if no migration is available')
             ->setHelp(
@@ -61,6 +64,10 @@ You can optionally specify a tenant to migrate:
 You can also execute the migration as a dry run:
 
     <info>%command.full_name% --dry-run</info>
+
+The tenant can also be specified via TENANT_ID environment variable:
+
+    <info>TENANT_ID=acme %command.full_name%</info>
 EOT
             );
     }
@@ -68,16 +75,21 @@ EOT
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $io = new SymfonyStyle($input, $output);
-        $tenantSlug = $input->getOption('tenant');
         $dryRun = $input->getOption('dry-run');
         $allowNoMigration = $input->getOption('allow-no-migration');
+
+        // Show current tenant context if set
+        $currentTenant = $this->getCurrentTenant();
+        if (null !== $currentTenant) {
+            $this->displayTenantInfo($io, $currentTenant);
+        }
 
         try {
             if ('shared_db' === $this->databaseStrategy) {
                 return $this->executeSharedDbMigrations($io, $dryRun, $allowNoMigration);
             }
 
-            return $this->executeMultiDbMigrations($io, $tenantSlug, $dryRun, $allowNoMigration);
+            return $this->executeMultiDbMigrations($io, $dryRun, $allowNoMigration);
         } catch (\Exception $e) {
             $io->error(sprintf('Migration failed: %s', $e->getMessage()));
 
@@ -128,11 +140,9 @@ EOT
     /**
      * Execute migrations for multi-database strategy.
      */
-    private function executeMultiDbMigrations(SymfonyStyle $io, ?string $tenantSlug, bool $dryRun, bool $allowNoMigration): int
+    private function executeMultiDbMigrations(SymfonyStyle $io, bool $dryRun, bool $allowNoMigration): int
     {
-        $tenants = (is_string($tenantSlug))
-            ? [$this->tenantRegistry->getBySlug($tenantSlug)]
-            : $this->tenantRegistry->getAll();
+        $tenants = $this->getTargetTenants();
 
         if (empty($tenants)) {
             $io->warning('No tenants found to migrate.');

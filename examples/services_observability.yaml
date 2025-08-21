@@ -1,0 +1,30 @@
+# Example service configuration for observability features
+# Add this to your config/services.yaml file
+
+services:
+    # Prometheus metrics adapter example
+    App\Metrics\PrometheusMetricsAdapter:
+        arguments:
+            $registry: '@prometheus.collector_registry'
+            $namespace: 'multitenant'
+
+    # Override the default null metrics adapter
+    Zhortein\MultiTenantBundle\Observability\Metrics\MetricsAdapterInterface:
+        alias: App\Metrics\PrometheusMetricsAdapter
+
+    # Custom event listener example
+    App\EventListener\TenantObserver:
+        tags:
+            - { name: kernel.event_subscriber }
+
+    # Prometheus collector registry (if using promphp/prometheus_client_php)
+    prometheus.collector_registry:
+        class: Prometheus\CollectorRegistry
+        factory: ['Prometheus\Storage\InMemory', 'fromDefaults']
+
+    # Example: Custom metrics collection
+    App\Metrics\CustomTenantMetrics:
+        arguments:
+            $metricsAdapter: '@Zhortein\MultiTenantBundle\Observability\Metrics\MetricsAdapterInterface'
+        tags:
+            - { name: kernel.event_subscriber }
