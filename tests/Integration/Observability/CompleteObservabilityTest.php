@@ -9,8 +9,8 @@ use Psr\Log\LoggerInterface;
 use Symfony\Component\EventDispatcher\EventDispatcher;
 use Symfony\Component\HttpFoundation\Request;
 use Zhortein\MultiTenantBundle\Context\TenantContext;
-use Zhortein\MultiTenantBundle\Observability\Event\TenantResolvedEvent;
 use Zhortein\MultiTenantBundle\Observability\Event\TenantResolutionFailedEvent;
+use Zhortein\MultiTenantBundle\Observability\Event\TenantResolvedEvent;
 use Zhortein\MultiTenantBundle\Observability\EventSubscriber\TenantLoggingSubscriber;
 use Zhortein\MultiTenantBundle\Observability\EventSubscriber\TenantMetricsSubscriber;
 use Zhortein\MultiTenantBundle\Registry\InMemoryTenantRegistry;
@@ -166,7 +166,7 @@ final class CompleteObservabilityTest extends TestCase
         // Reset log records for this test
         $this->logRecords = [];
         $this->metricsAdapter->reset();
-        
+
         $tenantContext = new TenantContext($this->eventDispatcher);
 
         $tenant = new TestTenant();

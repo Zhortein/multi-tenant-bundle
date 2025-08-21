@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Zhortein\MultiTenantBundle\Command;
 
-use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
@@ -29,8 +28,6 @@ final class ListTenantsCommand extends AbstractTenantAwareCommand
     public function __construct(
         TenantRegistryInterface $tenantRegistry,
         TenantContextInterface $tenantContext,
-        private readonly EntityManagerInterface $em,
-        private readonly string $tenantEntityClass,
     ) {
         parent::__construct($tenantRegistry, $tenantContext);
     }
@@ -63,7 +60,7 @@ EOT
             );
     }
 
-    protected function execute(InputInterface $input, OutputInterface $output): int
+    protected function doExecute(InputInterface $input, OutputInterface $output): int
     {
         $io = new SymfonyStyle($input, $output);
 
@@ -156,7 +153,11 @@ EOT
             $data[] = $tenantData;
         }
 
-        $output->writeln(json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+        $json = json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+        if (false === $json) {
+            throw new \RuntimeException('Failed to encode tenant data as JSON');
+        }
+        $output->writeln($json);
 
         return Command::SUCCESS;
     }
@@ -176,7 +177,8 @@ EOT
 
             if ($detailed) {
                 $name = method_exists($tenant, 'getName') ? $tenant->getName() : null;
-                $output->writeln(sprintf('    name: %s', $name ?? 'null'));
+                $nameStr = is_string($name) ? $name : 'null';
+                $output->writeln(sprintf('    name: %s', $nameStr));
                 $output->writeln(sprintf('    mailer_dsn: %s', $tenant->getMailerDsn() ?? 'null'));
                 $output->writeln(sprintf('    messenger_dsn: %s', $tenant->getMessengerDsn() ?? 'null'));
             }

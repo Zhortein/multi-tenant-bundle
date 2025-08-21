@@ -9,8 +9,8 @@ use Psr\Log\LoggerInterface;
 use Zhortein\MultiTenantBundle\Observability\Event\TenantContextEndedEvent;
 use Zhortein\MultiTenantBundle\Observability\Event\TenantContextStartedEvent;
 use Zhortein\MultiTenantBundle\Observability\Event\TenantHeaderRejectedEvent;
-use Zhortein\MultiTenantBundle\Observability\Event\TenantResolvedEvent;
 use Zhortein\MultiTenantBundle\Observability\Event\TenantResolutionFailedEvent;
+use Zhortein\MultiTenantBundle\Observability\Event\TenantResolvedEvent;
 use Zhortein\MultiTenantBundle\Observability\Event\TenantRlsAppliedEvent;
 use Zhortein\MultiTenantBundle\Observability\EventSubscriber\TenantLoggingSubscriber;
 
@@ -28,20 +28,20 @@ final class TenantLoggingSubscriberTest extends TestCase
     {
         $this->logRecords = [];
         $this->logger = $this->createMock(LoggerInterface::class);
-        
+
         // Configure the mock to capture log calls
         $this->logger->method('info')->willReturnCallback(function (string $message, array $context = []) {
             $this->logRecords[] = ['level' => 'info', 'message' => $message, 'context' => $context];
         });
-        
+
         $this->logger->method('warning')->willReturnCallback(function (string $message, array $context = []) {
             $this->logRecords[] = ['level' => 'warning', 'message' => $message, 'context' => $context];
         });
-        
+
         $this->logger->method('error')->willReturnCallback(function (string $message, array $context = []) {
             $this->logRecords[] = ['level' => 'error', 'message' => $message, 'context' => $context];
         });
-        
+
         $this->subscriber = new TenantLoggingSubscriber($this->logger);
     }
 

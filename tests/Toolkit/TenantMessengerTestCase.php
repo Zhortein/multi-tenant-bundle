@@ -38,6 +38,10 @@ abstract class TenantMessengerTestCase extends KernelTestCase
 
     protected function setUp(): void
     {
+        if (!$this->isKernelAvailable()) {
+            $this->markTestSkipped('Kernel not available in bundle CI context');
+        }
+
         parent::setUp();
 
         $kernel = static::createKernel();
@@ -61,6 +65,22 @@ abstract class TenantMessengerTestCase extends KernelTestCase
         $this->clearTransports();
 
         parent::tearDown();
+    }
+
+    /**
+     * Check if a Symfony kernel is available for testing.
+     */
+    private function isKernelAvailable(): bool
+    {
+        try {
+            // Try to get the kernel class
+            $kernelClass = static::getKernelClass();
+
+            return class_exists($kernelClass);
+        } catch (\LogicException $e) {
+            // KERNEL_CLASS not set or kernel class not found
+            return false;
+        }
     }
 
     /**

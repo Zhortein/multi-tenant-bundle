@@ -11,8 +11,8 @@ use Zhortein\MultiTenantBundle\Entity\TenantInterface;
 use Zhortein\MultiTenantBundle\Exception\AmbiguousTenantResolutionException;
 use Zhortein\MultiTenantBundle\Exception\TenantResolutionException;
 use Zhortein\MultiTenantBundle\Observability\Event\TenantHeaderRejectedEvent;
-use Zhortein\MultiTenantBundle\Observability\Event\TenantResolvedEvent;
 use Zhortein\MultiTenantBundle\Observability\Event\TenantResolutionFailedEvent;
+use Zhortein\MultiTenantBundle\Observability\Event\TenantResolvedEvent;
 
 /**
  * Chain resolver that tries multiple tenant resolvers in order.

@@ -30,6 +30,10 @@ abstract class TenantWebTestCase extends WebTestCase
 
     protected function setUp(): void
     {
+        if (!$this->isKernelAvailable()) {
+            $this->markTestSkipped('Kernel not available in bundle CI context');
+        }
+
         parent::setUp();
 
         $this->client = static::createClient();
@@ -47,6 +51,22 @@ abstract class TenantWebTestCase extends WebTestCase
         $this->tenantContext?->clear();
 
         parent::tearDown();
+    }
+
+    /**
+     * Check if a Symfony kernel is available for testing.
+     */
+    private function isKernelAvailable(): bool
+    {
+        try {
+            // Try to get the kernel class
+            $kernelClass = static::getKernelClass();
+
+            return class_exists($kernelClass);
+        } catch (\LogicException $e) {
+            // KERNEL_CLASS not set or kernel class not found
+            return false;
+        }
     }
 
     /**

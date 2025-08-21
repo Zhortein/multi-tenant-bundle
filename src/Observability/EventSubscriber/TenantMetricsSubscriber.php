@@ -6,8 +6,8 @@ namespace Zhortein\MultiTenantBundle\Observability\EventSubscriber;
 
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Zhortein\MultiTenantBundle\Observability\Event\TenantHeaderRejectedEvent;
-use Zhortein\MultiTenantBundle\Observability\Event\TenantResolvedEvent;
 use Zhortein\MultiTenantBundle\Observability\Event\TenantResolutionFailedEvent;
+use Zhortein\MultiTenantBundle\Observability\Event\TenantResolvedEvent;
 use Zhortein\MultiTenantBundle\Observability\Event\TenantRlsAppliedEvent;
 use Zhortein\MultiTenantBundle\Observability\Metrics\MetricsAdapterInterface;
 
