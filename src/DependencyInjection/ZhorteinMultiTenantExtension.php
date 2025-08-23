@@ -663,13 +663,9 @@ final class ZhorteinMultiTenantExtension extends Extension
                     ->setAutowired(true)
                     ->setArgument('$enabled', '%zhortein_multi_tenant.decorators.cache.enabled%');
 
-                // Register PSR-16 simple cache decorator (only if PSR-16 interface is available)
-                if (interface_exists('Psr\SimpleCache\CacheInterface') && $container->hasDefinition($serviceIdString.'.simple')) {
-                    $container->register($serviceIdString.'.simple.tenant_aware', TenantAwareSimpleCacheDecorator::class)
-                        ->setDecoratedService($serviceIdString.'.simple', null, 1) // Lower priority to avoid conflicts
-                        ->setAutowired(true)
-                        ->setArgument('$enabled', '%zhortein_multi_tenant.decorators.cache.enabled%');
-                }
+                // Register PSR-16 simple cache decorator (only if both interface and service exist)
+                // Note: We skip PSR-16 decoration for now as it requires optional dependencies
+                // and the .simple service may not exist in all Symfony configurations
             }
         }
     }
