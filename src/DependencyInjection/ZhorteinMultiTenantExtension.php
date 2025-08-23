@@ -417,7 +417,6 @@ final class ZhorteinMultiTenantExtension extends Extension
         $container->register(ListTenantsCommand::class)
             ->setAutowired(true)
             ->setAutoconfigured(true)
-            ->setArgument('$tenantEntityClass', '%zhortein_multi_tenant.tenant_entity%')
             ->addTag('console.command');
 
         // Create tenant command
