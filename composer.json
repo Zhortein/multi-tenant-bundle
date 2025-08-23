@@ -69,6 +69,7 @@
     "php-cs-fixer": "php-cs-fixer fix src --verbose --rules=@Symfony"
   },
   "suggest": {
+    "psr/simple-cache": "Needed for PSR-16 simple cache tenant-aware decorators",
     "symfony/mailer": "Needed for dynamic tenant-aware mail sending",
     "symfony/messenger": "Needed for dynamic tenant-aware async message dispatching",
     "symfony/twig-bundle": "Needed for templated tenant-aware emails"

@@ -13,6 +13,9 @@ use Zhortein\MultiTenantBundle\Context\TenantContextInterface;
  * This decorator automatically prefixes cache keys with the current tenant ID
  * to ensure cache isolation between tenants. When no tenant context is available,
  * it operates as a no-op decorator, allowing for public/shared cache usage.
+ *
+ * Note: This decorator requires the psr/simple-cache package to be installed.
+ * It will only be registered if the PSR-16 CacheInterface is available.
  */
 final class TenantAwareSimpleCacheDecorator implements CacheInterface
 {
