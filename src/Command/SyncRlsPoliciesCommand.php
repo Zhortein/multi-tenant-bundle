@@ -215,28 +215,44 @@ HELP
             }
 
             if (!$policyExists) {
+                $quotedSessionVariable = $this->quoteSessionVariable();
                 $statements[] = sprintf(
                     'CREATE POLICY %s ON %s FOR ALL USING (tenant_id::text = current_setting(%s, true)) WITH CHECK (tenant_id::text = current_setting(%s, true));',
                     (string) $this->connection->quoteIdentifier($policyName),
                     (string) $this->connection->quoteIdentifier($tableName),
-                    (string) $this->connection->quote($this->sessionVariable),
-                    (string) $this->connection->quote($this->sessionVariable)
+                    $quotedSessionVariable,
+                    $quotedSessionVariable
                 );
             }
         } catch (Exception $exception) {
             // If we can't check existing state, generate all statements
             $statements[] = sprintf('ALTER TABLE %s ENABLE ROW LEVEL SECURITY;', $this->connection->quoteIdentifier($tableName));
             $statements[] = sprintf('ALTER TABLE %s FORCE ROW LEVEL SECURITY;', $this->connection->quoteIdentifier($tableName));
+            $quotedSessionVariable = $this->quoteSessionVariable();
             $statements[] = sprintf(
                 'CREATE POLICY %s ON %s FOR ALL USING (tenant_id::text = current_setting(%s, true)) WITH CHECK (tenant_id::text = current_setting(%s, true));',
                 (string) $this->connection->quoteIdentifier($policyName),
                 (string) $this->connection->quoteIdentifier($tableName),
-                (string) $this->connection->quote($this->sessionVariable),
-                (string) $this->connection->quote($this->sessionVariable)
+                $quotedSessionVariable,
+                $quotedSessionVariable
             );
         }
 
         return $statements;
+    }
+
+    private function quoteSessionVariable(): string
+    {
+        return $this->requireQuotedString($this->connection->quote($this->sessionVariable));
+    }
+
+    private function requireQuotedString(mixed $quotedValue): string
+    {
+        if (!is_string($quotedValue)) {
+            throw new \RuntimeException('The database driver failed to quote the RLS session variable.');
+        }
+
+        return $quotedValue;
     }
 
     /**
