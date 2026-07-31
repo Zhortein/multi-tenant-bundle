@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Zhortein\MultiTenantBundle\DependencyInjection;
 
+use Symfony\Component\Cache\Adapter\AdapterInterface;
 use Symfony\Component\Config\FileLocator;
 use Symfony\Component\DependencyInjection\Argument\TaggedIteratorArgument;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
@@ -23,6 +24,7 @@ use Zhortein\MultiTenantBundle\Command\TenantImpersonateCommand;
 use Zhortein\MultiTenantBundle\Context\TenantContext;
 use Zhortein\MultiTenantBundle\Context\TenantContextInterface;
 use Zhortein\MultiTenantBundle\Database\TenantSessionConfigurator;
+use Zhortein\MultiTenantBundle\Decorator\TenantAwareCacheAdapterDecorator;
 use Zhortein\MultiTenantBundle\Decorator\TenantAwareCacheDecorator;
 use Zhortein\MultiTenantBundle\Decorator\TenantLoggerProcessor;
 use Zhortein\MultiTenantBundle\Decorator\TenantStoragePathHelper;
@@ -702,8 +704,12 @@ final class ZhorteinMultiTenantExtension extends Extension implements PrependExt
         if ($config['decorators']['cache']['enabled']) {
             foreach ($config['decorators']['cache']['services'] as $serviceId) {
                 $serviceIdString = (string) $serviceId;
-                // Register PSR-6 cache decorator
-                $container->register($serviceIdString.'.tenant_aware', TenantAwareCacheDecorator::class)
+                // Symfony cache pools must retain AdapterInterface for debug and traceable wrappers.
+                $decoratorClass = interface_exists(AdapterInterface::class)
+                    ? TenantAwareCacheAdapterDecorator::class
+                    : TenantAwareCacheDecorator::class;
+
+                $container->register($serviceIdString.'.tenant_aware', $decoratorClass)
                     ->setDecoratedService($serviceIdString)
                     ->setAutowired(true)
                     ->setArgument('$enabled', '%zhortein_multi_tenant.decorators.cache.enabled%');
