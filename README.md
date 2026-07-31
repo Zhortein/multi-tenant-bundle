@@ -27,6 +27,8 @@ Install the bundle via Composer:
 composer require zhortein/multi-tenant-bundle
 ```
 
+The core dependency set and optional Mailer, Twig, Monolog, and PSR-16 integrations are listed in the [dependency classification](docs/dependencies.md).
+
 Enable the bundle in your `config/bundles.php`:
 
 ```php

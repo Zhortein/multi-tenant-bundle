@@ -645,7 +645,7 @@ final class ZhorteinMultiTenantExtension extends Extension
         }
 
         // Register logger processor
-        if ($config['decorators']['logger']['enabled']) {
+        if ($config['decorators']['logger']['enabled'] && interface_exists('Monolog\Processor\ProcessorInterface')) {
             $container->register('zhortein_multi_tenant.logger_processor', TenantLoggerProcessor::class)
                 ->setAutowired(true)
                 ->setArgument('$enabled', '%zhortein_multi_tenant.decorators.logger.enabled%')

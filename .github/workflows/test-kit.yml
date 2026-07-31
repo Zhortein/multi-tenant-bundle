@@ -33,6 +33,31 @@ jobs:
           vendor/bin/php-cs-fixer fix src --rules=@Symfony --dry-run --diff
           vendor/bin/php-cs-fixer fix tests --rules=@Symfony --dry-run --diff
 
+  minimal-install:
+    name: Minimal production install
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+          coverage: none
+
+      - name: Resolve production dependencies only
+        run: composer update --no-dev --prefer-dist --no-progress --no-interaction
+
+      - name: Validate Composer metadata
+        run: composer validate --strict
+
+      - name: Audit production dependencies
+        run: composer audit --no-interaction --abandoned=report
+
+      - name: Compile without optional integrations
+        run: php tests/minimal-install.php
+
   compatibility:
     name: ${{ matrix.name }}
     runs-on: ubuntu-latest

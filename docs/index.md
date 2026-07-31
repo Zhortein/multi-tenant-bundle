@@ -19,6 +19,7 @@ Welcome to the comprehensive documentation for the Zhortein Multi-Tenant Bundle,
 
 ### Getting Started
 - [Installation](installation.md) - Install and enable the bundle
+- [Dependency classification](dependencies.md) - Required runtime components and optional integrations
 - [Configuration](configuration.md) - Complete configuration reference
 - [Database Strategies](database-strategies.md) - Shared DB vs Multi-DB approaches
 - [Project Overview](project-overview.md) - Architecture and implementation details
