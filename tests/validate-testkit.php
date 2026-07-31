@@ -74,7 +74,7 @@ $requiredPackages = [
 
 $composerLock = json_decode(file_get_contents(__DIR__.'/../composer.lock'), true);
 $installedPackages = [];
-foreach ($composerLock['packages'] as $package) {
+foreach (array_merge($composerLock['packages'], $composerLock['packages-dev']) as $package) {
     $installedPackages[$package['name']] = $package['version'];
 }
 
@@ -97,7 +97,7 @@ $postgresAvailable = false;
 $postgresError = '';
 
 try {
-    $dsn = $_ENV['DATABASE_URL'] ?? 'postgresql://test_user:test_password@localhost:5432/multi_tenant_test';
+    $dsn = $_ENV['DATABASE_DSN'] ?? 'pgsql:host=localhost;port=5432;dbname=multi_tenant_test;user=test_user;password=test_password';
     $pdo = new PDO($dsn);
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
@@ -222,8 +222,8 @@ if ($allPassed) {
     $output->writeln('');
     $output->writeln('<comment>Common Solutions:</comment>');
     $output->writeln('  composer install                 # Install dependencies');
-    $output->writeln('  cd tests && docker-compose up -d postgres  # Start PostgreSQL');
-    $output->writeln('  docker-compose exec postgres psql -U test_user -d multi_tenant_test -f /docker-entrypoint-initdb.d/init.sql  # Setup RLS');
+    $output->writeln('  cd tests && docker compose up -d postgres  # Start PostgreSQL');
+    $output->writeln('  docker compose exec postgres psql -U test_user -d multi_tenant_test -f /docker-entrypoint-initdb.d/init.sql  # Setup RLS');
 }
 
 $output->writeln('');

@@ -7,6 +7,7 @@ namespace Zhortein\MultiTenantBundle\Tests\Functional\Database;
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\DriverManager;
 use Doctrine\DBAL\Exception;
+use Doctrine\DBAL\Platforms\PostgreSQLPlatform;
 use PHPUnit\Framework\TestCase;
 use Zhortein\MultiTenantBundle\Context\TenantContext;
 use Zhortein\MultiTenantBundle\Database\TenantSessionConfigurator;
@@ -222,7 +223,7 @@ final class RlsIntegrationTest extends TestCase
 
         // Clear tenant context (no session variable set)
         $this->tenantContext->clear();
-        $this->connection->executeStatement('SELECT set_config(?, NULL, true)', ['app.tenant_id']);
+        $this->connection->executeStatement('SELECT set_config(?, ?, false)', ['app.tenant_id', '']);
 
         // Query should return no results due to RLS policy
         $products = $this->connection->fetchAllAssociative('SELECT * FROM test_products');
@@ -231,7 +232,7 @@ final class RlsIntegrationTest extends TestCase
 
     private function isPostgreSQL(): bool
     {
-        return str_contains($this->connection->getDatabasePlatform()->getName(), 'postgresql');
+        return $this->connection->getDatabasePlatform() instanceof PostgreSQLPlatform;
     }
 
     private function setupTestData(): void
@@ -294,7 +295,7 @@ final class RlsIntegrationTest extends TestCase
         $tenant = $this->tenantContext->getTenant();
         if (null !== $tenant) {
             $this->connection->executeStatement(
-                'SELECT set_config(?, ?, true)',
+                'SELECT set_config(?, ?, false)',
                 ['app.tenant_id', (string) $tenant->getId()]
             );
         }
@@ -313,6 +314,7 @@ final class RlsIntegrationTest extends TestCase
             'password' => $_ENV['TEST_DATABASE_PASSWORD'] ?? 'postgres',
         ];
 
+        // @phpstan-ignore-next-line
         return DriverManager::getConnection($connectionParams);
     }
 

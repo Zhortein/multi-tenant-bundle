@@ -87,7 +87,7 @@ class Product
 1. The `TenantRequestListener` resolves the tenant from the request
 2. The `TenantSessionConfigurator` sets the PostgreSQL session variable:
    ```sql
-   SELECT set_config('app.tenant_id', '123', true);
+   SELECT set_config('app.tenant_id', '123', false);
    ```
 3. RLS policies automatically filter queries based on this session variable
 
