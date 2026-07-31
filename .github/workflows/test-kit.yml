@@ -29,9 +29,7 @@ jobs:
           dependency-versions: highest
 
       - name: Check coding style
-        run: |
-          vendor/bin/php-cs-fixer fix src --rules=@Symfony --dry-run --diff
-          vendor/bin/php-cs-fixer fix tests --rules=@Symfony --dry-run --diff
+        run: vendor/bin/php-cs-fixer fix --dry-run --diff
 
   minimal-install:
     name: Minimal production install
@@ -57,6 +55,60 @@ jobs:
 
       - name: Compile without optional integrations
         run: php tests/minimal-install.php
+
+  consumer-application:
+    name: Consumer / ${{ matrix.name }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Symfony 7.4
+            php: "8.3"
+            symfony: "~7.4.0"
+          - name: Symfony 8.0
+            php: "8.4"
+            symfony: "~8.0.0"
+    defaults:
+      run:
+        working-directory: tests/ConsumerApp
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: pdo_sqlite
+          coverage: none
+
+      - name: Select the Symfony branch
+        run: >-
+          composer require --no-update
+          "symfony/config:${{ matrix.symfony }}"
+          "symfony/console:${{ matrix.symfony }}"
+          "symfony/dependency-injection:${{ matrix.symfony }}"
+          "symfony/event-dispatcher:${{ matrix.symfony }}"
+          "symfony/filesystem:${{ matrix.symfony }}"
+          "symfony/finder:${{ matrix.symfony }}"
+          "symfony/framework-bundle:${{ matrix.symfony }}"
+          "symfony/http-foundation:${{ matrix.symfony }}"
+          "symfony/http-kernel:${{ matrix.symfony }}"
+          "symfony/messenger:${{ matrix.symfony }}"
+
+      - name: Install the bundle as an external dependency
+        run: composer update --prefer-dist --no-progress --no-interaction
+
+      - name: Validate shared database container
+        run: php bin/validate.php
+        env:
+          DATABASE_STRATEGY: shared_db
+
+      - name: Validate multi-database container
+        run: php bin/validate.php
+        env:
+          DATABASE_STRATEGY: multi_db
 
   compatibility:
     name: ${{ matrix.name }}
@@ -146,11 +198,21 @@ jobs:
 
       - name: Select supported dependency combination
         run: |
-          composer require --no-update "doctrine/doctrine-bundle:${{ matrix.doctrine_bundle }}"
-          composer require --dev --no-update \
-            "symfony/framework-bundle:${{ matrix.symfony }}" \
+          composer require --no-update \
+            "doctrine/doctrine-bundle:${{ matrix.doctrine_bundle }}" \
             "doctrine/orm:${{ matrix.orm }}" \
-            "doctrine/dbal:${{ matrix.dbal }}"
+            "doctrine/dbal:${{ matrix.dbal }}" \
+            "symfony/config:${{ matrix.symfony }}" \
+            "symfony/console:${{ matrix.symfony }}" \
+            "symfony/dependency-injection:${{ matrix.symfony }}" \
+            "symfony/event-dispatcher:${{ matrix.symfony }}" \
+            "symfony/filesystem:${{ matrix.symfony }}" \
+            "symfony/finder:${{ matrix.symfony }}" \
+            "symfony/http-foundation:${{ matrix.symfony }}" \
+            "symfony/http-kernel:${{ matrix.symfony }}" \
+            "symfony/messenger:${{ matrix.symfony }}"
+          composer require --dev --no-update \
+            "symfony/framework-bundle:${{ matrix.symfony }}"
 
       - name: Resolve dependencies
         run: |

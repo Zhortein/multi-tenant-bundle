@@ -95,13 +95,15 @@ Create `config/packages/zhortein_multi_tenant.yaml`:
 ```yaml
 zhortein_multi_tenant:
     tenant_entity: 'App\Entity\Tenant'
-    resolver:
-        type: 'subdomain'
-        options:
-            base_domain: 'example.com'
     database:
         strategy: 'shared_db'
         enable_filter: true
+        rls:
+            enabled: false
+    fixtures:
+        enabled: false
+    mailer:
+        enabled: false
 ```
 
 ### 3. Create Tenant-Aware Entities
