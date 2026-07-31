@@ -138,6 +138,11 @@ final class ZhorteinMultiTenantExtension extends Extension implements PrependExt
      */
     private function setConfigurationParameters(ContainerBuilder $container, array $config): void
     {
+        $mailerConfig = $config['mailer'];
+        if (!is_array($mailerConfig)) {
+            throw new \LogicException('The processed mailer configuration must be an array.');
+        }
+
         $container->setParameter('zhortein_multi_tenant.tenant_entity', $config['tenant_entity']);
         $container->setParameter('zhortein_multi_tenant.resolver_type', $config['resolver']);
         $container->setParameter('zhortein_multi_tenant.default_tenant', $config['default_tenant']);
@@ -163,6 +168,8 @@ final class ZhorteinMultiTenantExtension extends Extension implements PrependExt
         $container->setParameter('zhortein_multi_tenant.cache.pool', $config['cache']['pool']);
         $container->setParameter('zhortein_multi_tenant.cache.ttl', $config['cache']['ttl']);
         $container->setParameter('zhortein_multi_tenant.mailer.enabled', $config['mailer']['enabled']);
+        $container->setParameter('zhortein_multi_tenant.mailer.add_tenant_id_header', $mailerConfig['add_tenant_id_header']);
+        $container->setParameter('zhortein_multi_tenant.mailer.add_tenant_name_header', $mailerConfig['add_tenant_name_header']);
         $container->setParameter('zhortein_multi_tenant.messenger.enabled', $config['messenger']['enabled']);
         $container->setParameter('zhortein_multi_tenant.messenger.default_transport', $config['messenger']['default_transport']);
         $container->setParameter('zhortein_multi_tenant.messenger.add_tenant_headers', $config['messenger']['add_tenant_headers']);
@@ -570,7 +577,9 @@ final class ZhorteinMultiTenantExtension extends Extension implements PrependExt
 
         $container->register('zhortein_multi_tenant.mailer.tenant_aware', TenantAwareMailer::class)
             ->setAutowired(true)
-            ->setAutoconfigured(true);
+            ->setAutoconfigured(true)
+            ->setArgument('$addTenantIdHeader', '%zhortein_multi_tenant.mailer.add_tenant_id_header%')
+            ->setArgument('$addTenantNameHeader', '%zhortein_multi_tenant.mailer.add_tenant_name_header%');
         $container->setAlias(TenantAwareMailer::class, 'zhortein_multi_tenant.mailer.tenant_aware');
     }
 

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Zhortein\MultiTenantBundle\Mailer;
 
-use Zhortein\MultiTenantBundle\Manager\TenantSettingsManager;
+use Zhortein\MultiTenantBundle\Manager\TenantSettingsManagerInterface;
 
 /**
  * Configures mailer settings based on tenant context.
@@ -16,7 +16,7 @@ use Zhortein\MultiTenantBundle\Manager\TenantSettingsManager;
 readonly class TenantMailerConfigurator
 {
     public function __construct(
-        private TenantSettingsManager $settingsManager,
+        private TenantSettingsManagerInterface $settingsManager,
         private ?string $fallbackDsn = null,
         private ?string $fallbackFrom = null,
         private ?string $fallbackSender = null,

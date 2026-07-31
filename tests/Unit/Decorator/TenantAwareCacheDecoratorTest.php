@@ -10,6 +10,7 @@ use Psr\Cache\CacheItemPoolInterface;
 use Zhortein\MultiTenantBundle\Context\TenantContextInterface;
 use Zhortein\MultiTenantBundle\Decorator\TenantAwareCacheDecorator;
 use Zhortein\MultiTenantBundle\Decorator\TenantAwareCacheItem;
+use Zhortein\MultiTenantBundle\Decorator\TenantCacheException;
 use Zhortein\MultiTenantBundle\Entity\TenantInterface;
 
 /**
@@ -36,7 +37,7 @@ final class TenantAwareCacheDecoratorTest extends TestCase
         $originalItem = $this->createMock(CacheItemInterface::class);
         $this->decoratedCache->expects($this->once())
             ->method('getItem')
-            ->with('tenant_tenant-123_test-key')
+            ->with('tenant_099e0572953afd9db57624a7a1f82da24ef15bb7fc1aa16ce27b1c36312871ab_test-key')
             ->willReturn($originalItem);
 
         $decorator = new TenantAwareCacheDecorator($this->decoratedCache, $this->tenantContext);
@@ -49,18 +50,10 @@ final class TenantAwareCacheDecoratorTest extends TestCase
     public function testGetItemWithoutTenantContext(): void
     {
         $this->tenantContext->method('getTenant')->willReturn(null);
-
-        $originalItem = $this->createMock(CacheItemInterface::class);
-        $this->decoratedCache->expects($this->once())
-            ->method('getItem')
-            ->with('test-key')
-            ->willReturn($originalItem);
-
         $decorator = new TenantAwareCacheDecorator($this->decoratedCache, $this->tenantContext);
-        $result = $decorator->getItem('test-key');
 
-        $this->assertInstanceOf(TenantAwareCacheItem::class, $result);
-        $this->assertSame('test-key', $result->getKey());
+        $this->expectException(TenantCacheException::class);
+        $decorator->getItem('test-key');
     }
 
     public function testGetItemWhenDisabled(): void
@@ -89,10 +82,10 @@ final class TenantAwareCacheDecoratorTest extends TestCase
 
         $this->decoratedCache->expects($this->once())
             ->method('getItems')
-            ->with(['tenant_tenant-123_key1', 'tenant_tenant-123_key2'])
+            ->with(['tenant_099e0572953afd9db57624a7a1f82da24ef15bb7fc1aa16ce27b1c36312871ab_key1', 'tenant_099e0572953afd9db57624a7a1f82da24ef15bb7fc1aa16ce27b1c36312871ab_key2'])
             ->willReturn([
-                'tenant_tenant-123_key1' => $originalItem1,
-                'tenant_tenant-123_key2' => $originalItem2,
+                'tenant_099e0572953afd9db57624a7a1f82da24ef15bb7fc1aa16ce27b1c36312871ab_key1' => $originalItem1,
+                'tenant_099e0572953afd9db57624a7a1f82da24ef15bb7fc1aa16ce27b1c36312871ab_key2' => $originalItem2,
             ]);
 
         $decorator = new TenantAwareCacheDecorator($this->decoratedCache, $this->tenantContext);
@@ -111,7 +104,7 @@ final class TenantAwareCacheDecoratorTest extends TestCase
 
         $this->decoratedCache->expects($this->once())
             ->method('hasItem')
-            ->with('tenant_tenant-123_test-key')
+            ->with('tenant_099e0572953afd9db57624a7a1f82da24ef15bb7fc1aa16ce27b1c36312871ab_test-key')
             ->willReturn(true);
 
         $decorator = new TenantAwareCacheDecorator($this->decoratedCache, $this->tenantContext);
@@ -126,7 +119,7 @@ final class TenantAwareCacheDecoratorTest extends TestCase
 
         $this->decoratedCache->expects($this->once())
             ->method('deleteItem')
-            ->with('tenant_tenant-123_test-key')
+            ->with('tenant_099e0572953afd9db57624a7a1f82da24ef15bb7fc1aa16ce27b1c36312871ab_test-key')
             ->willReturn(true);
 
         $decorator = new TenantAwareCacheDecorator($this->decoratedCache, $this->tenantContext);
@@ -141,7 +134,7 @@ final class TenantAwareCacheDecoratorTest extends TestCase
 
         $this->decoratedCache->expects($this->once())
             ->method('deleteItems')
-            ->with(['tenant_tenant-123_key1', 'tenant_tenant-123_key2'])
+            ->with(['tenant_099e0572953afd9db57624a7a1f82da24ef15bb7fc1aa16ce27b1c36312871ab_key1', 'tenant_099e0572953afd9db57624a7a1f82da24ef15bb7fc1aa16ce27b1c36312871ab_key2'])
             ->willReturn(true);
 
         $decorator = new TenantAwareCacheDecorator($this->decoratedCache, $this->tenantContext);
@@ -166,19 +159,12 @@ final class TenantAwareCacheDecoratorTest extends TestCase
         $this->assertTrue($result);
     }
 
-    public function testSaveWithRegularCacheItem(): void
+    public function testSaveWithRegularCacheItemIsRejected(): void
     {
-        $regularItem = $this->createMock(CacheItemInterface::class);
-
-        $this->decoratedCache->expects($this->once())
-            ->method('save')
-            ->with($regularItem)
-            ->willReturn(true);
-
         $decorator = new TenantAwareCacheDecorator($this->decoratedCache, $this->tenantContext);
-        $result = $decorator->save($regularItem);
 
-        $this->assertTrue($result);
+        $this->expectException(TenantCacheException::class);
+        $decorator->save($this->createMock(CacheItemInterface::class));
     }
 
     public function testSaveDeferredWithTenantAwareCacheItem(): void
@@ -209,15 +195,12 @@ final class TenantAwareCacheDecoratorTest extends TestCase
         $this->assertTrue($result);
     }
 
-    public function testClear(): void
+    public function testClearIsRejectedWhenThePoolCannotScopeIt(): void
     {
-        $this->decoratedCache->expects($this->once())
-            ->method('clear')
-            ->willReturn(true);
-
+        $this->tenantContext->method('getTenant')->willReturn($this->tenant);
         $decorator = new TenantAwareCacheDecorator($this->decoratedCache, $this->tenantContext);
-        $result = $decorator->clear();
 
-        $this->assertTrue($result);
+        $this->expectException(TenantCacheException::class);
+        $decorator->clear();
     }
 }

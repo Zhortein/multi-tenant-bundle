@@ -1,186 +1,61 @@
 # Tenant-Aware Storage
 
-The tenant-aware storage system provides isolated file storage for each tenant, supporting both local filesystem and cloud storage (S3-compatible) backends. Each tenant's files are completely isolated from other tenants while maintaining a unified API.
+Tenant storage is fail-closed and uses an explicit namespace for every active tenant.
 
-> 📖 **Navigation**: [← Messenger](messenger.md) | [Back to Documentation Index](index.md) | [Fixtures →](fixtures.md)
+## Contract
 
-## Overview
+All operations on `TenantFileStorageInterface` require an active tenant context. If the context is missing, they throw `TenantStorageException`; missing context never means global storage. Tenant paths have this shape:
 
-The storage system provides:
+```text
+tenants/{safe-tenant-slug}/{relative-path}
+```
 
-- **Complete file isolation**: Each tenant has its own storage space
-- **Multiple backends**: Local filesystem and S3-compatible storage
-- **Unified API**: Same interface regardless of storage backend
-- **Automatic path management**: Tenant-specific paths are handled automatically
-- **URL generation**: Generate public URLs for tenant files
-- **File operations**: Upload, download, delete, and list files
+The tenant slug `default` therefore maps to `tenants/default/...` and cannot collide with a global namespace. The same validation applies to upload, delete, existence checks, URL/path generation, and listing.
+
+Paths must be non-empty relative paths, except that the empty directory is accepted by `listFiles()`. Components may contain ASCII letters, digits, dots, underscores, and hyphens, and must start with a letter or digit. Absolute paths, dot segments, repeated or backslash separators, null bytes, percent-encoded input, drive paths, and unsafe tenant identifiers are rejected before backend access. Local storage also rejects symbolic links in the configured base path or tenant tree.
+
+The interface has no move operation. Applications that implement a move must perform both source and destination validation through the same tenant-aware adapter; copying a fully qualified tenant path between contexts is unsupported.
 
 ## Configuration
 
-### Bundle Configuration
-
 ```yaml
-# config/packages/zhortein_multi_tenant.yaml
 zhortein_multi_tenant:
     storage:
         enabled: true
-        type: 'local' # 'local' or 's3'
-        base_path: '%kernel.project_dir%/var/tenant_storage'
-        base_url: '/tenant-files'
-        s3:
-            bucket: 'my-tenant-bucket'
-            region: 'us-east-1'
-            access_key: '%env(AWS_ACCESS_KEY_ID)%'
-            secret_key: '%env(AWS_SECRET_ACCESS_KEY)%'
-```
-
-### Local Storage Configuration
-
-```yaml
-# config/packages/zhortein_multi_tenant.yaml
-zhortein_multi_tenant:
-    storage:
         type: 'local'
         base_path: '%kernel.project_dir%/var/tenant_storage'
         base_url: '/tenant-files'
 ```
 
-### S3 Storage Configuration
+The local layout is:
 
-```yaml
-# config/packages/zhortein_multi_tenant.yaml
-zhortein_multi_tenant:
-    storage:
-        type: 's3'
-        s3:
-            bucket: 'my-app-tenant-files'
-            region: 'us-east-1'
-            access_key: '%env(AWS_ACCESS_KEY_ID)%'
-            secret_key: '%env(AWS_SECRET_ACCESS_KEY)%'
-            endpoint: null # Optional: for S3-compatible services
+```text
+var/tenant_storage/
+`-- tenants/
+    |-- acme/
+    |   `-- documents/contract.pdf
+    `-- default/
+        `-- documents/example.pdf
 ```
 
-## Basic Usage
+## Usage
 
-### Injecting the Storage Service
+Pass only a path relative to the active tenant root:
 
 ```php
-<?php
-
-namespace App\Service;
-
-use Symfony\Component\HttpFoundation\File\UploadedFile;
-use Zhortein\MultiTenantBundle\Storage\TenantFileStorageInterface;
-use Zhortein\MultiTenantBundle\Context\TenantContextInterface;
-
-class DocumentService
-{
-    public function __construct(
-        private TenantFileStorageInterface $storage,
-        private TenantContextInterface $tenantContext,
-    ) {}
-
-    public function uploadDocument(UploadedFile $file, string $category = 'documents'): string
-    {
-        $tenant = $this->tenantContext->getTenant();
-        
-        if (!$tenant) {
-            throw new \RuntimeException('No tenant context available');
-        }
-
-        // Generate unique filename
-        $filename = $this->generateUniqueFilename($file);
-        $path = sprintf('%s/%s', $category, $filename);
-
-        // Upload file - automatically stored in tenant-specific directory
-        $storedPath = $this->storage->uploadFile($file, $path);
-
-        return $storedPath;
-    }
-
-    public function downloadDocument(string $path): ?string
-    {
-        if (!$this->storage->fileExists($path)) {
-            return null;
-        }
-
-        return $this->storage->getFileContents($path);
-    }
-
-    public function deleteDocument(string $path): bool
-    {
-        return $this->storage->deleteFile($path);
-    }
-
-    public function getDocumentUrl(string $path): ?string
-    {
-        if (!$this->storage->fileExists($path)) {
-            return null;
-        }
-
-        return $this->storage->getFileUrl($path);
-    }
-
-    private function generateUniqueFilename(UploadedFile $file): string
-    {
-        $extension = $file->getClientOriginalExtension();
-        $basename = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
-        $timestamp = time();
-        $random = bin2hex(random_bytes(8));
-
-        return sprintf('%s_%s_%s.%s', $basename, $timestamp, $random, $extension);
-    }
-}
+$storedPath = $storage->uploadFile($uploadedFile, 'documents/contract.pdf');
+$exists = $storage->exists('documents/contract.pdf');
+$url = $storage->getUrl('documents/contract.pdf');
+$files = $storage->listFiles('documents');
+$storage->delete('documents/contract.pdf');
 ```
 
-## Storage Backends
+Do not pass the returned `tenants/{slug}/...` path back into the adapter; public operations add the namespace themselves.
 
-### Local Storage
+## Explicit global storage
 
-The local storage backend stores files in the server's filesystem:
+Global files must use a separate application service and an explicit namespace such as `global/...`. Do not alias the tenant-aware service as global storage and do not derive global access from `TenantContextInterface::getTenant() === null`.
 
-```
-var/tenant_storage/
-├── tenant_acme/
-│   ├── documents/
-│   │   ├── contract_123.pdf
-│   │   └── invoice_456.pdf
-│   ├── images/
-│   │   ├── originals/
-│   │   ├── thumbnails/
-│   │   └── medium/
-│   └── uploads/
-└── tenant_techstartup/
-    ├── documents/
-    ├── images/
-    └── uploads/
-```
+For local files, an application can register a dedicated service around Symfony Filesystem with a fixed root such as `%kernel.project_dir%/var/storage/global`. Keep its interface distinct from `TenantFileStorageInterface`, validate relative paths independently, and apply the same symlink policy.
 
-### S3 Storage
-
-The S3 storage backend uses AWS S3 or S3-compatible services:
-
-```
-my-tenant-bucket/
-├── tenant_acme/
-│   ├── documents/
-│   ├── images/
-│   └── uploads/
-└── tenant_techstartup/
-    ├── documents/
-    ├── images/
-    └── uploads/
-```
-
-## Best Practices
-
-1. **Validate All Uploads**: Always validate file types, sizes, and content
-2. **Use Unique Filenames**: Prevent filename collisions with timestamps/UUIDs
-3. **Implement Access Control**: Verify user permissions before file operations
-4. **Monitor Storage Usage**: Track storage usage per tenant
-5. **Backup Important Files**: Implement backup strategies for critical files
-6. **Optimize Images**: Automatically resize/optimize uploaded images
-7. **Use CDN**: Consider CDN for public file delivery
-8. **Clean Up Temporary Files**: Remove temporary files after processing
-9. **Log File Operations**: Log uploads, downloads, and deletions for audit
-10. **Handle Large Files**: Implement chunked uploads for large files
+See [Security contract migration](migration-security-contracts.md) for existing-file migration.

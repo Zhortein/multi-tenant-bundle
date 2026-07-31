@@ -47,6 +47,19 @@ final class ConfigurationTest extends TestCase
         self::assertSame($resolver, $processed['resolver']);
     }
 
+    public function testTenantMetadataEmailHeadersAreIndependentAndDisabledByDefault(): void
+    {
+        $processed = (new Processor())->processConfiguration(new Configuration(), [[]]);
+        self::assertFalse($processed['mailer']['add_tenant_id_header']);
+        self::assertFalse($processed['mailer']['add_tenant_name_header']);
+
+        $processed = (new Processor())->processConfiguration(new Configuration(), [[
+            'mailer' => ['add_tenant_name_header' => true],
+        ]]);
+        self::assertFalse($processed['mailer']['add_tenant_id_header']);
+        self::assertTrue($processed['mailer']['add_tenant_name_header']);
+    }
+
     public function testChainAcceptsEveryBuiltInResolver(): void
     {
         $order = ['path', 'subdomain', 'header', 'query', 'domain', 'hybrid', 'dns_txt'];

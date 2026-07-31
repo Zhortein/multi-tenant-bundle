@@ -183,7 +183,8 @@ class DashboardController extends AbstractController
 ### 🔧 Service Integration
 - [Mailer](docs/mailer.md) - Tenant-aware email with templated support
 - [Messenger](docs/messenger.md) - Tenant-aware queues with automatic context propagation
-- [Storage](docs/storage.md) - File storage isolation
+- [Storage](docs/storage.md) - Fail-closed file storage isolation
+- [Security Contract Migration](docs/migration-security-contracts.md) - Required storage, cache, mailer, and observability migration
 
 ### 🗄️ Database Management
 - [Migrations](docs/migrations.md) - Database migrations

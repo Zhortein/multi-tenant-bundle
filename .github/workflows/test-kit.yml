@@ -74,10 +74,17 @@ jobs:
             symfony: "~8.1.0"
     defaults:
       run:
-        working-directory: tests/ConsumerApp
+        working-directory: /tmp/consumer
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Prepare external consumer directory
+        working-directory: ${{ github.workspace }}
+        run: |
+          mkdir -p "/tmp/consumer"
+          cp -R tests/ConsumerApp/. "/tmp/consumer/"
+          composer --working-dir="/tmp/consumer" config --json repositories.bundle "{\"type\":\"path\",\"url\":\"${GITHUB_WORKSPACE}\",\"options\":{\"symlink\":false}}"
 
       - name: Setup PHP
         uses: shivammathur/setup-php@v2

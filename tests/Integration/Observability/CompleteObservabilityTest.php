@@ -148,7 +148,6 @@ final class CompleteObservabilityTest extends TestCase
         $this->assertSame([
             'resolver' => 'header',
             'status' => 'error',
-            'reason' => 'no_tenant_found',
         ], $counter['labels']);
         $this->assertSame(1, $counter['value']);
 
@@ -158,7 +157,8 @@ final class CompleteObservabilityTest extends TestCase
         $this->assertSame('warning', $logRecord['level']);
         $this->assertStringContainsString('Tenant resolution failed', $logRecord['message']);
         $this->assertSame('header', $logRecord['context']['resolver']);
-        $this->assertSame('no_tenant_found', $logRecord['context']['reason']);
+        $this->assertArrayNotHasKey('reason', $logRecord['context']);
+        $this->assertArrayNotHasKey('context', $logRecord['context']);
     }
 
     public function testTenantContextLifecycleGeneratesObservabilityData(): void
@@ -219,7 +219,6 @@ final class CompleteObservabilityTest extends TestCase
         $this->assertSame([
             'resolver' => 'path',
             'status' => 'error',
-            'reason' => 'invalid_format',
         ], $failureCounter['labels']);
 
         // Verify logs
@@ -236,6 +235,7 @@ final class CompleteObservabilityTest extends TestCase
         $this->assertSame('warning', $failureLog['level']);
         $this->assertStringContainsString('Tenant resolution failed', $failureLog['message']);
         $this->assertSame('path', $failureLog['context']['resolver']);
-        $this->assertSame('invalid_format', $failureLog['context']['reason']);
+        $this->assertArrayNotHasKey('reason', $failureLog['context']);
+        $this->assertArrayNotHasKey('context', $failureLog['context']);
     }
 }

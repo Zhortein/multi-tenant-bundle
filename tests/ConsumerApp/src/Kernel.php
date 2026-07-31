@@ -69,7 +69,11 @@ final class Kernel extends BaseKernel
                 'logger' => ['enabled' => false],
             ],
             'fixtures' => ['enabled' => false],
-            'mailer' => ['enabled' => true],
+            'mailer' => [
+                'enabled' => true,
+                'add_tenant_id_header' => false,
+                'add_tenant_name_header' => false,
+            ],
             'storage' => ['enabled' => false],
         ]);
     }

@@ -10,6 +10,7 @@ use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\Cache\Adapter\TraceableAdapter;
 use Zhortein\MultiTenantBundle\Context\TenantContext;
 use Zhortein\MultiTenantBundle\Decorator\TenantAwareCacheAdapterDecorator;
+use Zhortein\MultiTenantBundle\Decorator\TenantCacheException;
 use Zhortein\MultiTenantBundle\Tests\Fixtures\Entity\TestTenant;
 
 final class TenantAwareCacheAdapterDecoratorTest extends TestCase
@@ -37,5 +38,13 @@ final class TenantAwareCacheAdapterDecoratorTest extends TestCase
 
         $context->setTenant((new TestTenant())->setId(1));
         self::assertSame('tenant-one', $decorator->getItem('shared-key')->get());
+    }
+
+    public function testItFailsClosedWithoutTenantContext(): void
+    {
+        $decorator = new TenantAwareCacheAdapterDecorator(new ArrayAdapter(), new TenantContext());
+
+        $this->expectException(TenantCacheException::class);
+        $decorator->getItem('tenant_1_shared-key');
     }
 }

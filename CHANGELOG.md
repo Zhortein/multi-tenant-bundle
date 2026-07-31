@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.0.0-RC3] - 2026-04-05
 
+### Security
+
+- Made tenant-aware storage fail closed without an active tenant, replaced the ambiguous `default/` fallback with `tenants/{safe-tenant-slug}/...`, rejected unsafe paths and symbolic-link escapes, and documented explicit global storage.
+- Made tenant-aware cache decorators fail closed, isolated keys with non-forgeable hashed namespaces, and rejected generic cache clearing when it cannot be scoped safely.
+- Disabled public tenant email headers by default, added independent opt-ins for `X-Tenant-ID` and `X-Tenant-Name`, preserved application headers, and rejected injection values.
+- Bounded default metric labels and removed arbitrary or confidential failure fields from default logs.
+- Added a migration guide for these intentional pre-1.0 security-related breaking changes.
+
 ### Fixed
 - Enforced PostgreSQL RLS for table owners with explicit read/write predicates and expanded real-database coverage for UPDATE, DELETE, rollback cleanup, and connection reuse.
 - Kept tenant-aware Symfony cache decorators compatible with traceable adapters while preserving same-tenant access and cross-tenant namespace isolation.
