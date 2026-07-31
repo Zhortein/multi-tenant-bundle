@@ -20,6 +20,7 @@ use Zhortein\MultiTenantBundle\Mailer\TenantMailerConfigurator;
 use Zhortein\MultiTenantBundle\Messenger\TenantMessengerConfigurator;
 use Zhortein\MultiTenantBundle\Messenger\TenantMessengerTransportFactory;
 use Zhortein\MultiTenantBundle\Messenger\TenantMessengerTransportResolver;
+use Zhortein\MultiTenantBundle\Repository\TenantSettingRepository;
 
 /**
  * @covers \Zhortein\MultiTenantBundle\DependencyInjection\Configuration
@@ -111,6 +112,8 @@ final class ConfigurationTest extends TestCase
         (new ZhorteinMultiTenantExtension())->load([[
             'mailer' => ['enabled' => true],
         ]], $container);
+
+        self::assertTrue($container->hasDefinition(TenantSettingRepository::class));
 
         $fallback = $container->getDefinition('zhortein_multi_tenant.mailer.fallback_transport_factory');
         self::assertSame(MailerTransport::class, $fallback->getClass());

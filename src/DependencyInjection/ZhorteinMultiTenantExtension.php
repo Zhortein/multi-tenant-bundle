@@ -48,6 +48,7 @@ use Zhortein\MultiTenantBundle\Observability\Metrics\MetricsAdapterInterface;
 use Zhortein\MultiTenantBundle\Observability\Metrics\NullMetricsAdapter;
 use Zhortein\MultiTenantBundle\Registry\DoctrineTenantRegistry;
 use Zhortein\MultiTenantBundle\Registry\TenantRegistryInterface;
+use Zhortein\MultiTenantBundle\Repository\TenantSettingRepository;
 use Zhortein\MultiTenantBundle\Resolver\ChainTenantResolver;
 use Zhortein\MultiTenantBundle\Resolver\DnsTxtTenantResolver;
 use Zhortein\MultiTenantBundle\Resolver\DomainBasedTenantResolver;
@@ -178,6 +179,10 @@ final class ZhorteinMultiTenantExtension extends Extension
         $container->setAlias(TenantRegistryInterface::class, DoctrineTenantRegistry::class);
 
         // Register tenant settings manager
+        $container->register(TenantSettingRepository::class)
+            ->setAutowired(true)
+            ->setAutoconfigured(true);
+
         $container->register(TenantSettingsManager::class)
             ->setAutowired(true)
             ->setAutoconfigured(true)
