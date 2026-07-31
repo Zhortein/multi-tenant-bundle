@@ -38,7 +38,7 @@
     "phpstan/phpstan-symfony": "^2.0",
     "phpunit/php-code-coverage": "^12.3.1",
     "phpunit/phpunit": "^12.2.5",
-    "psr/simple-cache": "*",
+    "psr/simple-cache": "^3.0",
     "roave/security-advisories": "dev-latest",
     "symfony/mailer": "^7.4 || ^8.0",
     "symfony/messenger": "^7.4 || ^8.0",
@@ -66,6 +66,9 @@
   },
   "scripts": {
     "php-cs-fixer": "php-cs-fixer fix src --verbose --rules=@Symfony"
+  },
+  "conflict": {
+    "psr/simple-cache": "<3.0"
   },
   "suggest": {
     "psr/simple-cache": "Needed for PSR-16 simple cache tenant-aware decorators",

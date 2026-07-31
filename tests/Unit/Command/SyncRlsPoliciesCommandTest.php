@@ -49,7 +49,7 @@ final class SyncRlsPoliciesCommandTest extends TestCase
         );
 
         $application = new Application();
-        $application->add($this->command);
+        $application->addCommand($this->command);
         $this->commandTester = new CommandTester($this->command);
     }
 

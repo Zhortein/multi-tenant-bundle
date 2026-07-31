@@ -65,7 +65,7 @@ final class SyncRlsPoliciesCommandIntegrationTest extends TestCase
         );
 
         $application = new Application();
-        $application->add($command);
+        $application->addCommand($command);
         $commandTester = new CommandTester($command);
 
         $exitCode = $commandTester->execute([]);

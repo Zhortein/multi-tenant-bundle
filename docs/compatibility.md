@@ -24,6 +24,7 @@ Each matrix cell runs strict Composer validation, a dependency security audit, P
 - Doctrine ORM 3.5 and later within the 3.x line are supported.
 - Doctrine DBAL 3.8 and the 4.x line are supported through explicitly tested combinations.
 - PostgreSQL 16 is the reference database for RLS guarantees.
+- The optional PSR-16 decorator requires `psr/simple-cache` 3.x because earlier interface versions do not define the typed PSR-16 signatures implemented by the bundle.
 
 Removing a matrix entry is a compatibility change. It requires evidence that the combination is no longer resolvable or supportable, an updated changelog, and migration guidance where applicable.
 
