@@ -12,6 +12,12 @@ The Test Kit includes:
 - **RLS Verification**: Critical tests proving PostgreSQL Row-Level Security works as defense-in-depth
 - **CI/CD Support**: Docker Compose and GitHub Actions integration
 
+## Contributor Dependency Checks
+
+The `Minimal production install` GitHub Actions job resolves Composer with `--no-dev` and runs `php tests/minimal-install.php`. The script verifies that Mailer, Twig, Monolog, and PSR-16 are absent, confirms required bundle classes remain loadable, and compiles the service container with optional integrations unavailable.
+
+Run this check in an isolated copy because `composer update --no-dev` replaces the local development vendor tree. Normal local validation continues to use the Docker-based Make targets documented below.
+
 ## 🚀 Quick Start
 
 ### 1. Basic Usage

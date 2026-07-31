@@ -9,7 +9,9 @@ This guide walks you through installing and configuring the Zhortein Multi-Tenan
 - **PHP**: >= 8.3
 - **Symfony**: >= 7.4 | 8.0
 - **PostgreSQL**: >= 16 (recommended)
-- **Doctrine ORM**: >= 3.0
+- **Doctrine ORM**: >= 3.5
+- **Doctrine DBAL**: >= 3.8 or >= 4.4
+- **Dependencies**: See the [required and optional component classification](dependencies.md)
 
 ## Installation
 
