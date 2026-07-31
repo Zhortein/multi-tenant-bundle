@@ -19,8 +19,8 @@ final class ConditionalCacheDecoratorsPass implements CompilerPassInterface
     public function process(ContainerBuilder $container): void
     {
         // Only proceed if cache decorators are enabled
-        if (!$container->hasParameter('zhortein_multi_tenant.decorators.cache.enabled') ||
-            !$container->getParameter('zhortein_multi_tenant.decorators.cache.enabled')) {
+        if (!$container->hasParameter('zhortein_multi_tenant.decorators.cache.enabled')
+            || !$container->getParameter('zhortein_multi_tenant.decorators.cache.enabled')) {
             return;
         }
 

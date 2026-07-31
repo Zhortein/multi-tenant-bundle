@@ -20,7 +20,8 @@ final class SubdomainTenantResolver implements TenantResolverInterface
     private const array EXCLUDED_SUBDOMAINS = ['www', 'api', 'admin', 'mail', 'ftp'];
 
     /**
-     * @param string[] $excludedSubdomains Common subdomains to exclude from tenant resolution
+     * @param class-string<TenantInterface> $tenantEntityClass  Tenant entity class
+     * @param string[]                      $excludedSubdomains Common subdomains to exclude from tenant resolution
      */
     public function __construct(
         private readonly EntityManagerInterface $em,

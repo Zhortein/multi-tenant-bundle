@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.0-RC3] - 2026-04-05
+
+### Fixed
+- Replaced the false-positive RLS target with six effective PostgreSQL 16 tests using a non-superuser application role and raw DBAL queries.
+- Persisted the PostgreSQL tenant setting for the database session and clear stale tenant state when no context is active.
+
+### Added
+- **Symfony 8.0 & 7.4 Compatibility**
+  - Updated `composer.json` to support Symfony `^7.4` and `^8.0` components
+  - Updated `symfony/contracts` to support `^3.4` and `^4.0`
+  - Ensured compatibility with PHP 8.3+ (as required by Symfony 8)
+- **Doctrine DBAL 4 Support**
+  - Refactored database platform detection to use `instanceof PostgreSQLPlatform` instead of deprecated `getName()`
+  - Updated `DriverManager::getConnection()` calls to handle stricter type-hinting in DBAL 4
+  - Updated `executeStatement()` return type handling in tests (now returns `int|string`)
+  - Updated `Doctrine\DBAL\Exception` handling for interface-based exceptions in DBAL 4
+- **Test Suite Updates**
+  - Updated `SubdomainTenantResolver` tests for correct constructor arguments
+  - Fixed various unit tests to support DBAL 4 changes and stricter typing
+  - Updated `Makefile` to use `docker compose` (v2) instead of legacy `docker-compose`
+- **Documentation Updates**
+  - Updated `README.md` and documentation files to reflect Symfony 8 support
+
 ## [1.0.0-RC2]
 
 ### Added

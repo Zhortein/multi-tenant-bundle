@@ -78,7 +78,7 @@ final class TenantSessionConfiguratorTest extends TestCase
         $this->configurator->onKernelRequest($event);
     }
 
-    public function testOnKernelRequestSkipsWhenNoTenant(): void
+    public function testOnKernelRequestClearsSessionWhenNoTenant(): void
     {
         $event = $this->createRequestEvent(true);
 
@@ -86,14 +86,29 @@ final class TenantSessionConfiguratorTest extends TestCase
             ->method('getTenant')
             ->willReturn(null);
 
+        $messages = [];
         $this->logger
-            ->expects($this->once())
+            ->expects($this->exactly(2))
             ->method('debug')
-            ->with('No tenant context available for RLS configuration');
+            ->willReturnCallback(static function (string $message) use (&$messages): void {
+                $messages[] = $message;
+            });
 
-        $this->connection->expects($this->never())->method('executeStatement');
+        $this->connection
+            ->method('getDatabasePlatform')
+            ->willReturn(new PostgreSQLPlatform());
+
+        $this->connection
+            ->expects($this->once())
+            ->method('executeStatement')
+            ->with('SELECT set_config(?, ?, false)', ['app.tenant_id', '']);
 
         $this->configurator->onKernelRequest($event);
+
+        $this->assertSame([
+            'No tenant context available for RLS configuration',
+            'Cleared PostgreSQL session variable for RLS',
+        ], $messages);
     }
 
     public function testOnKernelRequestSkipsWhenNotPostgreSQL(): void
@@ -106,7 +121,6 @@ final class TenantSessionConfiguratorTest extends TestCase
             ->willReturn($tenant);
 
         $platform = $this->createMock(\Doctrine\DBAL\Platforms\MySQLPlatform::class);
-        $platform->method('getName')->willReturn('mysql');
 
         $this->connection
             ->method('getDatabasePlatform')
@@ -140,7 +154,7 @@ final class TenantSessionConfiguratorTest extends TestCase
             ->expects($this->once())
             ->method('executeStatement')
             ->with(
-                'SELECT set_config(?, ?, true)',
+                'SELECT set_config(?, ?, false)',
                 ['app.tenant_id', '123']
             );
 
@@ -173,7 +187,7 @@ final class TenantSessionConfiguratorTest extends TestCase
             ->method('getDatabasePlatform')
             ->willReturn($platform);
 
-        $exception = new Exception('Database error');
+        $exception = new class('Database error') extends \Exception implements Exception {};
         $this->connection
             ->method('executeStatement')
             ->willThrowException($exception);
@@ -241,8 +255,8 @@ final class TenantSessionConfiguratorTest extends TestCase
             ->willReturn($platform);
 
         $expectedCalls = [
-            ['SELECT set_config(?, ?, true)', ['app.tenant_id', '456']],
-            ['SELECT set_config(?, NULL, true)', ['app.tenant_id']],
+            ['SELECT set_config(?, ?, false)', ['app.tenant_id', '456']],
+            ['SELECT set_config(?, ?, false)', ['app.tenant_id', '']],
         ];
         $callCount = 0;
 
@@ -254,7 +268,7 @@ final class TenantSessionConfiguratorTest extends TestCase
                 $this->assertSame($expectedCalls[$callCount][1], $params);
                 ++$callCount;
 
-                return null;
+                return 1;
             });
 
         $this->tenantContext
@@ -339,8 +353,8 @@ final class TenantSessionConfiguratorTest extends TestCase
         $this->connection
             ->method('executeStatement')
             ->willReturnOnConsecutiveCalls(
-                null, // First call succeeds (set config)
-                null  // Second call succeeds (clear config)
+                1, // First call succeeds (set config)
+                1  // Second call succeeds (clear config)
             );
 
         $this->tenantContext

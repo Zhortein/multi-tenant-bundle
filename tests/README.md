@@ -116,11 +116,14 @@ public function testCommandWithTenant(): void
 ### Integration Tests
 
 #### RlsIsolationTest ⭐
-**The most critical test** - proves PostgreSQL RLS works as defense-in-depth:
-- Doctrine filter ON: Normal tenant isolation
-- **Doctrine filter OFF + RLS ON**: Critical test proving RLS isolation
-- DQL and native SQL query isolation
-- PostgreSQL session variable management
+
+The dedicated suite proves PostgreSQL RLS as a database-level defense:
+
+- PostgreSQL 16 runs in Docker Compose with a PHP 8.3 image containing `pdo_pgsql`.
+- Schema creation and fixtures use the administrative test role.
+- Every isolation assertion uses a separate non-superuser application role, because PostgreSQL superusers bypass RLS even when a table uses `FORCE ROW LEVEL SECURITY`.
+- Raw DBAL queries prove same-tenant reads and writes, denied cross-tenant reads and writes, tenant switching, and fail-closed behavior without relying on the Doctrine tenant filter.
+- `TEST_DATABASE_REQUIRED=1` turns environment failures into test failures in the dedicated target instead of skipped tests.
 
 #### ResolverChainHttpTest
 - Subdomain, header, path, query, and domain resolution
@@ -152,18 +155,12 @@ public function testCommandWithTenant(): void
 ### Using Docker Compose
 
 ```bash
-# Start PostgreSQL for testing
-cd tests && docker-compose up -d postgres
-
-# Wait for PostgreSQL to be ready
-docker-compose exec postgres pg_isready -U test_user -d multi_tenant_test
-
-# Connect to PostgreSQL shell
-docker-compose exec postgres psql -U test_user -d multi_tenant_test
-
-# Stop PostgreSQL
-docker-compose down
+# Build the PHP image, start PostgreSQL 16, run all mandatory RLS assertions,
+# and stop the environment even when a test fails.
+make test-with-postgres
 ```
+
+The Compose environment creates the privileged `test_user` only for schema setup. The test itself creates and connects as `rls_test_app`, a non-superuser role with limited DML permissions. Do not run isolation assertions as `POSTGRES_USER`; that role is a PostgreSQL superuser and bypasses RLS.
 
 ### Manual Setup
 
@@ -300,10 +297,10 @@ PostgreSQL session variables are automatically managed:
 
 ```sql
 -- Set tenant context
-SELECT set_config('app.tenant_id', '1', true);
+SELECT set_config('app.tenant_id', '1', false);
 
 -- Clear tenant context
-SELECT set_config('app.tenant_id', NULL, true);
+SELECT set_config('app.tenant_id', '', false);
 ```
 
 ## 🚀 CI/CD Integration
@@ -364,26 +361,26 @@ When adding new tests to the Test Kit:
 
 ```bash
 # Check if PostgreSQL is running
-docker-compose ps
+docker compose ps
 
 # Check PostgreSQL logs
-docker-compose logs postgres
+docker compose logs postgres
 
 # Test connection manually
-docker-compose exec postgres pg_isready -U test_user -d multi_tenant_test
+docker compose exec postgres pg_isready -U test_user -d multi_tenant_test
 ```
 
 ### RLS Issues
 
 ```bash
 # Check if RLS is enabled
-docker-compose exec postgres psql -U test_user -d multi_tenant_test -c "SELECT relrowsecurity FROM pg_class WHERE relname = 'test_products';"
+docker compose exec postgres psql -U test_user -d multi_tenant_test -c "SELECT relrowsecurity FROM pg_class WHERE relname = 'test_products';"
 
 # Check RLS policies
-docker-compose exec postgres psql -U test_user -d multi_tenant_test -c "SELECT * FROM pg_policies WHERE tablename = 'test_products';"
+docker compose exec postgres psql -U test_user -d multi_tenant_test -c "SELECT * FROM pg_policies WHERE tablename = 'test_products';"
 
 # Reinitialize database
-docker-compose exec postgres psql -U test_user -d multi_tenant_test -f /docker-entrypoint-initdb.d/init.sql
+docker compose exec postgres psql -U test_user -d multi_tenant_test -f /docker-entrypoint-initdb.d/init.sql
 ```
 
 ### Test Failures

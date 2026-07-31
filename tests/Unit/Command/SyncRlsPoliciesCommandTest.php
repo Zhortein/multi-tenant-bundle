@@ -56,7 +56,6 @@ final class SyncRlsPoliciesCommandTest extends TestCase
     public function testExecuteWithNonPostgreSQLDatabase(): void
     {
         $platform = $this->createMock(\Doctrine\DBAL\Platforms\MySQLPlatform::class);
-        $platform->method('getName')->willReturn('mysql');
 
         $this->connection
             ->method('getDatabasePlatform')
@@ -189,7 +188,7 @@ final class SyncRlsPoliciesCommandTest extends TestCase
             ->willReturnCallback(function ($sql) use (&$expectedCalls) {
                 $this->assertContains($sql, $expectedCalls);
 
-                return null;
+                return 1;
             });
 
         $exitCode = $this->commandTester->execute(['--apply' => true]);
@@ -278,7 +277,7 @@ final class SyncRlsPoliciesCommandTest extends TestCase
         // Mock connection methods to throw exception
         $this->connection
             ->method('fetchOne')
-            ->willThrowException(new Exception('Database error'));
+            ->willThrowException($this->createMock(Exception::class));
 
         $this->connection
             ->method('quoteIdentifier')

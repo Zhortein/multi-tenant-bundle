@@ -4,301 +4,285 @@ declare(strict_types=1);
 
 namespace Zhortein\MultiTenantBundle\Tests\Integration;
 
-use Zhortein\MultiTenantBundle\Tests\Fixtures\Entity\TestProduct;
-use Zhortein\MultiTenantBundle\Tests\Toolkit\TenantWebTestCase;
+use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\DriverManager;
+use Doctrine\DBAL\Exception;
+use PHPUnit\Framework\TestCase;
+use Zhortein\MultiTenantBundle\Context\TenantContext;
+use Zhortein\MultiTenantBundle\Database\TenantSessionConfigurator;
+use Zhortein\MultiTenantBundle\Registry\InMemoryTenantRegistry;
+use Zhortein\MultiTenantBundle\Tests\Fixtures\Entity\TestTenant;
 
 /**
- * Integration test for PostgreSQL Row-Level Security (RLS) isolation.
+ * Proves PostgreSQL RLS isolation through raw DBAL queries.
  *
- * This test verifies that:
- * 1. Doctrine filters work correctly for tenant isolation
- * 2. PostgreSQL RLS provides defense-in-depth even when Doctrine filters are disabled
- * 3. Tenant context properly sets PostgreSQL session variables
+ * The dedicated Compose target runs this class against PostgreSQL 16 with a
+ * real pdo_pgsql connection. FORCE ROW LEVEL SECURITY ensures the table owner
+ * cannot bypass the policy, and raw SQL keeps the proof independent from the
+ * Doctrine tenant filter.
  */
-class RlsIsolationTest extends TenantWebTestCase
+final class RlsIsolationTest extends TestCase
 {
-    private const TENANT_A_SLUG = 'tenant-a';
-    private const TENANT_B_SLUG = 'tenant-b';
-    private const TENANT_A_PRODUCTS = 2;
-    private const TENANT_B_PRODUCTS = 1;
+    private const int TENANT_A_ID = 1;
+    private const int TENANT_B_ID = 2;
+
+    private Connection $adminConnection;
+    private Connection $connection;
+    private TenantContext $tenantContext;
+    private TenantSessionConfigurator $sessionConfigurator;
+    private TestTenant $tenantA;
+    private TestTenant $tenantB;
 
     protected function setUp(): void
     {
-        parent::setUp();
+        try {
+            $this->adminConnection = DriverManager::getConnection($this->connectionParameters(
+                $_ENV['TEST_DATABASE_USER'] ?? 'test_user',
+                $_ENV['TEST_DATABASE_PASSWORD'] ?? 'test_password',
+            ));
+            $this->adminConnection->executeQuery('SELECT 1');
+            $this->createSchemaAndSeedData();
+            $this->connection = DriverManager::getConnection($this->connectionParameters(
+                $_ENV['TEST_DATABASE_APP_USER'] ?? 'rls_test_app',
+                $_ENV['TEST_DATABASE_APP_PASSWORD'] ?? 'rls_test_password',
+            ));
+            $this->connection->executeQuery('SELECT 1');
+        } catch (\Throwable $exception) {
+            if ('1' === ($_ENV['TEST_DATABASE_REQUIRED'] ?? null)) {
+                throw new \RuntimeException('The required PostgreSQL RLS environment is unavailable.', 0, $exception);
+            }
 
-        // Create test tenants
-        $this->getTestData()->seedTenants([
-            self::TENANT_A_SLUG => ['name' => 'Tenant A'],
-            self::TENANT_B_SLUG => ['name' => 'Tenant B'],
+            $this->markTestSkipped('PostgreSQL is not available; run `make test-with-postgres` for mandatory RLS coverage.');
+        }
+
+        $this->tenantA = $this->createTenant(self::TENANT_A_ID, 'tenant-a', 'Tenant A');
+        $this->tenantB = $this->createTenant(self::TENANT_B_ID, 'tenant-b', 'Tenant B');
+
+        $registry = new InMemoryTenantRegistry();
+        $registry->addTenant($this->tenantA);
+        $registry->addTenant($this->tenantB);
+
+        $this->tenantContext = new TenantContext();
+        $this->sessionConfigurator = new TenantSessionConfigurator(
+            $this->tenantContext,
+            $this->connection,
+            $registry,
+            true,
+            'app.tenant_id',
+        );
+    }
+
+    protected function tearDown(): void
+    {
+        if (isset($this->connection) && $this->connection->isConnected()) {
+            $this->tenantContext->clear();
+            $this->sessionConfigurator->setConfig();
+            $this->connection->close();
+        }
+        if (isset($this->adminConnection) && $this->adminConnection->isConnected()) {
+            $this->adminConnection->executeStatement('DROP TABLE IF EXISTS test_products');
+            $this->adminConnection->executeStatement('DROP TABLE IF EXISTS test_tenants');
+            $this->adminConnection->close();
+        }
+
+        parent::tearDown();
+    }
+
+    public function testPolicyIsEnabledAndForcedForTheTableOwner(): void
+    {
+        $state = $this->connection->fetchAssociative(<<<'SQL'
+            SELECT relrowsecurity, relforcerowsecurity
+            FROM pg_class
+            WHERE oid = 'test_products'::regclass
+            SQL);
+
+        self::assertIsArray($state);
+        self::assertTrue($state['relrowsecurity']);
+        self::assertTrue($state['relforcerowsecurity']);
+        self::assertSame(1, (int) $this->connection->fetchOne(<<<'SQL'
+            SELECT count(*)
+            FROM pg_policies
+            WHERE schemaname = 'public'
+              AND tablename = 'test_products'
+              AND policyname = 'tenant_isolation_policy'
+            SQL));
+    }
+
+    public function testSameTenantReadsAreAllowedAndCrossTenantReadsAreDenied(): void
+    {
+        $this->configureTenant($this->tenantA);
+
+        $rows = $this->connection->fetchAllAssociative('SELECT tenant_id, name FROM test_products ORDER BY id');
+
+        self::assertCount(2, $rows, 'Tenant A must see both of its own rows.');
+        self::assertSame([self::TENANT_A_ID], array_values(array_unique(array_map(
+            static fn (array $row): int => (int) $row['tenant_id'],
+            $rows,
+        ))));
+        self::assertNotContains('Tenant B secret', array_column($rows, 'name'));
+    }
+
+    public function testTenantSwitchReplacesTheVisibleDataset(): void
+    {
+        $this->configureTenant($this->tenantA);
+        self::assertSame(['Tenant A product 1', 'Tenant A product 2'], $this->visibleProductNames());
+
+        $this->configureTenant($this->tenantB);
+        self::assertSame(['Tenant B secret'], $this->visibleProductNames());
+        self::assertNotContains('Tenant A product 1', $this->visibleProductNames());
+    }
+
+    public function testNativeSqlRemainsIsolatedWithoutTheDoctrineTenantFilter(): void
+    {
+        $this->configureTenant($this->tenantB);
+
+        $rows = $this->connection->executeQuery(
+            'SELECT tenant_id, name FROM test_products WHERE tenant_id IN (?, ?) ORDER BY id',
+            [self::TENANT_A_ID, self::TENANT_B_ID],
+        )->fetchAllAssociative();
+
+        self::assertSame([
+            ['tenant_id' => self::TENANT_B_ID, 'name' => 'Tenant B secret'],
+        ], array_map(
+            static fn (array $row): array => ['tenant_id' => (int) $row['tenant_id'], 'name' => $row['name']],
+            $rows,
+        ));
+    }
+
+    public function testWritesAllowTheCurrentTenantAndRejectAnotherTenant(): void
+    {
+        $this->configureTenant($this->tenantA);
+
+        $this->connection->insert('test_products', [
+            'tenant_id' => self::TENANT_A_ID,
+            'name' => 'Tenant A allowed insert',
+            'price' => '15.00',
         ]);
+        self::assertContains('Tenant A allowed insert', $this->visibleProductNames());
 
-        // Seed test data
-        $this->getTestData()->seedProducts(self::TENANT_A_SLUG, self::TENANT_A_PRODUCTS);
-        $this->getTestData()->seedProducts(self::TENANT_B_SLUG, self::TENANT_B_PRODUCTS);
+        try {
+            $this->connection->insert('test_products', [
+                'tenant_id' => self::TENANT_B_ID,
+                'name' => 'Cross-tenant attack',
+                'price' => '99.00',
+            ]);
+            self::fail('PostgreSQL RLS must reject a write targeting another tenant.');
+        } catch (Exception $exception) {
+            self::assertStringContainsString('row-level security policy', $exception->getMessage());
+        }
+
+        self::assertNotContains('Cross-tenant attack', $this->visibleProductNames());
     }
 
-    /**
-     * Test Case #1: Doctrine filter ON - should see only tenant-specific data.
-     */
-    public function testDoctrineFilterIsolation(): void
+    public function testMissingContextFailsClosedAndSessionStateIsCleared(): void
     {
-        $productRepository = $this->getEntityManager()->getRepository(TestProduct::class);
+        $this->configureTenant($this->tenantA);
+        self::assertSame((string) self::TENANT_A_ID, $this->currentTenantSetting());
+        self::assertNotEmpty($this->visibleProductNames());
 
-        // Test tenant A context
-        $this->withTenant(self::TENANT_A_SLUG, function () use ($productRepository) {
-            $products = $productRepository->findAll();
-            $this->assertCount(
-                self::TENANT_A_PRODUCTS,
-                $products,
-                'Tenant A should see exactly '.self::TENANT_A_PRODUCTS.' products'
-            );
+        $this->tenantContext->clear();
+        $this->sessionConfigurator->setConfig();
 
-            foreach ($products as $product) {
-                $this->assertStringContainsString(
-                    self::TENANT_A_SLUG,
-                    $product->getName(),
-                    'All products should belong to tenant A'
-                );
-            }
-        });
-
-        // Test tenant B context
-        $this->withTenant(self::TENANT_B_SLUG, function () use ($productRepository) {
-            $products = $productRepository->findAll();
-            $this->assertCount(
-                self::TENANT_B_PRODUCTS,
-                $products,
-                'Tenant B should see exactly '.self::TENANT_B_PRODUCTS.' product'
-            );
-
-            foreach ($products as $product) {
-                $this->assertStringContainsString(
-                    self::TENANT_B_SLUG,
-                    $product->getName(),
-                    'All products should belong to tenant B'
-                );
-            }
-        });
+        self::assertSame('', $this->currentTenantSetting());
+        self::assertSame([], $this->visibleProductNames(), 'No tenant context must expose no tenant-owned rows.');
     }
 
-    /**
-     * Test Case #2: Doctrine filter OFF + RLS ON - PostgreSQL RLS should still provide isolation.
-     *
-     * This is the critical test that proves RLS works as defense-in-depth.
-     * Even with Doctrine filters disabled, PostgreSQL should only return tenant-specific data.
-     */
-    public function testRlsIsolationWithDoctrineFilterDisabled(): void
+    private function createSchemaAndSeedData(): void
     {
-        $productRepository = $this->getEntityManager()->getRepository(TestProduct::class);
-
-        // Test tenant A context with Doctrine filter disabled
-        $this->withTenant(self::TENANT_A_SLUG, function () use ($productRepository) {
-            $this->withoutDoctrineTenantFilter(function () use ($productRepository) {
-                // Even with Doctrine filter disabled, RLS should limit results to tenant A
-                $products = $productRepository->findAll();
-
-                $this->assertCount(
-                    self::TENANT_A_PRODUCTS,
-                    $products,
-                    'RLS should ensure tenant A sees only '.self::TENANT_A_PRODUCTS.' products (not all '.(self::TENANT_A_PRODUCTS + self::TENANT_B_PRODUCTS).')'
-                );
-
-                foreach ($products as $product) {
-                    $this->assertStringContainsString(
-                        self::TENANT_A_SLUG,
-                        $product->getName(),
-                        'RLS should ensure all products belong to tenant A'
-                    );
-                }
-            });
-        });
-
-        // Test tenant B context with Doctrine filter disabled
-        $this->withTenant(self::TENANT_B_SLUG, function () use ($productRepository) {
-            $this->withoutDoctrineTenantFilter(function () use ($productRepository) {
-                // Even with Doctrine filter disabled, RLS should limit results to tenant B
-                $products = $productRepository->findAll();
-
-                $this->assertCount(
-                    self::TENANT_B_PRODUCTS,
-                    $products,
-                    'RLS should ensure tenant B sees only '.self::TENANT_B_PRODUCTS.' product (not all '.(self::TENANT_A_PRODUCTS + self::TENANT_B_PRODUCTS).')'
-                );
-
-                foreach ($products as $product) {
-                    $this->assertStringContainsString(
-                        self::TENANT_B_SLUG,
-                        $product->getName(),
-                        'RLS should ensure all products belong to tenant B'
-                    );
-                }
-            });
-        });
+        $this->adminConnection->executeStatement(<<<'SQL'
+            DO $$
+            BEGIN
+                IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'rls_test_app') THEN
+                    CREATE ROLE rls_test_app LOGIN PASSWORD 'rls_test_password' NOSUPERUSER NOCREATEDB NOCREATEROLE;
+                END IF;
+            END
+            $$
+            SQL);
+        $this->adminConnection->executeStatement('DROP TABLE IF EXISTS test_products');
+        $this->adminConnection->executeStatement('DROP TABLE IF EXISTS test_tenants');
+        $this->adminConnection->executeStatement(<<<'SQL'
+            CREATE TABLE test_tenants (
+                id INTEGER PRIMARY KEY,
+                slug VARCHAR(255) NOT NULL UNIQUE,
+                name VARCHAR(255) NOT NULL
+            )
+            SQL);
+        $this->adminConnection->executeStatement(<<<'SQL'
+            CREATE TABLE test_products (
+                id SERIAL PRIMARY KEY,
+                tenant_id INTEGER NOT NULL REFERENCES test_tenants(id),
+                name VARCHAR(255) NOT NULL,
+                price NUMERIC(10, 2) NOT NULL
+            )
+            SQL);
+        $this->adminConnection->executeStatement(<<<'SQL'
+            INSERT INTO test_tenants (id, slug, name)
+            VALUES (1, 'tenant-a', 'Tenant A'), (2, 'tenant-b', 'Tenant B')
+            SQL);
+        $this->adminConnection->executeStatement(<<<'SQL'
+            INSERT INTO test_products (tenant_id, name, price)
+            VALUES
+                (1, 'Tenant A product 1', 10.00),
+                (1, 'Tenant A product 2', 20.00),
+                (2, 'Tenant B secret', 30.00)
+            SQL);
+        $this->adminConnection->executeStatement('ALTER TABLE test_products ENABLE ROW LEVEL SECURITY');
+        $this->adminConnection->executeStatement('ALTER TABLE test_products FORCE ROW LEVEL SECURITY');
+        $this->adminConnection->executeStatement(<<<'SQL'
+            CREATE POLICY tenant_isolation_policy ON test_products
+            FOR ALL
+            USING (tenant_id = NULLIF(current_setting('app.tenant_id', true), '')::integer)
+            WITH CHECK (tenant_id = NULLIF(current_setting('app.tenant_id', true), '')::integer)
+            SQL);
+        $this->adminConnection->executeStatement('GRANT USAGE ON SCHEMA public TO rls_test_app');
+        $this->adminConnection->executeStatement('GRANT SELECT ON test_tenants TO rls_test_app');
+        $this->adminConnection->executeStatement('GRANT SELECT, INSERT, UPDATE, DELETE ON test_products TO rls_test_app');
+        $this->adminConnection->executeStatement('GRANT USAGE, SELECT ON SEQUENCE test_products_id_seq TO rls_test_app');
     }
 
-    /**
-     * Test that raw DQL queries also respect RLS isolation.
-     */
-    public function testRlsIsolationWithDqlQueries(): void
+    private function configureTenant(TestTenant $tenant): void
     {
-        $entityManager = $this->getEntityManager();
-
-        // Test tenant A context
-        $this->withTenant(self::TENANT_A_SLUG, function () use ($entityManager) {
-            $this->withoutDoctrineTenantFilter(function () use ($entityManager) {
-                $query = $entityManager->createQuery(
-                    'SELECT p FROM '.TestProduct::class.' p ORDER BY p.id'
-                );
-
-                $products = $query->getResult();
-
-                $this->assertCount(
-                    self::TENANT_A_PRODUCTS,
-                    $products,
-                    'RLS should limit DQL query results to tenant A products only'
-                );
-
-                foreach ($products as $product) {
-                    $this->assertStringContainsString(
-                        self::TENANT_A_SLUG,
-                        $product->getName(),
-                        'All DQL query results should belong to tenant A'
-                    );
-                }
-            });
-        });
-
-        // Test tenant B context
-        $this->withTenant(self::TENANT_B_SLUG, function () use ($entityManager) {
-            $this->withoutDoctrineTenantFilter(function () use ($entityManager) {
-                $query = $entityManager->createQuery(
-                    'SELECT p FROM '.TestProduct::class.' p ORDER BY p.id'
-                );
-
-                $products = $query->getResult();
-
-                $this->assertCount(
-                    self::TENANT_B_PRODUCTS,
-                    $products,
-                    'RLS should limit DQL query results to tenant B products only'
-                );
-
-                foreach ($products as $product) {
-                    $this->assertStringContainsString(
-                        self::TENANT_B_SLUG,
-                        $product->getName(),
-                        'All DQL query results should belong to tenant B'
-                    );
-                }
-            });
-        });
+        $this->tenantContext->setTenant($tenant);
+        $this->sessionConfigurator->setConfig();
+        self::assertSame((string) $tenant->getId(), $this->currentTenantSetting());
     }
 
-    /**
-     * Test that native SQL queries also respect RLS isolation.
-     */
-    public function testRlsIsolationWithNativeSqlQueries(): void
+    /** @return list<string> */
+    private function visibleProductNames(): array
     {
-        $connection = $this->getEntityManager()->getConnection();
-
-        // Test tenant A context
-        $this->withTenant(self::TENANT_A_SLUG, function () use ($connection) {
-            $this->withoutDoctrineTenantFilter(function () use ($connection) {
-                $result = $connection->executeQuery('SELECT * FROM test_products ORDER BY id');
-                $products = $result->fetchAllAssociative();
-
-                $this->assertCount(
-                    self::TENANT_A_PRODUCTS,
-                    $products,
-                    'RLS should limit native SQL query results to tenant A products only'
-                );
-
-                foreach ($products as $product) {
-                    $this->assertStringContainsString(
-                        self::TENANT_A_SLUG,
-                        $product['name'],
-                        'All native SQL query results should belong to tenant A'
-                    );
-                }
-            });
-        });
-
-        // Test tenant B context
-        $this->withTenant(self::TENANT_B_SLUG, function () use ($connection) {
-            $this->withoutDoctrineTenantFilter(function () use ($connection) {
-                $result = $connection->executeQuery('SELECT * FROM test_products ORDER BY id');
-                $products = $result->fetchAllAssociative();
-
-                $this->assertCount(
-                    self::TENANT_B_PRODUCTS,
-                    $products,
-                    'RLS should limit native SQL query results to tenant B products only'
-                );
-
-                foreach ($products as $product) {
-                    $this->assertStringContainsString(
-                        self::TENANT_B_SLUG,
-                        $product['name'],
-                        'All native SQL query results should belong to tenant B'
-                    );
-                }
-            });
-        });
+        return array_values(array_map(
+            static fn (array $row): string => (string) $row['name'],
+            $this->connection->fetchAllAssociative('SELECT name FROM test_products ORDER BY id'),
+        ));
     }
 
-    /**
-     * Test that PostgreSQL session variable is properly set and cleared.
-     */
-    public function testPostgreSqlSessionVariableManagement(): void
+    private function currentTenantSetting(): string
     {
-        $connection = $this->getEntityManager()->getConnection();
-
-        // Initially, no tenant should be set
-        $result = $connection->executeQuery("SELECT current_setting('app.tenant_id', true)");
-        $currentTenantId = $result->fetchOne();
-        $this->assertEmpty($currentTenantId, 'Initially, no tenant ID should be set');
-
-        // Test that session variable is set within tenant context
-        $tenantA = $this->getTenantRegistry()->findBySlug(self::TENANT_A_SLUG);
-        $this->assertNotNull($tenantA);
-
-        $this->withTenant(self::TENANT_A_SLUG, function () use ($connection, $tenantA) {
-            $result = $connection->executeQuery("SELECT current_setting('app.tenant_id', true)");
-            $currentTenantId = $result->fetchOne();
-            $this->assertSame(
-                (string) $tenantA->getId(),
-                $currentTenantId,
-                'Session variable should be set to tenant A ID'
-            );
-        });
-
-        // After exiting tenant context, session variable should be cleared
-        $result = $connection->executeQuery("SELECT current_setting('app.tenant_id', true)");
-        $currentTenantId = $result->fetchOne();
-        $this->assertEmpty($currentTenantId, 'Session variable should be cleared after exiting tenant context');
+        return (string) $this->connection->fetchOne("SELECT current_setting('app.tenant_id', true)");
     }
 
-    /**
-     * Test nested tenant contexts.
-     */
-    public function testNestedTenantContexts(): void
+    /** @return array{driver: string, host: string, port: int, dbname: string, user: string, password: string} */
+    private function connectionParameters(string $user, string $password): array
     {
-        $productRepository = $this->getEntityManager()->getRepository(TestProduct::class);
+        return [
+            'driver' => 'pdo_pgsql',
+            'host' => $_ENV['TEST_DATABASE_HOST'] ?? '127.0.0.1',
+            'port' => (int) ($_ENV['TEST_DATABASE_PORT'] ?? 5432),
+            'dbname' => $_ENV['TEST_DATABASE_NAME'] ?? 'multi_tenant_test',
+            'user' => $user,
+            'password' => $password,
+        ];
+    }
 
-        $this->withTenant(self::TENANT_A_SLUG, function () use ($productRepository) {
-            // In tenant A context
-            $productsA = $productRepository->findAll();
-            $this->assertCount(self::TENANT_A_PRODUCTS, $productsA);
+    private function createTenant(int $id, string $slug, string $name): TestTenant
+    {
+        $tenant = new TestTenant();
+        $property = new \ReflectionProperty($tenant, 'id');
+        $property->setValue($tenant, $id);
+        $tenant->setSlug($slug);
+        $tenant->setName($name);
+        $tenant->setActive(true);
 
-            $this->withTenant(self::TENANT_B_SLUG, function () use ($productRepository) {
-                // In nested tenant B context
-                $productsB = $productRepository->findAll();
-                $this->assertCount(self::TENANT_B_PRODUCTS, $productsB);
-            });
-
-            // Back in tenant A context
-            $productsA2 = $productRepository->findAll();
-            $this->assertCount(self::TENANT_A_PRODUCTS, $productsA2);
-        });
+        return $tenant;
     }
 }

@@ -6,6 +6,7 @@ namespace Zhortein\MultiTenantBundle\Command;
 
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\Exception;
+use Doctrine\DBAL\Platforms\PostgreSQLPlatform;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Mapping\ClassMetadata;
 use Symfony\Component\Console\Attribute\AsCommand;
@@ -160,10 +161,6 @@ HELP
         foreach ($allMetadata as $metadata) {
             $reflectionClass = $metadata->getReflectionClass();
 
-            if (!$reflectionClass instanceof \ReflectionClass) {
-                continue;
-            }
-
             $attributes = $reflectionClass->getAttributes(AsTenantAware::class);
 
             if (!empty($attributes)) {
@@ -274,6 +271,6 @@ HELP
      */
     private function isPostgreSQL(): bool
     {
-        return str_contains($this->connection->getDatabasePlatform()->getName(), 'postgresql');
+        return $this->connection->getDatabasePlatform() instanceof PostgreSQLPlatform;
     }
 }

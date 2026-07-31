@@ -4,7 +4,7 @@
 
 PHP_IMAGE := php:8.3-cli
 DOCKER_VOLUME := -v "$(PWD)":/app -w /app
-DOCKER_RUN := docker run --rm -it $(DOCKER_VOLUME) $(PHP_IMAGE)
+DOCKER_RUN := docker run --rm $(DOCKER_VOLUME) $(PHP_IMAGE)
 
 ## —— 🎵 🐳 Zhortein's Multi-Tenant Bundle Makefile 🐳 🎵 ——————————————————————————————————
 help: ## 📖 Show available commands
@@ -22,7 +22,8 @@ installdeps: ## Install Composer deps in container
 		php composer.phar install"
 
 updatedeps: ## Update Composer deps in container
-	$(DOCKER_RUN) bash -c "php composer.phar update"
+	$(DOCKER_RUN) bash -c "apt update && apt install -y unzip git zip curl > /dev/null && \
+		php composer.phar update"
 
 composer: ## Run composer in container (usage: make composer ARGS="require symfony/yaml")
 	@$(DOCKER_RUN) php composer.phar $(ARGS)
@@ -50,7 +51,7 @@ test-kit: ## Run Test Kit integration tests
 	$(DOCKER_RUN) vendor/bin/phpunit tests/Integration --no-coverage
 
 test-rls: ## Run RLS isolation tests (requires PostgreSQL)
-	$(DOCKER_RUN) vendor/bin/phpunit tests/Integration/RlsIsolationTest.php --no-coverage
+	docker compose -f tests/docker-compose.yml run --rm php-rls vendor/bin/phpunit tests/Integration/RlsIsolationTest.php --no-coverage
 
 test-resolvers: ## Run resolver chain tests
 	$(DOCKER_RUN) vendor/bin/phpunit tests/Integration/ResolverChainHttpTest.php tests/Integration/ResolverChainTest.php --no-coverage
@@ -82,25 +83,29 @@ phpstan-baseline: ## Generate PHPStan baseline
 ## —— 🐘 PostgreSQL Test Environment ——————————————————————————————————————————————————————
 postgres-start: ## Start PostgreSQL test container
 	@echo "🐘 Starting PostgreSQL test container..."
-	cd tests && docker-compose up -d postgres
+	cd tests && docker compose up -d postgres
 	@echo "⏳ Waiting for PostgreSQL to be ready..."
-	cd tests && docker-compose exec postgres pg_isready -U test_user -d multi_tenant_test || sleep 5
+	cd tests && docker compose exec postgres pg_isready -U test_user -d multi_tenant_test || sleep 5
 	@echo "✅ PostgreSQL is ready!"
 
 postgres-stop: ## Stop PostgreSQL test container
 	@echo "🛑 Stopping PostgreSQL test container..."
-	cd tests && docker-compose down
+	cd tests && docker compose down
 
 postgres-logs: ## Show PostgreSQL logs
-	cd tests && docker-compose logs postgres
+	cd tests && docker compose logs postgres
 
 postgres-shell: ## Connect to PostgreSQL shell
-	cd tests && docker-compose exec postgres psql -U test_user -d multi_tenant_test
+	cd tests && docker compose exec postgres psql -U test_user -d multi_tenant_test
 
-test-with-postgres: postgres-start test-rls postgres-stop ## Run RLS tests with PostgreSQL
+test-with-postgres: ## Run RLS tests with PostgreSQL
+	@set -e; \
+	trap 'docker compose -f tests/docker-compose.yml down' EXIT; \
+	docker compose -f tests/docker-compose.yml up -d --wait postgres; \
+	docker compose -f tests/docker-compose.yml run --rm php-rls vendor/bin/phpunit tests/Integration/RlsIsolationTest.php --no-coverage
 
 validate-testkit: ## Validate Test Kit setup and configuration
-	$(DOCKER_RUN) php tests/validate-testkit.php
+	docker compose -f tests/docker-compose.yml run --rm --no-deps php-rls php tests/validate-testkit.php
 
 ## —— 🔧 Bundle-specific ———————————————————————————————————————————————————————————————————
 bundle-validate: ## Validate bundle structure

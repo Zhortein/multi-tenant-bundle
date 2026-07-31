@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   postgres:
     image: postgres:16-alpine
@@ -17,6 +15,25 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+
+
+  php-rls:
+    build:
+      context: ..
+      dockerfile: tests/Dockerfile.rls
+    working_dir: /app
+    volumes:
+      - ..:/app
+    environment:
+      TEST_DATABASE_HOST: postgres
+      TEST_DATABASE_PORT: 5432
+      TEST_DATABASE_NAME: multi_tenant_test
+      TEST_DATABASE_USER: test_user
+      TEST_DATABASE_PASSWORD: test_password
+      TEST_DATABASE_REQUIRED: 1
+    depends_on:
+      postgres:
+        condition: service_healthy
 
 volumes:
   postgres_data:
