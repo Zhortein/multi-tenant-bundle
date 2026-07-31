@@ -9,7 +9,14 @@ use PHPUnit\Framework\TestCase;
 use Symfony\Component\Config\Definition\Dumper\YamlReferenceDumper;
 use Symfony\Component\Config\Definition\Exception\InvalidConfigurationException;
 use Symfony\Component\Config\Definition\Processor;
+use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Zhortein\MultiTenantBundle\DependencyInjection\Configuration;
+use Zhortein\MultiTenantBundle\DependencyInjection\ZhorteinMultiTenantExtension;
+use Zhortein\MultiTenantBundle\Mailer\TenantAwareMailer;
+use Zhortein\MultiTenantBundle\Mailer\TenantMailerConfigurator;
+use Zhortein\MultiTenantBundle\Messenger\TenantMessengerConfigurator;
+use Zhortein\MultiTenantBundle\Messenger\TenantMessengerTransportFactory;
+use Zhortein\MultiTenantBundle\Messenger\TenantMessengerTransportResolver;
 
 /**
  * @covers \Zhortein\MultiTenantBundle\DependencyInjection\Configuration
@@ -78,6 +85,21 @@ final class ConfigurationTest extends TestCase
         $this->expectExceptionMessage('Permissible values: "path", "subdomain", "header", "query", "domain", "hybrid", "dns_txt", "chain", "custom".');
 
         (new Processor())->processConfiguration(new Configuration(), [['resolver' => 'automatic']]);
+    }
+
+    public function testOptionalIntegrationClassAliasesAreRegistered(): void
+    {
+        $container = new ContainerBuilder();
+        (new ZhorteinMultiTenantExtension())->load([[
+            'mailer' => ['enabled' => true],
+            'messenger' => ['enabled' => true],
+        ]], $container);
+
+        self::assertSame('zhortein_multi_tenant.mailer.configurator', (string) $container->getAlias(TenantMailerConfigurator::class));
+        self::assertSame('zhortein_multi_tenant.mailer.tenant_aware', (string) $container->getAlias(TenantAwareMailer::class));
+        self::assertSame('zhortein_multi_tenant.messenger.configurator', (string) $container->getAlias(TenantMessengerConfigurator::class));
+        self::assertSame('zhortein_multi_tenant.messenger.transport_factory', (string) $container->getAlias(TenantMessengerTransportFactory::class));
+        self::assertSame('zhortein_multi_tenant.messenger.transport_resolver', (string) $container->getAlias(TenantMessengerTransportResolver::class));
     }
 
     public function testReferenceUsesCanonicalResolverSyntax(): void
