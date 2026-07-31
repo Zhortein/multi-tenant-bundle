@@ -6,7 +6,7 @@ Every supported combination is resolved from `composer.json` and exercised in Gi
 
 | PHP | Symfony | DoctrineBundle | Doctrine ORM | Doctrine DBAL | Dependency mode |
 |---|---|---|---|---|---|
-| 8.3 | 7.4 | 2.19 | 3.5 | 3.8 | Lowest supported versions |
+| 8.3 | 7.4 | 2.19 | 3.5 | 3.8 | Lowest supported runtime versions |
 | 8.3 | 7.4 | 2.19 | 3.6 | 4.4 | Latest supported versions |
 | 8.4 | 7.4 | 3.3 | 3.6 | 4.4 | Latest supported versions |
 | 8.4 | 8.0 | 3.3 | 3.6 | 4.4 | Latest supported versions |
@@ -14,6 +14,8 @@ Every supported combination is resolved from `composer.json` and exercised in Gi
 | 8.5 | 8.0 | 3.3 | 3.6 | 4.4 | Latest supported versions |
 
 Symfony 8 is not tested on PHP 8.3 because Symfony 8 requires PHP 8.4 or later. DoctrineBundle 2.19 preserves the PHP 8.3 path, while DoctrineBundle 3.3 provides the Symfony 8-compatible path on PHP 8.4 and later. Doctrine DBAL 3 support is exercised with the oldest supported ORM line, while DBAL 4 is exercised with the current ORM line.
+
+The lowest cell resolves runtime packages with `--prefer-lowest`, then updates PHPStan and its extensions so current static-analysis rules evaluate that runtime graph.
 
 Each matrix cell runs strict Composer validation, a dependency security audit, PHPStan at maximum level, the PHPUnit suite, and the PostgreSQL 16 RLS group. Security advisories fail the audit. Abandoned transitive packages are reported because the lowest-supported dependency graph can contain upstream packages that Composer marks as abandoned. Coding style is a separate required job on PHP 8.3.
 

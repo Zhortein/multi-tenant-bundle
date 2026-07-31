@@ -135,6 +135,12 @@ jobs:
           fi
           composer update "${options[@]}"
 
+      - name: Update static analysis tooling for the lowest runtime
+        if: matrix.dependencies == "lowest"
+        run: >-
+          composer update --prefer-dist --no-progress --no-interaction
+          phpstan/phpstan phpstan/phpstan-doctrine phpstan/phpstan-symfony
+
       - name: Validate Composer metadata
         run: composer validate --strict
 
