@@ -112,39 +112,36 @@ EOT
             foreach ($tenants as $tenant) {
                 $io->section(sprintf('Dropping schema for tenant: %s', $tenant->getSlug()));
 
-                // Set tenant context
+                // Switch first so a failed resolution cannot publish a stale context.
+                $this->connectionResolver->switchToTenantConnection($tenant);
                 $this->tenantContext->setTenant($tenant);
 
-                // Switch to tenant connection
-                $this->connectionResolver->switchToTenantConnection($tenant);
+                $this->entityManagerFactory->runForTenant(
+                    $tenant,
+                    function (EntityManagerInterface $tenantEntityManager) use ($dumpSql, $fullDatabase, $io, $metadata, $tenant): void {
+                        $schemaTool = new SchemaTool($tenantEntityManager);
 
-                // Create tenant-specific entity manager
-                $tenantEntityManager = $this->entityManagerFactory->createForTenant($tenant);
+                        if ($dumpSql) {
+                            $sql = $fullDatabase
+                                ? $schemaTool->getDropDatabaseSQL()
+                                : $schemaTool->getDropSchemaSQL($metadata);
 
-                // Create schema tool
-                $schemaTool = new SchemaTool($tenantEntityManager);
-
-                if ($dumpSql) {
-                    $sql = $fullDatabase
-                        ? $schemaTool->getDropDatabaseSQL()
-                        : $schemaTool->getDropSchemaSQL($metadata);
-
-                    if (!empty($sql)) {
-                        $io->text(sprintf('SQL for tenant %s:', $tenant->getSlug()));
-                        $io->block($sql);
-                    } else {
-                        $io->note(sprintf('No SQL to execute for tenant %s', $tenant->getSlug()));
+                            if (!empty($sql)) {
+                                $io->text(sprintf('SQL for tenant %s:', $tenant->getSlug()));
+                                $io->block($sql);
+                            } else {
+                                $io->note(sprintf('No SQL to execute for tenant %s', $tenant->getSlug()));
+                            }
+                        } elseif ($fullDatabase) {
+                            $schemaTool->dropDatabase();
+                            $io->success(sprintf('Successfully dropped database for tenant %s', $tenant->getSlug()));
+                        } else {
+                            $schemaTool->dropSchema($metadata);
+                            $io->success(sprintf('Successfully dropped schema for tenant %s', $tenant->getSlug()));
+                        }
                     }
-                } elseif ($fullDatabase) {
-                    $schemaTool->dropDatabase();
-                    $io->success(sprintf('Successfully dropped database for tenant %s', $tenant->getSlug()));
-                } else {
-                    $schemaTool->dropSchema($metadata);
-                    $io->success(sprintf('Successfully dropped schema for tenant %s', $tenant->getSlug()));
-                }
-
-                // Close the tenant entity manager
-                $tenantEntityManager->close();
+                );
+                $this->tenantContext->clear();
             }
 
             if ($dumpSql) {

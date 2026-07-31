@@ -9,6 +9,7 @@ use Symfony\Component\Messenger\Middleware\MiddlewareInterface;
 use Symfony\Component\Messenger\Middleware\StackInterface;
 use Zhortein\MultiTenantBundle\Context\TenantContextInterface;
 use Zhortein\MultiTenantBundle\Database\TenantSessionConfigurator;
+use Zhortein\MultiTenantBundle\Doctrine\TenantConnectionResolverInterface;
 use Zhortein\MultiTenantBundle\Registry\TenantRegistryInterface;
 
 /**
@@ -24,11 +25,16 @@ final readonly class TenantWorkerMiddleware implements MiddlewareInterface
         private TenantContextInterface $tenantContext,
         private TenantRegistryInterface $tenantRegistry,
         private TenantSessionConfigurator $sessionConfigurator,
+        private ?TenantConnectionResolverInterface $connectionResolver = null,
     ) {
     }
 
     public function handle(Envelope $envelope, StackInterface $stack): Envelope
     {
+        // A reused worker must start without state from the previous message.
+        $this->tenantContext->clear();
+        $this->sessionConfigurator->clearConfig();
+
         $tenantStamp = $envelope->last(TenantStamp::class);
 
         if (!$tenantStamp instanceof TenantStamp) {
@@ -44,7 +50,8 @@ final readonly class TenantWorkerMiddleware implements MiddlewareInterface
             return $stack->next()->handle($envelope, $stack);
         }
 
-        // Set tenant context
+        // Switch before publishing the context so resolution failures fail closed.
+        $this->connectionResolver?->switchToTenantConnection($tenant);
         $this->tenantContext->setTenant($tenant);
 
         try {
@@ -54,8 +61,9 @@ final readonly class TenantWorkerMiddleware implements MiddlewareInterface
             // Process the message with tenant context
             return $stack->next()->handle($envelope, $stack);
         } finally {
-            // Always clear tenant context after processing
+            // Always clear both PHP and database session state after processing.
             $this->tenantContext->clear();
+            $this->sessionConfigurator->clearConfig();
         }
     }
 }

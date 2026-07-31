@@ -109,6 +109,16 @@ final readonly class TenantSessionConfigurator implements MiddlewareInterface
     }
 
     /**
+     * Clears the configured tenant session before a connection is reused.
+     */
+    public function clearConfig(): void
+    {
+        if ($this->rlsEnabled) {
+            $this->clearTenantSession();
+        }
+    }
+
+    /**
      * Configures the PostgreSQL session variable with current tenant ID.
      */
     private function configureTenantSession(): void

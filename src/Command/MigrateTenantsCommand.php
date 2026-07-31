@@ -154,63 +154,54 @@ EOT
 
         foreach ($tenants as $tenant) {
             $io->section(sprintf('Migrating tenant: %s', $tenant->getSlug()));
+            $dependencyFactory = null;
 
-            // Set tenant context
-            $this->tenantContext->setTenant($tenant);
+            try {
+                $this->connectionResolver->switchToTenantConnection($tenant);
+                $this->tenantContext->setTenant($tenant);
 
-            // Switch to tenant connection
-            $this->connectionResolver->switchToTenantConnection($tenant);
+                $connectionParams = $this->connectionResolver->resolveParameters($tenant);
+                $dependencyFactory = $this->createTenantDependencyFactory($connectionParams);
+                $migrator = $dependencyFactory->getMigrator();
+                $migrations = $dependencyFactory->getMigrationRepository()->getMigrations();
 
-            // Get connection parameters for this tenant
-            $connectionParams = $this->connectionResolver->resolveParameters($tenant);
+                if (0 === $migrations->count()) {
+                    if ($allowNoMigration) {
+                        $io->note(sprintf('No migrations found for tenant %s', $tenant->getSlug()));
+                        continue;
+                    }
 
-            // Create tenant-specific dependency factory
-            $dependencyFactory = $this->createTenantDependencyFactory($connectionParams);
+                    $io->error(sprintf('No migrations found for tenant %s', $tenant->getSlug()));
 
-            // Execute migrations
-            $migrator = $dependencyFactory->getMigrator();
-            $migrations = $dependencyFactory->getMigrationRepository()->getMigrations();
+                    return Command::FAILURE;
+                }
 
-            if (0 === $migrations->count()) {
-                if ($allowNoMigration) {
-                    $io->note(sprintf('No migrations found for tenant %s', $tenant->getSlug()));
+                $planCalculator = $dependencyFactory->getMigrationPlanCalculator();
+                /** @phpstan-ignore-next-line */
+                $plan = $planCalculator->getPlanToMigrateUp();
+
+                if ($dryRun) {
+                    $io->note('Executing migration as dry run...');
+
+                    if ($plan->count() > 0) {
+                        $io->text('SQL that would be executed:');
+                        /* @phpstan-ignore-next-line */
+                        foreach ($plan->getItems() as $item) {
+                            /* @phpstan-ignore-next-line */
+                            $io->text(sprintf('-- Migration: %s', $item->getVersion()));
+                            $io->text('-- SQL queries would be shown here in a real implementation');
+                        }
+                    } else {
+                        $io->success('No migrations to execute.');
+                    }
+
                     continue;
                 }
 
-                $io->error(sprintf('No migrations found for tenant %s', $tenant->getSlug()));
-
-                return Command::FAILURE;
-            }
-
-            if ($dryRun) {
-                $io->note('Executing migration as dry run...');
-                // For dry run, we need to get the plan and show SQL
-                $planCalculator = $dependencyFactory->getMigrationPlanCalculator();
-                /** @phpstan-ignore-next-line */
-                $plan = $planCalculator->getPlanToMigrateUp();
-
-                if ($plan->count() > 0) {
-                    $io->text('SQL that would be executed:');
-                    /* @phpstan-ignore-next-line */
-                    foreach ($plan->getItems() as $item) {
-                        /* @phpstan-ignore-next-line */
-                        $io->text(sprintf('-- Migration: %s', $item->getVersion()));
-                        // Note: Actual SQL queries would require executing the migration
-                        $io->text('-- SQL queries would be shown here in a real implementation');
-                    }
-                } else {
-                    $io->success('No migrations to execute.');
-                }
-            } else {
-                // Execute migrations
-                $planCalculator = $dependencyFactory->getMigrationPlanCalculator();
-                /** @phpstan-ignore-next-line */
-                $plan = $planCalculator->getPlanToMigrateUp();
-
                 /* @phpstan-ignore-next-line */
                 if ($plan->count() > 0) {
-                    /** @phpstan-ignore-next-line */
-                    $result = $migrator->migrate($plan, $dryRun);
+                    /* @phpstan-ignore-next-line */
+                    $migrator->migrate($plan, false);
                     $io->success(sprintf(
                         'Successfully executed %d migrations for tenant %s',
                         /* @phpstan-ignore-next-line */
@@ -220,6 +211,12 @@ EOT
                 } else {
                     $io->note(sprintf('No migrations to execute for tenant %s', $tenant->getSlug()));
                 }
+            } finally {
+                if (null !== $dependencyFactory) {
+                    $dependencyFactory->getConnection()->close();
+                }
+
+                $this->tenantContext->clear();
             }
         }
 
