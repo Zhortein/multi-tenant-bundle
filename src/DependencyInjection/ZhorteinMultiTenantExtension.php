@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace Zhortein\MultiTenantBundle\DependencyInjection;
 
 use Symfony\Component\Config\FileLocator;
+use Symfony\Component\DependencyInjection\Argument\TaggedIteratorArgument;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Extension\Extension;
 use Symfony\Component\DependencyInjection\Loader\YamlFileLoader;
 use Symfony\Component\DependencyInjection\Reference;
+use Symfony\Component\Mailer\Transport as MailerTransport;
 use Zhortein\MultiTenantBundle\Command\ClearTenantSettingsCacheCommand;
 use Zhortein\MultiTenantBundle\Command\CreateTenantCommand;
 use Zhortein\MultiTenantBundle\Command\CreateTenantSchemaCommand;
@@ -525,9 +527,16 @@ final class ZhorteinMultiTenantExtension extends Extension
             ->setAutoconfigured(true);
         $container->setAlias(TenantMailerConfigurator::class, 'zhortein_multi_tenant.mailer.configurator');
 
+        $container->register('zhortein_multi_tenant.mailer.fallback_transport_factory', MailerTransport::class)
+            ->setArgument(0, new TaggedIteratorArgument(
+                'mailer.transport_factory',
+                exclude: ['zhortein_multi_tenant.mailer.transport_factory'],
+            ));
+
         $container->register('zhortein_multi_tenant.mailer.transport_factory', TenantMailerTransportFactory::class)
             ->setAutowired(true)
             ->setAutoconfigured(true)
+            ->setArgument(1, new Reference('zhortein_multi_tenant.mailer.fallback_transport_factory'))
             ->addTag('mailer.transport_factory');
 
         $container->register('zhortein_multi_tenant.mailer.tenant_aware', TenantAwareMailer::class)
