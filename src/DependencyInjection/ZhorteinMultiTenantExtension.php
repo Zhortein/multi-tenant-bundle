@@ -22,7 +22,6 @@ use Zhortein\MultiTenantBundle\Context\TenantContext;
 use Zhortein\MultiTenantBundle\Context\TenantContextInterface;
 use Zhortein\MultiTenantBundle\Database\TenantSessionConfigurator;
 use Zhortein\MultiTenantBundle\Decorator\TenantAwareCacheDecorator;
-use Zhortein\MultiTenantBundle\Decorator\TenantAwareSimpleCacheDecorator;
 use Zhortein\MultiTenantBundle\Decorator\TenantLoggerProcessor;
 use Zhortein\MultiTenantBundle\Decorator\TenantStoragePathHelper;
 use Zhortein\MultiTenantBundle\Doctrine\DefaultConnectionResolver;
@@ -517,7 +516,7 @@ final class ZhorteinMultiTenantExtension extends Extension
     private function registerMailerServices(ContainerBuilder $container): void
     {
         // Only register mailer services if Symfony Mailer is available
-        if (!class_exists('Symfony\Component\Mailer\MailerInterface')) {
+        if (!interface_exists('Symfony\Component\Mailer\MailerInterface')) {
             return;
         }
 
@@ -543,7 +542,7 @@ final class ZhorteinMultiTenantExtension extends Extension
     private function registerMessengerServices(ContainerBuilder $container): void
     {
         // Only register messenger services if Symfony Messenger is available
-        if (!class_exists('Symfony\Component\Messenger\MessageBusInterface')) {
+        if (!interface_exists('Symfony\Component\Messenger\MessageBusInterface')) {
             return;
         }
 

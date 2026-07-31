@@ -46,11 +46,11 @@ final class TenantAwareCacheDecorator implements CacheItemPoolInterface
         $keyMap = array_combine($prefixedKeys, $keys);
 
         foreach ($items as $prefixedKey => $item) {
-            if (!$item instanceof CacheItemInterface) {
+            if (!$item instanceof CacheItemInterface || !is_string($prefixedKey)) {
                 continue;
             }
             $originalKey = $keyMap[$prefixedKey] ?? $prefixedKey;
-            $result[(string) $originalKey] = new TenantAwareCacheItem($item, (string) $originalKey);
+            $result[$originalKey] = new TenantAwareCacheItem($item, $originalKey);
         }
 
         return $result;

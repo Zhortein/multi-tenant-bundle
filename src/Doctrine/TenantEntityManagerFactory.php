@@ -36,6 +36,7 @@ final readonly class TenantEntityManagerFactory
     public function createForTenant(TenantInterface $tenant): EntityManagerInterface
     {
         $connectionParams = $this->connectionResolver->resolveParameters($tenant);
+        // @phpstan-ignore-next-line
         $connection = DriverManager::getConnection($connectionParams);
 
         return new EntityManager($connection, $this->ormConfiguration);

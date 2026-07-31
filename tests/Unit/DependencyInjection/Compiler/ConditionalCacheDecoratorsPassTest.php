@@ -6,8 +6,8 @@ namespace Zhortein\MultiTenantBundle\Tests\Unit\DependencyInjection\Compiler;
 
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
-use Zhortein\MultiTenantBundle\DependencyInjection\Compiler\ConditionalCacheDecoratorsPass;
 use Zhortein\MultiTenantBundle\Decorator\TenantAwareSimpleCacheDecorator;
+use Zhortein\MultiTenantBundle\DependencyInjection\Compiler\ConditionalCacheDecoratorsPass;
 
 /**
  * @covers \Zhortein\MultiTenantBundle\DependencyInjection\Compiler\ConditionalCacheDecoratorsPass
@@ -73,7 +73,7 @@ final class ConditionalCacheDecoratorsPassTest extends TestCase
     {
         $this->container->setParameter('zhortein_multi_tenant.decorators.cache.enabled', true);
         $this->container->setParameter('zhortein_multi_tenant.decorators.cache.services', [123, 'cache.app']);
-        
+
         // Add the simple service
         $this->container->register('cache.app.simple');
 
@@ -96,14 +96,14 @@ final class ConditionalCacheDecoratorsPassTest extends TestCase
 
         $this->container->setParameter('zhortein_multi_tenant.decorators.cache.enabled', true);
         $this->container->setParameter('zhortein_multi_tenant.decorators.cache.services', ['cache.app']);
-        
+
         // Add the simple service
         $this->container->register('cache.app.simple');
 
         $this->compilerPass->process($this->container);
 
         $this->assertTrue($this->container->hasDefinition('cache.app.simple.tenant_aware'));
-        
+
         $definition = $this->container->getDefinition('cache.app.simple.tenant_aware');
         $this->assertSame(TenantAwareSimpleCacheDecorator::class, $definition->getClass());
         $this->assertTrue($definition->isAutowired());

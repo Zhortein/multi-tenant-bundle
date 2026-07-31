@@ -56,6 +56,7 @@ final readonly class TenantAwareConnectionFactory
             unset($params['url']); // Remove URL after parsing
         }
 
+        // @phpstan-ignore-next-line
         return DriverManager::getConnection($params, $this->configuration);
     }
 }

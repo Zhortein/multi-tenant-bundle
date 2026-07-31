@@ -1,13 +1,13 @@
 # Installation & Setup
 
-This guide walks you through installing and configuring the Zhortein Multi-Tenant Bundle for Symfony 7+ applications.
+This guide walks you through installing and configuring the Zhortein Multi-Tenant Bundle for Symfony 7.4+ and 8.0+ applications.
 
 > 📖 **Navigation**: [← Back to Documentation Index](index.md) | [Configuration →](configuration.md)
 
 ## Requirements
 
 - **PHP**: >= 8.3
-- **Symfony**: >= 7.0
+- **Symfony**: >= 7.4 | 8.0
 - **PostgreSQL**: >= 16 (recommended)
 - **Doctrine ORM**: >= 3.0
 

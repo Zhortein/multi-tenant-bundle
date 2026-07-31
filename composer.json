@@ -1,7 +1,7 @@
 {
   "name": "zhortein/multi-tenant-bundle",
   "type": "symfony-bundle",
-  "description": "A comprehensive Symfony 7+ bundle for building multi-tenant applications with PostgreSQL 16 support, featuring multiple resolution strategies, tenant-aware services, and automatic database filtering.",
+  "description": "A comprehensive Symfony 7.4+ and 8.0+ bundle for building multi-tenant applications with PostgreSQL 16 support, featuring multiple resolution strategies, tenant-aware services, and automatic database filtering.",
   "keywords": ["symfony", "symfony-bundle", "multi-tenant", "multitenant", "tenant", "multi-tenancy", "subdomain", "domain", "dns", "postgresql", "doctrine", "orm", "mailer", "messenger", "storage", "saas", "hosting"],
   "homepage": "https://github.com/zhortein/multi-tenant-bundle",
   "license": "MIT",
@@ -20,16 +20,15 @@
   ],
   "require": {
     "php": ">=8.3",
-    "doctrine/annotations": "^2.0",
     "doctrine/doctrine-bundle": "^2.7",
     "doctrine/doctrine-migrations-bundle": "^3.0",
     "monolog/monolog": "^3",
-    "symfony/cache": "^7.0",
-    "symfony/config": " ^7.0",
-    "symfony/contracts": " ^3.0",
-    "symfony/dependency-injection": "^7.0",
-    "symfony/filesystem": "^7.0",
-    "symfony/http-kernel": " ^7.0",
+    "symfony/cache": "^7.4 || ^8.0",
+    "symfony/config": "^7.4 || ^8.0",
+    "symfony/contracts": "^3.4 || ^4.0",
+    "symfony/dependency-injection": "^7.4 || ^8.0",
+    "symfony/filesystem": "^7.4 || ^8.0",
+    "symfony/http-kernel": "^7.4 || ^8.0",
     "symfony/orm-pack": "^2.0"
   },
   "require-dev": {
@@ -41,11 +40,11 @@
     "phpunit/phpunit": "^12.2.5",
     "psr/simple-cache": "*",
     "roave/security-advisories": "dev-latest",
-    "symfony/mailer": "^7.0",
-    "symfony/messenger": "^7.0",
-    "symfony/phpunit-bridge": "^7.3",
-    "symfony/test-pack": "^1.0",
-    "symfony/twig-bundle": "^7.0"
+    "symfony/mailer": "^7.4 || ^8.0",
+    "symfony/messenger": "^7.4 || ^8.0",
+    "symfony/phpunit-bridge": "^7.4 || ^8.0",
+    "symfony/test-pack": "^1.1",
+    "symfony/twig-bundle": "^7.4 || ^8.0"
   },
   "config": {
     "sort-packages": true
