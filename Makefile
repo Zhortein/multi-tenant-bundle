@@ -67,12 +67,10 @@ test-decorators: ## Run decorator tests
 
 ## —— 🧪 QA tools ———————————————————————————————————————————————————————————————————————————
 csfixer: ## Run PHP-CS-Fixer on src/ and tests/
-	$(DOCKER_RUN) vendor/bin/php-cs-fixer fix src --rules=@Symfony --verbose
-	$(DOCKER_RUN) vendor/bin/php-cs-fixer fix tests --rules=@Symfony --verbose
+	$(DOCKER_RUN) vendor/bin/php-cs-fixer fix --verbose
 
 csfixer-check: ## Check code style without fixing
-	$(DOCKER_RUN) vendor/bin/php-cs-fixer fix src --rules=@Symfony --dry-run --diff
-	$(DOCKER_RUN) vendor/bin/php-cs-fixer fix tests --rules=@Symfony --dry-run --diff
+	$(DOCKER_RUN) vendor/bin/php-cs-fixer fix --dry-run --diff
 
 phpstan: ## Run PHPStan static analysis
 	$(DOCKER_RUN) vendor/bin/phpstan analyse src -c phpstan.neon --memory-limit=512M
