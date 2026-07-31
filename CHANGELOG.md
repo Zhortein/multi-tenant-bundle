@@ -252,3 +252,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Tenant user interface and authentication integration
 - Advanced file storage adapters (S3, etc.)
 - Tenant-specific routing capabilities
+
+- Hardened multi-database long-running processes with fresh tenant EntityManagers, explicit DBAL connection closure, fail-closed context switching, worker cleanup, and real PostgreSQL A/B/A isolation coverage.

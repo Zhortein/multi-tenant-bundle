@@ -43,6 +43,32 @@ final readonly class TenantEntityManagerFactory
     }
 
     /**
+     * Executes work with a fresh tenant-specific entity manager.
+     *
+     * The entity manager and its connection are always cleared and closed before
+     * control returns to the caller, including when tenant work throws.
+     *
+     * @template TResult
+     *
+     * @param callable(EntityManagerInterface): TResult $operation
+     *
+     * @return TResult
+     */
+    public function runForTenant(TenantInterface $tenant, callable $operation): mixed
+    {
+        $entityManager = $this->createForTenant($tenant);
+
+        try {
+            return $operation($entityManager);
+        } finally {
+            $connection = $entityManager->getConnection();
+            $entityManager->clear();
+            $entityManager->close();
+            $connection->close();
+        }
+    }
+
+    /**
      * Creates entity managers for multiple tenants.
      *
      * @param array<TenantInterface> $tenants The tenants to create entity managers for

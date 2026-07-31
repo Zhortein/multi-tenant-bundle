@@ -405,3 +405,6 @@ php -m | grep pdo_pgsql  # Ensure PostgreSQL extension is loaded
 ```
 
 The Test Kit ensures your multi-tenant application is bulletproof with comprehensive testing at every level! 🛡️
+### Multi-database isolation
+
+The mandatory PostgreSQL run also creates two dedicated test databases and executes an A/B/A tenant rotation. It asserts distinct DBAL connection objects, the effective PostgreSQL database name, cross-database data separation, and connection closure after exceptions. The PostgreSQL provisioning user must be allowed to create the two disposable test databases.

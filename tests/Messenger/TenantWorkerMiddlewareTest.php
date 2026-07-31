@@ -34,9 +34,7 @@ class TenantWorkerMiddlewareTest extends TestCase
 
         // Create a real TenantSessionConfigurator with mocked dependencies
         $connection = $this->createMock(Connection::class);
-        $platform = $this->createMock(\Doctrine\DBAL\Platforms\AbstractPlatform::class);
-        $platform->method('getName')->willReturn('postgresql');
-        $connection->method('getDatabasePlatform')->willReturn($platform);
+        $connection->method('getDatabasePlatform')->willReturn(new \Doctrine\DBAL\Platforms\PostgreSQLPlatform());
 
         $logger = $this->createMock(LoggerInterface::class);
 
@@ -76,7 +74,7 @@ class TenantWorkerMiddlewareTest extends TestCase
             ->method('setTenant')
             ->with($tenant);
 
-        $this->tenantContext->expects($this->once())
+        $this->tenantContext->expects($this->exactly(2))
             ->method('clear');
 
         $nextMiddleware = $this->createMock(\Symfony\Component\Messenger\Middleware\MiddlewareInterface::class);
@@ -108,7 +106,7 @@ class TenantWorkerMiddlewareTest extends TestCase
         $this->tenantContext->expects($this->never())
             ->method('setTenant');
 
-        $this->tenantContext->expects($this->never())
+        $this->tenantContext->expects($this->once())
             ->method('clear');
 
         $nextMiddleware = $this->createMock(\Symfony\Component\Messenger\Middleware\MiddlewareInterface::class);
@@ -144,7 +142,7 @@ class TenantWorkerMiddlewareTest extends TestCase
         $this->tenantContext->expects($this->never())
             ->method('setTenant');
 
-        $this->tenantContext->expects($this->never())
+        $this->tenantContext->expects($this->once())
             ->method('clear');
 
         $nextMiddleware = $this->createMock(\Symfony\Component\Messenger\Middleware\MiddlewareInterface::class);
@@ -195,7 +193,7 @@ class TenantWorkerMiddlewareTest extends TestCase
             ->willThrowException($exception);
 
         // Expect clear to be called even when exception is thrown
-        $this->tenantContext->expects($this->once())
+        $this->tenantContext->expects($this->exactly(2))
             ->method('clear');
 
         // Act & Assert
@@ -223,7 +221,7 @@ class TenantWorkerMiddlewareTest extends TestCase
             ->method('setTenant')
             ->with($tenant);
 
-        $this->tenantContext->expects($this->once())
+        $this->tenantContext->expects($this->exactly(2))
             ->method('clear');
 
         $nextMiddleware = $this->createMock(\Symfony\Component\Messenger\Middleware\MiddlewareInterface::class);
@@ -263,7 +261,7 @@ class TenantWorkerMiddlewareTest extends TestCase
             ->method('setTenant')
             ->with($tenant);
 
-        $this->tenantContext->expects($this->once())
+        $this->tenantContext->expects($this->exactly(2))
             ->method('clear');
 
         $nextMiddleware = $this->createMock(\Symfony\Component\Messenger\Middleware\MiddlewareInterface::class);
