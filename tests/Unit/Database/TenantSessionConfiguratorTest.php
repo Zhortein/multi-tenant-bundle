@@ -187,7 +187,7 @@ final class TenantSessionConfiguratorTest extends TestCase
             ->method('getDatabasePlatform')
             ->willReturn($platform);
 
-        $exception = new class('Database error') extends \Exception implements Exception {};
+        $exception = new Exception\InvalidArgumentException('Database error');
         $this->connection
             ->method('executeStatement')
             ->willThrowException($exception);
