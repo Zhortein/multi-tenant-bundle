@@ -123,11 +123,13 @@ public function testCommandWithTenant(): void
 
 #### RlsIsolationTest ⭐
 
-The dedicated suite proves PostgreSQL RLS as a database-level defense:
+The dedicated suite proves PostgreSQL RLS as a database-level defense across SELECT, INSERT, UPDATE, and DELETE:
 
 - PostgreSQL 16 runs in Docker Compose with a PHP 8.3 image containing `pdo_pgsql`.
 - Schema creation and fixtures use the administrative test role.
 - Every isolation assertion uses a separate non-superuser application role, because PostgreSQL superusers bypass RLS even when a table uses `FORCE ROW LEVEL SECURITY`.
+- Same-tenant writes succeed while cross-tenant reads are hidden, cross-tenant updates and deletes affect no rows, and cross-tenant inserts fail.
+- Rollback cleanup, A/B connection reuse, and newly opened connection state fail closed independently from the Doctrine filter.
 - Raw DBAL queries prove same-tenant reads and writes, denied cross-tenant reads and writes, tenant switching, and fail-closed behavior without relying on the Doctrine tenant filter.
 - `TEST_DATABASE_REQUIRED=1` turns environment failures into test failures in the dedicated target instead of skipped tests.
 

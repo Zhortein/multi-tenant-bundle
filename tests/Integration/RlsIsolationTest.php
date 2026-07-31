@@ -101,6 +101,18 @@ final class RlsIsolationTest extends TestCase
         self::assertIsArray($state);
         self::assertTrue($state['relrowsecurity']);
         self::assertTrue($state['relforcerowsecurity']);
+
+        $role = $this->connection->fetchAssociative(<<<'SQL'
+    SELECT r.rolsuper, r.rolbypassrls, pg_get_userbyid(c.relowner) AS table_owner
+    FROM pg_roles r
+    CROSS JOIN pg_class c
+    WHERE r.rolname = current_user
+      AND c.oid = 'test_products'::regclass
+    SQL);
+        self::assertIsArray($role);
+        self::assertFalse($role['rolsuper']);
+        self::assertFalse($role['rolbypassrls']);
+        self::assertNotSame('rls_test_app', $role['table_owner']);
         self::assertSame(1, (int) $this->connection->fetchOne(<<<'SQL'
             SELECT count(*)
             FROM pg_policies
@@ -174,6 +186,77 @@ final class RlsIsolationTest extends TestCase
         }
 
         self::assertNotContains('Cross-tenant attack', $this->visibleProductNames());
+    }
+
+    public function testUpdatesAllowTheCurrentTenantAndHideAnotherTenant(): void
+    {
+        $this->configureTenant($this->tenantA);
+
+        self::assertSame(1, $this->connection->update(
+            'test_products',
+            ['name' => 'Tenant A updated'],
+            ['id' => 1],
+        ));
+        self::assertContains('Tenant A updated', $this->visibleProductNames());
+
+        self::assertSame(0, $this->connection->update(
+            'test_products',
+            ['name' => 'Cross-tenant update'],
+            ['id' => 3],
+        ));
+        self::assertSame(
+            'Tenant B secret',
+            $this->adminConnection->fetchOne('SELECT name FROM test_products WHERE id = 3'),
+        );
+    }
+
+    public function testDeletesAllowTheCurrentTenantAndHideAnotherTenant(): void
+    {
+        $this->configureTenant($this->tenantA);
+
+        self::assertSame(0, $this->connection->delete('test_products', ['id' => 3]));
+        self::assertSame(1, $this->connection->delete('test_products', ['id' => 2]));
+        self::assertSame(['Tenant A product 1'], $this->visibleProductNames());
+        self::assertSame(
+            'Tenant B secret',
+            $this->adminConnection->fetchOne('SELECT name FROM test_products WHERE id = 3'),
+        );
+    }
+
+    public function testFailureCleanupClearsSessionStateBeforeConnectionReuse(): void
+    {
+        $this->configureTenant($this->tenantA);
+        $this->connection->beginTransaction();
+
+        try {
+            self::assertNotEmpty($this->visibleProductNames());
+            throw new \RuntimeException('Simulated tenant operation failure.');
+        } catch (\RuntimeException) {
+            $this->connection->rollBack();
+            $this->tenantContext->clear();
+            $this->sessionConfigurator->setConfig();
+        }
+
+        self::assertSame('', $this->currentTenantSetting());
+        self::assertSame([], $this->visibleProductNames());
+
+        $this->configureTenant($this->tenantB);
+        self::assertSame(['Tenant B secret'], $this->visibleProductNames());
+    }
+
+    public function testAReopenedConnectionHasNoInheritedTenantState(): void
+    {
+        $this->configureTenant($this->tenantA);
+        self::assertNotEmpty($this->visibleProductNames());
+        $this->connection->close();
+
+        $this->connection = DriverManager::getConnection($this->connectionParameters(
+            $_ENV['TEST_DATABASE_APP_USER'] ?? 'rls_test_app',
+            $_ENV['TEST_DATABASE_APP_PASSWORD'] ?? 'rls_test_password',
+        ));
+
+        self::assertSame('', $this->currentTenantSetting());
+        self::assertSame([], $this->visibleProductNames());
     }
 
     public function testMissingContextFailsClosedAndSessionStateIsCleared(): void

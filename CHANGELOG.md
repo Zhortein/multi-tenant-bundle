@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.0.0-RC3] - 2026-04-05
 
 ### Fixed
+- Enforced PostgreSQL RLS for table owners with explicit read/write predicates and expanded real-database coverage for UPDATE, DELETE, rollback cleanup, and connection reuse.
 - Kept tenant-aware Symfony cache decorators compatible with traceable adapters while preserving same-tenant access and cross-tenant namespace isolation.
 - Registered a contract-correct aggregate Mailer transport factory and mapped `TenantInterface` to the configured tenant entity so real consumer containers and Doctrine metadata validate successfully.
 - Injected the non-recursive Symfony transport factory iterator required by the tenant Messenger integration.
