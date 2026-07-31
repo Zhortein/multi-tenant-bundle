@@ -23,6 +23,7 @@
     "symfony/framework-bundle": "~7.4.0",
     "symfony/http-foundation": "~7.4.0",
     "symfony/http-kernel": "~7.4.0",
+    "symfony/mailer": "~7.4.0",
     "symfony/messenger": "~7.4.0",
     "zhortein/multi-tenant-bundle": "@dev"
   },

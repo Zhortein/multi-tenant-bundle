@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.0.0-RC3] - 2026-04-05
 
 ### Fixed
+- Wired the tenant Mailer factory to a non-recursive aggregate of Symfony transport factories and registered its settings repository so consumer containers compile with Mailer enabled.
 - Added class aliases for optional Mailer and Messenger services so real consumer containers can autowire their concrete dependencies.
 - Kept the tenant CLI test helper compatible with Symfony 8.1's public command assertion while preserving existing CommandTester calls.
 - Corrected historically invalid `resolver.type` and `resolution.strategy` documentation examples to the only supported scalar `resolver` syntax; invalid nested structures now fail with actionable errors.

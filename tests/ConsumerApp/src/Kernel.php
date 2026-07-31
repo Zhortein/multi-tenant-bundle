@@ -37,6 +37,7 @@ final class Kernel extends BaseKernel
         $container->loadFromExtension('framework', [
             'secret' => 'consumer-fixture-secret',
             'test' => true,
+            'mailer' => ['dsn' => 'null://null'],
         ]);
         $container->loadFromExtension('doctrine', [
             'dbal' => ['url' => 'sqlite:///%kernel.cache_dir%/consumer.db'],
@@ -64,7 +65,7 @@ final class Kernel extends BaseKernel
                 'logger' => ['enabled' => false],
             ],
             'fixtures' => ['enabled' => false],
-            'mailer' => ['enabled' => false],
+            'mailer' => ['enabled' => true],
             'storage' => ['enabled' => false],
         ]);
     }
