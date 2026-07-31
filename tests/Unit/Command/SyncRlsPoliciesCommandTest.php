@@ -128,7 +128,9 @@ final class SyncRlsPoliciesCommandTest extends TestCase
 
         $this->assertStringContainsString('Found 1 tenant-aware entities', $output);
         $this->assertStringContainsString('ALTER TABLE "products" ENABLE ROW LEVEL SECURITY', $output);
-        $this->assertStringContainsString('CREATE POLICY "tenant_isolation_products" ON "products"', $output);
+        $this->assertStringContainsString('ALTER TABLE "products" FORCE ROW LEVEL SECURITY', $output);
+        $this->assertStringContainsString('CREATE POLICY "tenant_isolation_products" ON "products" FOR ALL', $output);
+        $this->assertStringContainsString('WITH CHECK (tenant_id::text = current_setting', $output);
         $this->assertStringContainsString('tenant_id::text = current_setting(\'app.tenant_id\', true)', $output);
         $this->assertStringContainsString('Use --apply option to execute', $output);
     }
@@ -176,11 +178,12 @@ final class SyncRlsPoliciesCommandTest extends TestCase
         // Expect SQL statements to be executed
         $expectedCalls = [
             'ALTER TABLE "products" ENABLE ROW LEVEL SECURITY;',
-            'CREATE POLICY "tenant_isolation_products" ON "products" USING (tenant_id::text = current_setting(\'app.tenant_id\', true));',
+            'ALTER TABLE "products" FORCE ROW LEVEL SECURITY;',
+            "CREATE POLICY \"tenant_isolation_products\" ON \"products\" FOR ALL USING (tenant_id::text = current_setting('app.tenant_id', true)) WITH CHECK (tenant_id::text = current_setting('app.tenant_id', true));",
         ];
 
         $this->connection
-            ->expects($this->exactly(2))
+            ->expects($this->exactly(3))
             ->method('executeStatement')
             ->willReturnCallback(function ($sql) use (&$expectedCalls) {
                 $this->assertContains($sql, $expectedCalls);
@@ -191,7 +194,7 @@ final class SyncRlsPoliciesCommandTest extends TestCase
         $exitCode = $this->commandTester->execute(['--apply' => true]);
 
         $this->assertSame(Command::SUCCESS, $exitCode);
-        $this->assertStringContainsString('Successfully applied 2 SQL statements', $this->commandTester->getDisplay());
+        $this->assertStringContainsString('Successfully applied 3 SQL statements', $this->commandTester->getDisplay());
     }
 
     public function testExecuteWithForceOption(): void
@@ -224,7 +227,7 @@ final class SyncRlsPoliciesCommandTest extends TestCase
         // Mock connection methods - RLS enabled, policy exists
         $this->connection
             ->method('fetchOne')
-            ->willReturnOnConsecutiveCalls(true, true); // RLS enabled, policy exists
+            ->willReturnOnConsecutiveCalls(true, true, true); // RLS enabled, forced, and policy exists
 
         $this->connection
             ->method('quoteIdentifier')
@@ -291,6 +294,7 @@ final class SyncRlsPoliciesCommandTest extends TestCase
         $output = $this->commandTester->getDisplay();
 
         $this->assertStringContainsString('ALTER TABLE "products" ENABLE ROW LEVEL SECURITY', $output);
+        $this->assertStringContainsString('ALTER TABLE "products" FORCE ROW LEVEL SECURITY', $output);
         $this->assertStringContainsString('CREATE POLICY "tenant_isolation_products"', $output);
     }
 

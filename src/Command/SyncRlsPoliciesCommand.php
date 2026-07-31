@@ -198,6 +198,10 @@ HELP
                 $statements[] = sprintf('ALTER TABLE %s ENABLE ROW LEVEL SECURITY;', $this->connection->quoteIdentifier($tableName));
             }
 
+            if (!$rlsEnabled || !$this->isRlsForced($tableName)) {
+                $statements[] = sprintf('ALTER TABLE %s FORCE ROW LEVEL SECURITY;', $this->connection->quoteIdentifier($tableName));
+            }
+
             // Check if policy already exists
             $policyExists = $this->policyExists($tableName, $policyName);
 
@@ -212,19 +216,22 @@ HELP
 
             if (!$policyExists) {
                 $statements[] = sprintf(
-                    'CREATE POLICY %s ON %s USING (tenant_id::text = current_setting(%s, true));',
+                    'CREATE POLICY %s ON %s FOR ALL USING (tenant_id::text = current_setting(%s, true)) WITH CHECK (tenant_id::text = current_setting(%s, true));',
                     (string) $this->connection->quoteIdentifier($policyName),
                     (string) $this->connection->quoteIdentifier($tableName),
+                    (string) $this->connection->quote($this->sessionVariable),
                     (string) $this->connection->quote($this->sessionVariable)
                 );
             }
         } catch (Exception $exception) {
             // If we can't check existing state, generate all statements
             $statements[] = sprintf('ALTER TABLE %s ENABLE ROW LEVEL SECURITY;', $this->connection->quoteIdentifier($tableName));
+            $statements[] = sprintf('ALTER TABLE %s FORCE ROW LEVEL SECURITY;', $this->connection->quoteIdentifier($tableName));
             $statements[] = sprintf(
-                'CREATE POLICY %s ON %s USING (tenant_id::text = current_setting(%s, true));',
+                'CREATE POLICY %s ON %s FOR ALL USING (tenant_id::text = current_setting(%s, true)) WITH CHECK (tenant_id::text = current_setting(%s, true));',
                 (string) $this->connection->quoteIdentifier($policyName),
                 (string) $this->connection->quoteIdentifier($tableName),
+                (string) $this->connection->quote($this->sessionVariable),
                 (string) $this->connection->quote($this->sessionVariable)
             );
         }
@@ -240,6 +247,23 @@ HELP
         try {
             $result = $this->connection->fetchOne(
                 'SELECT relrowsecurity FROM pg_class WHERE relname = ?',
+                [$tableName]
+            );
+
+            return (bool) $result;
+        } catch (Exception) {
+            return false;
+        }
+    }
+
+    /**
+     * Checks whether table owners are subject to RLS.
+     */
+    private function isRlsForced(string $tableName): bool
+    {
+        try {
+            $result = $this->connection->fetchOne(
+                'SELECT relforcerowsecurity FROM pg_class WHERE relname = ?',
                 [$tableName]
             );
 
