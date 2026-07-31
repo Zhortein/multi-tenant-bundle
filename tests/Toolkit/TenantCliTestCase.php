@@ -202,8 +202,15 @@ abstract class TenantCliTestCase extends KernelTestCase
      *
      * @param CommandTester $commandTester The command tester
      */
-    protected function assertCommandIsSuccessful(CommandTester $commandTester): void
+    public function assertCommandIsSuccessful(CommandTester|string $commandTester = ''): void
     {
+        if (is_string($commandTester)) {
+            $parentMethod = new \ReflectionMethod(parent::class, __FUNCTION__);
+            $parentMethod->invoke($this, $commandTester);
+
+            return;
+        }
+
         $this->assertSame(
             Command::SUCCESS,
             $commandTester->getStatusCode(),

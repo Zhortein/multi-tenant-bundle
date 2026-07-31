@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.0.0-RC3] - 2026-04-05
 
 ### Fixed
+- Kept the tenant CLI test helper compatible with Symfony 8.1's public command assertion while preserving existing CommandTester calls.
 - Corrected historically invalid `resolver.type` and `resolution.strategy` documentation examples to the only supported scalar `resolver` syntax; invalid nested structures now fail with actionable errors.
 - Declared the PSR Simple Cache 3 requirement used by the optional typed PSR-16 decorator and updated Console tests for Symfony 8.
 - Replaced the false-positive RLS target with six effective PostgreSQL 16 tests using a non-superuser application role and raw DBAL queries.
