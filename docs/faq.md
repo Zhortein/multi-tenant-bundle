@@ -131,10 +131,9 @@ $settingsManager->set('email_from', 'noreply@tenant.com');
 
 ```yaml
 zhortein_multi_tenant:
-    resolver:
-        type: 'subdomain'
-        options:
-            base_domain: 'example.com'
+    resolver: 'subdomain'
+    subdomain:
+        base_domain: 'example.com'
 ```
 
 ## Development & Testing

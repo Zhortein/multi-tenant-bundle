@@ -1,7 +1,7 @@
 {
   "name": "zhortein/multi-tenant-bundle",
   "type": "symfony-bundle",
-  "description": "A comprehensive Symfony 7.4+ and 8.0+ bundle for building multi-tenant applications with PostgreSQL 16 support, featuring multiple resolution strategies, tenant-aware services, and automatic database filtering.",
+  "description": "A comprehensive Symfony 7.4 LTS and Symfony 8.x bundle for building multi-tenant applications with PostgreSQL 16 support, featuring multiple resolution strategies, tenant-aware services, and automatic database filtering.",
   "keywords": ["symfony", "symfony-bundle", "multi-tenant", "multitenant", "tenant", "multi-tenancy", "subdomain", "domain", "dns", "postgresql", "doctrine", "orm", "mailer", "messenger", "storage", "saas", "hosting"],
   "homepage": "https://github.com/zhortein/multi-tenant-bundle",
   "license": "MIT",
@@ -50,11 +50,12 @@
     "phpunit/phpunit": "^12.2.5",
     "psr/simple-cache": "^3.0",
     "roave/security-advisories": "dev-latest",
-    "symfony/mailer": "^7.4 || ^8.0",
-    "symfony/phpunit-bridge": "^7.4 || ^8.0",
     "symfony/browser-kit": "^7.4 || ^8.0",
     "symfony/dom-crawler": "^7.4 || ^8.0",
-    "symfony/twig-bundle": "^7.4 || ^8.0"
+    "symfony/mailer": "^7.4 || ^8.0",
+    "symfony/phpunit-bridge": "^7.4 || ^8.0",
+    "symfony/twig-bundle": "^7.4 || ^8.0",
+    "symfony/yaml": "^7.4 || ^8.0"
   },
   "config": {
     "sort-packages": true

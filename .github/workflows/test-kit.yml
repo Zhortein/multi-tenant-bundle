@@ -69,6 +69,9 @@ jobs:
           - name: Symfony 8.0
             php: "8.4"
             symfony: "~8.0.0"
+          - name: Symfony 8.1
+            php: "8.5"
+            symfony: "~8.1.0"
     defaults:
       run:
         working-directory: tests/ConsumerApp
@@ -155,6 +158,13 @@ jobs:
           - name: PHP 8.5 / Symfony 8.0 / ORM 3.6 / DBAL 4.4
             php: '8.5'
             symfony: '~8.0.0'
+            orm: '^3.6'
+            dbal: '^4.4'
+            doctrine_bundle: ^3.3
+            dependencies: highest
+          - name: PHP 8.5 / Symfony 8.1 / ORM 3.6 / DBAL 4.4
+            php: '8.5'
+            symfony: '~8.1.0'
             orm: '^3.6'
             dbal: '^4.4'
             doctrine_bundle: ^3.3

@@ -8,15 +8,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.0.0-RC3] - 2026-04-05
 
 ### Fixed
+- Corrected historically invalid `resolver.type` and `resolution.strategy` documentation examples to the only supported scalar `resolver` syntax; invalid nested structures now fail with actionable errors.
 - Declared the PSR Simple Cache 3 requirement used by the optional typed PSR-16 decorator and updated Console tests for Symfony 8.
 - Replaced the false-positive RLS target with six effective PostgreSQL 16 tests using a non-superuser application role and raw DBAL queries.
 - Persisted the PostgreSQL tenant setting for the database session and clear stale tenant state when no context is active.
 
 ### Added
-- Added an external consumer application that compiles shared and multi-database configurations on Symfony 7.4 and 8.0.
+- Added required Symfony 8.1 and PHP 8.5 compatibility and external consumer jobs while retaining Symfony 7.4 LTS and Symfony 8.0 lower-bound coverage.
+- Added an external consumer application that compiles shared and multi-database configurations on Symfony 7.4, 8.0, and 8.1.
 - Replaced Symfony ORM and test packs with direct component requirements and added a production-only minimal installation check.
 - Documented required, optional, suggested, and development-only dependencies.
-- Added a required PHP 8.3–8.5, Symfony 7.4/8.0, Doctrine ORM 3.5/3.6, and DBAL 3.8/4.4 compatibility matrix.
+- Added a required PHP 8.3–8.5, Symfony 7.4/8.0/8.1, Doctrine ORM 3.5/3.6, and DBAL 3.8/4.4 compatibility matrix.
 - Documented the supported combinations and compatibility removal policy.
 - **Symfony 8.0 & 7.4 Compatibility**
   - Updated `composer.json` to support Symfony `^7.4` and `^8.0` components

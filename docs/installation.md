@@ -1,6 +1,6 @@
 # Installation & Setup
 
-This guide walks you through installing and configuring the Zhortein Multi-Tenant Bundle for Symfony 7.4+ and 8.0+ applications.
+This guide walks you through installing and configuring the Zhortein Multi-Tenant Bundle for Symfony 7.4 LTS and Symfony 8.x applications.
 
 > 📖 **Navigation**: [← Back to Documentation Index](index.md) | [Configuration →](configuration.md)
 
@@ -140,10 +140,9 @@ zhortein_multi_tenant:
     tenant_entity: 'App\Entity\Tenant'
     
     # Tenant resolution strategy
-    resolver:
-        type: 'subdomain'  # 'subdomain', 'path', 'header', or 'custom'
-        options:
-            base_domain: 'example.com'
+    resolver: 'subdomain'
+    subdomain:
+        base_domain: 'example.com'
     
     # Database strategy
     database:
