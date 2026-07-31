@@ -12,7 +12,6 @@ use Doctrine\ORM\Mapping\ClassMetadata;
 use Doctrine\ORM\Mapping\ClassMetadataFactory;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
-use Symfony\Component\Console\Application;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Tester\CommandTester;
 use Zhortein\MultiTenantBundle\Attribute\AsTenantAware;
@@ -48,8 +47,6 @@ final class SyncRlsPoliciesCommandTest extends TestCase
             'tenant_isolation'
         );
 
-        $application = new Application();
-        $application->addCommand($this->command);
         $this->commandTester = new CommandTester($this->command);
     }
 
