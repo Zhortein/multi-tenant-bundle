@@ -6,6 +6,7 @@ namespace Zhortein\MultiTenantBundle\DependencyInjection;
 
 use Symfony\Component\Config\Definition\Builder\TreeBuilder;
 use Symfony\Component\Config\Definition\ConfigurationInterface;
+use Symfony\Component\Config\Definition\Exception\InvalidConfigurationException;
 
 /**
  * Configuration definition for the multi-tenant bundle.
@@ -23,6 +24,12 @@ final class Configuration implements ConfigurationInterface
         $treeBuilder = new TreeBuilder('zhortein_multi_tenant');
 
         $treeBuilder->getRootNode()
+            ->beforeNormalization()
+                ->ifTrue(static fn (mixed $value): bool => is_array($value) && array_key_exists('resolution', $value))
+                ->then(static function (mixed $value): never {
+                    throw new InvalidConfigurationException('The "resolution" option has never been supported. Use the scalar "resolver: path" syntax instead.');
+                })
+            ->end()
             ->children()
                 // Tenant entity configuration
                 ->scalarNode('tenant_entity')
@@ -32,6 +39,12 @@ final class Configuration implements ConfigurationInterface
 
                 // Tenant resolver configuration
                 ->enumNode('resolver')
+                    ->beforeNormalization()
+                        ->ifArray()
+                        ->then(static function (mixed $value): never {
+                            throw new InvalidConfigurationException('The "resolver" option must be a scalar. Use "resolver: path" instead of the unsupported "resolver.type" structure.');
+                        })
+                    ->end()
                     ->values(['path', 'subdomain', 'header', 'query', 'domain', 'hybrid', 'dns_txt', 'chain', 'custom'])
                     ->defaultValue('path')
                     ->info('The tenant resolution strategy to use')
@@ -42,7 +55,9 @@ final class Configuration implements ConfigurationInterface
                     ->addDefaultsIfNotSet()
                     ->children()
                         ->arrayNode('order')
-                            ->scalarPrototype()->end()
+                            ->enumPrototype()
+                                ->values(['path', 'subdomain', 'header', 'query', 'domain', 'hybrid', 'dns_txt'])
+                            ->end()
                             ->defaultValue(['subdomain', 'path', 'header', 'query'])
                             ->info('Order of resolvers to try in the chain')
                         ->end()

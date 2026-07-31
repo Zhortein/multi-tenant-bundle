@@ -1,6 +1,6 @@
 # Zhortein Multi-Tenant Bundle Documentation
 
-Welcome to the comprehensive documentation for the Zhortein Multi-Tenant Bundle, a powerful Symfony 7.4+ and 8.0+ solution for building multi-tenant applications with PostgreSQL 16 support.
+Welcome to the comprehensive documentation for the Zhortein Multi-Tenant Bundle, a powerful Symfony 7.4 LTS and Symfony 8.x solution for building multi-tenant applications with PostgreSQL 16 support.
 
 > 📖 **Quick Start**: New to the bundle? Check out the [main README](../README.md) for installation and quick start guide.
 
@@ -63,7 +63,7 @@ Welcome to the comprehensive documentation for the Zhortein Multi-Tenant Bundle,
 
 ## Overview
 
-The Zhortein Multi-Tenant Bundle provides a comprehensive, production-ready solution for building multi-tenant applications with Symfony 7.4+ and 8.0+. It follows Symfony best practices and includes extensive testing and documentation.
+The Zhortein Multi-Tenant Bundle provides a comprehensive, production-ready solution for building multi-tenant applications with Symfony 7.4 LTS and Symfony 8.x. It follows Symfony best practices and includes extensive testing and documentation.
 
 ### Key Features
 

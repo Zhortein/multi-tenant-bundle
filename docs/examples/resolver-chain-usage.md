@@ -104,54 +104,19 @@ class TenantController
 }
 ```
 
-### Example 4: Custom Resolver in Chain
+### Example 4: Application-Specific Composite Resolver
 
-```php
-<?php
-
-use Zhortein\MultiTenantBundle\Resolver\TenantResolverInterface;
-
-class JwtTenantResolver implements TenantResolverInterface
-{
-    public function __construct(
-        private TenantRegistryInterface $tenantRegistry,
-        private JwtDecoderInterface $jwtDecoder
-    ) {}
-    
-    public function resolveTenant(Request $request): ?TenantInterface
-    {
-        $token = $request->headers->get('Authorization');
-        
-        if (!$token || !str_starts_with($token, 'Bearer ')) {
-            return null;
-        }
-        
-        try {
-            $payload = $this->jwtDecoder->decode(substr($token, 7));
-            $tenantId = $payload['tenant_id'] ?? null;
-            
-            return $tenantId ? $this->tenantRegistry->getById($tenantId) : null;
-        } catch (\Exception) {
-            return null;
-        }
-    }
-}
-```
+Custom names cannot be added to `resolver_chain.order`. Implement application-specific composition behind `TenantResolverInterface` and select the custom strategy:
 
 ```yaml
-# Register custom resolver
 services:
-    App\Resolver\JwtTenantResolver:
-        arguments:
-            $tenantRegistry: '@zhortein_multi_tenant.tenant_registry'
-            $jwtDecoder: '@app.jwt_decoder'
+    App\Resolver\JwtThenSubdomainResolver: ~
 
-# Use in chain
+    Zhortein\MultiTenantBundle\Resolver\TenantResolverInterface:
+        alias: App\Resolver\JwtThenSubdomainResolver
+
 zhortein_multi_tenant:
-    resolver: chain
-    resolver_chain:
-        order: [jwt, subdomain, header]
-        strict: false
+    resolver: 'custom'
 ```
 
 ## Request Examples

@@ -31,7 +31,9 @@ zhortein_multi_tenant:
 | `header_allow_list` | array | `[X-Tenant-Id, X-Tenant-Slug]` | Allowed header names for header resolvers |
 
 ### Individual Resolver Configuration
-   
+
+The `order` list accepts only the seven built-in resolver names shown below. Unknown names fail configuration processing instead of being silently skipped. Custom composition belongs behind a `TenantResolverInterface` service selected with `resolver: 'custom'`.
+
 Each resolver in the chain can be configured independently:
 
 ```yaml
@@ -41,18 +43,18 @@ zhortein_multi_tenant:
         order: [subdomain, header, query, path]
         strict: false
         header_allow_list: ["X-Tenant-Id"]
-    
+
     # Configure individual resolvers
     subdomain:
         base_domain: 'myapp.com'
         excluded_subdomains: ['www', 'api', 'admin']
-    
+
     header:
         name: 'X-Tenant-Id'
-    
+
     query:
         parameter: 'tenant'
-    
+
     # Path resolver uses default configuration
 ```
 
@@ -222,10 +224,10 @@ zhortein_multi_tenant:
         order: [subdomain, header]
         strict: false
         header_allow_list: ["X-Tenant-Id"]
-    
+
     subdomain:
         base_domain: 'myapp.com'
-    
+
     header:
         name: 'X-Tenant-Id'
 ```
@@ -244,10 +246,10 @@ zhortein_multi_tenant:
         order: [header, query]
         strict: true
         header_allow_list: ["X-Tenant-Id"]
-    
+
     header:
         name: 'X-Tenant-Id'
-    
+
     query:
         parameter: 'tenant'
 ```
@@ -266,10 +268,10 @@ zhortein_multi_tenant:
         order: [header, query, path]
         strict: false
         header_allow_list: ["X-Tenant-Id", "Authorization"]
-    
+
     header:
         name: 'X-Tenant-Id'
-    
+
     query:
         parameter: 'tenant_id'
 ```

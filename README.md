@@ -1,6 +1,6 @@
 # Zhortein Multi-Tenant Bundle
 
-A comprehensive Symfony 7.4+ and 8.0+ bundle for building multi-tenant applications with PostgreSQL 16 support.
+A comprehensive Symfony 7.4 LTS and Symfony 8.x bundle for building multi-tenant applications with PostgreSQL 16 support.
 
 [![PHP Version](https://img.shields.io/badge/php-%3E%3D8.3-blue.svg)](https://php.net/)
 [![Symfony Version](https://img.shields.io/badge/symfony-%3E%3D7.4%20%7C%208.0-green.svg)](https://symfony.com/)

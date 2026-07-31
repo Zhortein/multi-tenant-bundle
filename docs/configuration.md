@@ -1,5 +1,17 @@
 # Configuration Reference
 
+## Canonical resolver syntax
+
+The `resolver` option is a scalar. Supported values are `path`, `subdomain`, `header`, `query`, `domain`, `hybrid`, `dns_txt`, `chain`, and `custom`.
+
+~~~yaml
+zhortein_multi_tenant:
+    resolver: 'path'
+~~~
+
+Older examples using `resolver.type` or `resolution.strategy` were documentation errors and never matched the effective configuration tree. They are not compatibility aliases and are rejected with an actionable configuration error.
+
+
 This document provides a complete reference for configuring the Zhortein Multi-Tenant Bundle.
 
 > 📖 **Navigation**: [← Back to Documentation Index](index.md) | [Installation Guide →](installation.md)
@@ -259,13 +271,13 @@ Then register your custom resolver service:
 ```yaml
 # config/services.yaml
 services:
-    app.custom_tenant_resolver:
-        class: App\Resolver\CustomTenantResolver
-        tags:
-            - { name: 'zhortein_multi_tenant.resolver', alias: 'custom' }
+    App\Resolver\CustomTenantResolver: ~
+
+    Zhortein\MultiTenantBundle\Resolver\TenantResolverInterface:
+        alias: App\Resolver\CustomTenantResolver
 ```
 
-Your custom resolver must implement `TenantResolverInterface`.
+Your custom resolver must implement `TenantResolverInterface`. The bundle does not collect tagged custom resolvers.
 
 ## Database Strategies
 
