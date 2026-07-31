@@ -8,9 +8,9 @@ use Symfony\Component\Config\FileLocator;
 use Symfony\Component\DependencyInjection\Argument\TaggedIteratorArgument;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Extension\Extension;
+use Symfony\Component\DependencyInjection\Extension\PrependExtensionInterface;
 use Symfony\Component\DependencyInjection\Loader\YamlFileLoader;
 use Symfony\Component\DependencyInjection\Reference;
-use Symfony\Component\Mailer\Transport as MailerTransport;
 use Zhortein\MultiTenantBundle\Command\ClearTenantSettingsCacheCommand;
 use Zhortein\MultiTenantBundle\Command\CreateTenantCommand;
 use Zhortein\MultiTenantBundle\Command\CreateTenantSchemaCommand;
@@ -30,12 +30,14 @@ use Zhortein\MultiTenantBundle\Doctrine\DefaultConnectionResolver;
 use Zhortein\MultiTenantBundle\Doctrine\EventAwareConnectionResolver;
 use Zhortein\MultiTenantBundle\Doctrine\TenantConnectionResolverInterface;
 use Zhortein\MultiTenantBundle\Doctrine\TenantEntityManagerFactory;
+use Zhortein\MultiTenantBundle\Entity\TenantInterface;
 use Zhortein\MultiTenantBundle\EventListener\TenantDoctrineFilterListener;
 use Zhortein\MultiTenantBundle\EventListener\TenantEntityListener;
 use Zhortein\MultiTenantBundle\EventListener\TenantRequestListener;
 use Zhortein\MultiTenantBundle\EventListener\TenantResolutionExceptionListener;
 use Zhortein\MultiTenantBundle\Mailer\TenantAwareMailer;
 use Zhortein\MultiTenantBundle\Mailer\TenantMailerConfigurator;
+use Zhortein\MultiTenantBundle\Mailer\TenantMailerFallbackTransportFactory;
 use Zhortein\MultiTenantBundle\Mailer\TenantMailerTransportFactory;
 use Zhortein\MultiTenantBundle\Manager\TenantSettingsManager;
 use Zhortein\MultiTenantBundle\Manager\TenantSettingsManagerInterface;
@@ -68,8 +70,28 @@ use Zhortein\MultiTenantBundle\Storage\TenantFileStorageInterface;
  * This class handles the configuration and registration of all bundle services,
  * including tenant resolvers, context managers, event listeners, and commands.
  */
-final class ZhorteinMultiTenantExtension extends Extension
+final class ZhorteinMultiTenantExtension extends Extension implements PrependExtensionInterface
 {
+    public function prepend(ContainerBuilder $container): void
+    {
+        if (!$container->hasExtension('doctrine')) {
+            return;
+        }
+
+        $config = $this->processConfiguration(
+            new Configuration(),
+            $container->getExtensionConfig($this->getAlias()),
+        );
+
+        $container->prependExtensionConfig('doctrine', [
+            'orm' => [
+                'resolve_target_entities' => [
+                    TenantInterface::class => $config['tenant_entity'],
+                ],
+            ],
+        ]);
+    }
+
     public function load(array $configs, ContainerBuilder $container): void
     {
         $configuration = new Configuration();
@@ -532,7 +554,7 @@ final class ZhorteinMultiTenantExtension extends Extension
             ->setAutoconfigured(true);
         $container->setAlias(TenantMailerConfigurator::class, 'zhortein_multi_tenant.mailer.configurator');
 
-        $container->register('zhortein_multi_tenant.mailer.fallback_transport_factory', MailerTransport::class)
+        $container->register('zhortein_multi_tenant.mailer.fallback_transport_factory', TenantMailerFallbackTransportFactory::class)
             ->setArgument(0, new TaggedIteratorArgument(
                 'mailer.transport_factory',
                 exclude: ['zhortein_multi_tenant.mailer.transport_factory'],

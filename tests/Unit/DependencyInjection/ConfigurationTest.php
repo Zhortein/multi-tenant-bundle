@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Zhortein\MultiTenantBundle\Tests\DependencyInjection;
 
+use Doctrine\Bundle\DoctrineBundle\DependencyInjection\DoctrineExtension;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Config\Definition\Dumper\YamlReferenceDumper;
@@ -12,11 +13,12 @@ use Symfony\Component\Config\Definition\Processor;
 use Symfony\Component\DependencyInjection\Argument\TaggedIteratorArgument;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Reference;
-use Symfony\Component\Mailer\Transport as MailerTransport;
+use Symfony\Component\Mailer\Transport\TransportFactoryInterface;
 use Zhortein\MultiTenantBundle\DependencyInjection\Configuration;
 use Zhortein\MultiTenantBundle\DependencyInjection\ZhorteinMultiTenantExtension;
 use Zhortein\MultiTenantBundle\Mailer\TenantAwareMailer;
 use Zhortein\MultiTenantBundle\Mailer\TenantMailerConfigurator;
+use Zhortein\MultiTenantBundle\Mailer\TenantMailerFallbackTransportFactory;
 use Zhortein\MultiTenantBundle\Messenger\TenantMessengerConfigurator;
 use Zhortein\MultiTenantBundle\Messenger\TenantMessengerTransportFactory;
 use Zhortein\MultiTenantBundle\Messenger\TenantMessengerTransportResolver;
@@ -124,7 +126,8 @@ final class ConfigurationTest extends TestCase
         self::assertTrue($container->hasDefinition(TenantSettingRepository::class));
 
         $fallback = $container->getDefinition('zhortein_multi_tenant.mailer.fallback_transport_factory');
-        self::assertSame(MailerTransport::class, $fallback->getClass());
+        self::assertSame(TenantMailerFallbackTransportFactory::class, $fallback->getClass());
+        self::assertTrue(is_a($fallback->getClass(), TransportFactoryInterface::class, true));
 
         $factories = $fallback->getArgument(0);
         self::assertInstanceOf(TaggedIteratorArgument::class, $factories);
@@ -137,6 +140,25 @@ final class ConfigurationTest extends TestCase
         $fallbackReference = $factory->getArgument(1);
         self::assertInstanceOf(Reference::class, $fallbackReference);
         self::assertSame('zhortein_multi_tenant.mailer.fallback_transport_factory', (string) $fallbackReference);
+    }
+
+    public function testDoctrineResolvesTenantInterfaceToTheConfiguredEntity(): void
+    {
+        $container = new ContainerBuilder();
+        $container->registerExtension(new DoctrineExtension());
+        $extension = new ZhorteinMultiTenantExtension();
+        $container->registerExtension($extension);
+        $container->loadFromExtension($extension->getAlias(), [
+            'tenant_entity' => "App\Entity\Tenant",
+        ]);
+
+        $extension->prepend($container);
+
+        $doctrineConfig = $container->getExtensionConfig('doctrine');
+        self::assertSame(
+            "App\Entity\Tenant",
+            $doctrineConfig[0]['orm']['resolve_target_entities'][\Zhortein\MultiTenantBundle\Entity\TenantInterface::class],
+        );
     }
 
     public function testReferenceUsesCanonicalResolverSyntax(): void
