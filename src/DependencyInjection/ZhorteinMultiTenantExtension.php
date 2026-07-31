@@ -523,6 +523,7 @@ final class ZhorteinMultiTenantExtension extends Extension
         $container->register('zhortein_multi_tenant.mailer.configurator', TenantMailerConfigurator::class)
             ->setAutowired(true)
             ->setAutoconfigured(true);
+        $container->setAlias(TenantMailerConfigurator::class, 'zhortein_multi_tenant.mailer.configurator');
 
         $container->register('zhortein_multi_tenant.mailer.transport_factory', TenantMailerTransportFactory::class)
             ->setAutowired(true)
@@ -532,6 +533,7 @@ final class ZhorteinMultiTenantExtension extends Extension
         $container->register('zhortein_multi_tenant.mailer.tenant_aware', TenantAwareMailer::class)
             ->setAutowired(true)
             ->setAutoconfigured(true);
+        $container->setAlias(TenantAwareMailer::class, 'zhortein_multi_tenant.mailer.tenant_aware');
     }
 
     /**
@@ -549,6 +551,7 @@ final class ZhorteinMultiTenantExtension extends Extension
         $container->register('zhortein_multi_tenant.messenger.configurator', TenantMessengerConfigurator::class)
             ->setAutowired(true)
             ->setAutoconfigured(true);
+        $container->setAlias(TenantMessengerConfigurator::class, 'zhortein_multi_tenant.messenger.configurator');
 
         $container->register('zhortein_multi_tenant.messenger.transport_factory', TenantMessengerTransportFactory::class)
             ->setAutowired(true)
@@ -556,6 +559,8 @@ final class ZhorteinMultiTenantExtension extends Extension
             ->addTag('messenger.transport_factory');
 
         // Register transport resolver middleware
+        $container->setAlias(TenantMessengerTransportFactory::class, 'zhortein_multi_tenant.messenger.transport_factory');
+
         $container->register('zhortein_multi_tenant.messenger.transport_resolver', TenantMessengerTransportResolver::class)
             ->setAutowired(true)
             ->setAutoconfigured(true)
@@ -563,6 +568,7 @@ final class ZhorteinMultiTenantExtension extends Extension
             ->setArgument('$defaultTransport', '%zhortein_multi_tenant.messenger.default_transport%')
             ->setArgument('$addTenantHeaders', '%zhortein_multi_tenant.messenger.add_tenant_headers%')
             ->addTag('messenger.middleware', ['priority' => 100]);
+        $container->setAlias(TenantMessengerTransportResolver::class, 'zhortein_multi_tenant.messenger.transport_resolver');
     }
 
     /**
