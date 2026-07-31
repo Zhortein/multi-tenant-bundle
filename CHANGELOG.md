@@ -12,6 +12,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Persisted the PostgreSQL tenant setting for the database session and clear stale tenant state when no context is active.
 
 ### Added
+- Added a required PHP 8.3–8.5, Symfony 7.4/8.0, Doctrine ORM 3.5/3.6, and DBAL 3.8/4.4 compatibility matrix.
+- Documented the supported combinations and compatibility removal policy.
 - **Symfony 8.0 & 7.4 Compatibility**
   - Updated `composer.json` to support Symfony `^7.4` and `^8.0` components
   - Updated `symfony/contracts` to support `^3.4` and `^4.0`

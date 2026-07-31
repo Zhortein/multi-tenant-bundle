@@ -164,6 +164,7 @@ class DashboardController extends AbstractController
 
 ### 🚀 Getting Started
 - [Installation & Setup](docs/installation.md) - Complete installation guide
+- [Compatibility Policy](docs/compatibility.md) - Tested PHP, Symfony, and Doctrine combinations
 - [Configuration Reference](docs/configuration.md) - All configuration options
 - [Database Strategies](docs/database-strategies.md) - Shared DB vs Multi-DB
 

@@ -1,20 +1,82 @@
-name: Test Kit
+name: Compatibility
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [main, develop]
   pull_request:
-    branches: [ main, develop ]
+    branches: [main, develop]
+
+permissions:
+  contents: read
 
 jobs:
-  test-kit:
-    name: Test Kit (PHP ${{ matrix.php-version }})
+  quality:
+    name: Code style
     runs-on: ubuntu-latest
-    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          coverage: none
+
+      - name: Install dependencies
+        uses: ramsey/composer-install@v3
+        with:
+          dependency-versions: highest
+
+      - name: Check coding style
+        run: |
+          vendor/bin/php-cs-fixer fix src --rules=@Symfony --dry-run --diff
+          vendor/bin/php-cs-fixer fix tests --rules=@Symfony --dry-run --diff
+
+  compatibility:
+    name: ${{ matrix.name }}
+    runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
-        php-version: ['8.3']
-        
+        include:
+          - name: PHP 8.3 / Symfony 7.4 / ORM 3.5 / DBAL 3.8 lowest
+            php: '8.3'
+            symfony: '~7.4.0'
+            orm: '~3.5.0'
+            dbal: '^3.8'
+            dependencies: lowest
+          - name: PHP 8.3 / Symfony 7.4 / ORM 3.6 / DBAL 4.4
+            php: '8.3'
+            symfony: '~7.4.0'
+            orm: '^3.6'
+            dbal: '^4.4'
+            dependencies: highest
+          - name: PHP 8.4 / Symfony 7.4 / ORM 3.6 / DBAL 4.4
+            php: '8.4'
+            symfony: '~7.4.0'
+            orm: '^3.6'
+            dbal: '^4.4'
+            dependencies: highest
+          - name: PHP 8.4 / Symfony 8.0 / ORM 3.6 / DBAL 4.4
+            php: '8.4'
+            symfony: '~8.0.0'
+            orm: '^3.6'
+            dbal: '^4.4'
+            dependencies: highest
+          - name: PHP 8.5 / Symfony 7.4 / ORM 3.6 / DBAL 4.4
+            php: '8.5'
+            symfony: '~7.4.0'
+            orm: '^3.6'
+            dbal: '^4.4'
+            dependencies: highest
+          - name: PHP 8.5 / Symfony 8.0 / ORM 3.6 / DBAL 4.4
+            php: '8.5'
+            symfony: '~8.0.0'
+            orm: '^3.6'
+            dbal: '^4.4'
+            dependencies: highest
+
     services:
       postgres:
         image: postgres:16
@@ -23,12 +85,22 @@ jobs:
           POSTGRES_USER: test_user
           POSTGRES_PASSWORD: test_password
         options: >-
-          --health-cmd pg_isready
+          --health-cmd "pg_isready -U test_user -d multi_tenant_test"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
         ports:
           - 5432:5432
+
+    env:
+      TEST_DATABASE_HOST: 127.0.0.1
+      TEST_DATABASE_PORT: 5432
+      TEST_DATABASE_NAME: multi_tenant_test
+      TEST_DATABASE_USER: test_user
+      TEST_DATABASE_PASSWORD: test_password
+      TEST_DATABASE_APP_USER: rls_test_app
+      TEST_DATABASE_APP_PASSWORD: rls_test_password
+      TEST_DATABASE_REQUIRED: 1
 
     steps:
       - name: Checkout code
@@ -37,70 +109,36 @@ jobs:
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: ${{ matrix.php-version }}
+          php-version: ${{ matrix.php }}
           extensions: pdo_pgsql, intl, json, mbstring
           coverage: none
 
-      - name: Get composer cache directory
-        id: composer-cache
-        run: echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
+      - name: Select supported dependency combination
+        run: >-
+          composer require --dev --no-update
+          "symfony/framework-bundle:${{ matrix.symfony }}"
+          "doctrine/orm:${{ matrix.orm }}"
+          "doctrine/dbal:${{ matrix.dbal }}"
 
-      - name: Cache composer dependencies
-        uses: actions/cache@v3
-        with:
-          path: ${{ steps.composer-cache.outputs.dir }}
-          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
-          restore-keys: ${{ runner.os }}-composer-
+      - name: Resolve dependencies
+        run: |
+          options=(--prefer-dist --no-progress --no-interaction --with-all-dependencies)
+          if [ "${{ matrix.dependencies }}" = "lowest" ]; then
+            options+=(--prefer-lowest)
+          fi
+          composer update "${options[@]}"
 
-      - name: Install dependencies
-        run: composer install --prefer-dist --no-progress --no-suggest --no-interaction
-
-      - name: Validate composer.json
+      - name: Validate Composer metadata
         run: composer validate --strict
 
-      - name: Run PHPStan
+      - name: Audit dependencies
+        run: composer audit --no-interaction
+
+      - name: Run PHPStan at maximum level
         run: vendor/bin/phpstan analyse src -c phpstan.neon --memory-limit=512M
 
-      - name: Run Unit Tests
-        run: vendor/bin/phpunit tests/Unit --no-coverage
+      - name: Run PHPUnit outside the dedicated RLS group
+        run: vendor/bin/phpunit --configuration phpunit.xml.dist --exclude-group rls --no-coverage
 
-      - name: Wait for PostgreSQL
-        run: |
-          until pg_isready -h localhost -p 5432 -U test_user; do
-            echo "Waiting for PostgreSQL..."
-            sleep 2
-          done
-
-      - name: Setup PostgreSQL test database
-        run: |
-          PGPASSWORD=test_password psql -h localhost -U test_user -d multi_tenant_test -f tests/sql/init.sql
-
-      - name: Run RLS Isolation Tests
-        run: vendor/bin/phpunit tests/Integration/RlsIsolationTest.php --no-coverage
-        env:
-          DATABASE_URL: postgresql://test_user:test_password@localhost:5432/multi_tenant_test
-
-      - name: Run Resolver Chain Tests
-        run: vendor/bin/phpunit tests/Integration/ResolverChainHttpTest.php tests/Integration/ResolverChainTest.php --no-coverage
-        env:
-          DATABASE_URL: postgresql://test_user:test_password@localhost:5432/multi_tenant_test
-
-      - name: Run Messenger Tests
-        run: vendor/bin/phpunit tests/Integration/MessengerTenantPropagationTest.php --no-coverage
-        env:
-          DATABASE_URL: postgresql://test_user:test_password@localhost:5432/multi_tenant_test
-
-      - name: Run CLI Tests
-        run: vendor/bin/phpunit tests/Integration/CliTenantContextTest.php --no-coverage
-        env:
-          DATABASE_URL: postgresql://test_user:test_password@localhost:5432/multi_tenant_test
-
-      - name: Run Decorators Tests
-        run: vendor/bin/phpunit tests/Integration/DecoratorsTest.php --no-coverage
-        env:
-          DATABASE_URL: postgresql://test_user:test_password@localhost:5432/multi_tenant_test
-
-      - name: Run All Integration Tests
-        run: vendor/bin/phpunit tests/Integration --no-coverage
-        env:
-          DATABASE_URL: postgresql://test_user:test_password@localhost:5432/multi_tenant_test
+      - name: Run PostgreSQL RLS tests
+        run: vendor/bin/phpunit --configuration phpunit.xml.dist --group rls --no-coverage
