@@ -8,6 +8,7 @@ use PHPUnit\Framework\TestCase;
 use Psr\SimpleCache\CacheInterface;
 use Zhortein\MultiTenantBundle\Context\TenantContextInterface;
 use Zhortein\MultiTenantBundle\Decorator\TenantAwareSimpleCacheDecorator;
+use Zhortein\MultiTenantBundle\Decorator\TenantCacheException;
 use Zhortein\MultiTenantBundle\Entity\TenantInterface;
 
 /**
@@ -34,7 +35,7 @@ final class TenantAwareSimpleCacheDecoratorTest extends TestCase
 
         $this->decoratedCache->expects($this->once())
             ->method('get')
-            ->with('tenant_tenant-456_test-key', 'default-value')
+            ->with('tenant_3540319dcf8c811eb59de65d85fa6a565b8fd488c75b8531a6b8dd2648f8358c_test-key', 'default-value')
             ->willReturn('cached-value');
 
         $decorator = new TenantAwareSimpleCacheDecorator($this->decoratedCache, $this->tenantContext);
@@ -46,16 +47,10 @@ final class TenantAwareSimpleCacheDecoratorTest extends TestCase
     public function testGetWithoutTenantContext(): void
     {
         $this->tenantContext->method('getTenant')->willReturn(null);
-
-        $this->decoratedCache->expects($this->once())
-            ->method('get')
-            ->with('test-key', 'default-value')
-            ->willReturn('cached-value');
-
         $decorator = new TenantAwareSimpleCacheDecorator($this->decoratedCache, $this->tenantContext);
-        $result = $decorator->get('test-key', 'default-value');
 
-        $this->assertSame('cached-value', $result);
+        $this->expectException(TenantCacheException::class);
+        $decorator->get('test-key');
     }
 
     public function testGetWhenDisabled(): void
@@ -79,7 +74,7 @@ final class TenantAwareSimpleCacheDecoratorTest extends TestCase
 
         $this->decoratedCache->expects($this->once())
             ->method('set')
-            ->with('tenant_tenant-456_test-key', 'test-value', 3600)
+            ->with('tenant_3540319dcf8c811eb59de65d85fa6a565b8fd488c75b8531a6b8dd2648f8358c_test-key', 'test-value', 3600)
             ->willReturn(true);
 
         $decorator = new TenantAwareSimpleCacheDecorator($this->decoratedCache, $this->tenantContext);
@@ -94,7 +89,7 @@ final class TenantAwareSimpleCacheDecoratorTest extends TestCase
 
         $this->decoratedCache->expects($this->once())
             ->method('delete')
-            ->with('tenant_tenant-456_test-key')
+            ->with('tenant_3540319dcf8c811eb59de65d85fa6a565b8fd488c75b8531a6b8dd2648f8358c_test-key')
             ->willReturn(true);
 
         $decorator = new TenantAwareSimpleCacheDecorator($this->decoratedCache, $this->tenantContext);
@@ -103,18 +98,13 @@ final class TenantAwareSimpleCacheDecoratorTest extends TestCase
         $this->assertTrue($result);
     }
 
-    public function testClear(): void
+    public function testClearIsRejectedWhenTheCacheCannotScopeIt(): void
     {
         $this->tenantContext->method('getTenant')->willReturn($this->tenant);
-
-        $this->decoratedCache->expects($this->once())
-            ->method('clear')
-            ->willReturn(true);
-
         $decorator = new TenantAwareSimpleCacheDecorator($this->decoratedCache, $this->tenantContext);
-        $result = $decorator->clear();
 
-        $this->assertTrue($result);
+        $this->expectException(TenantCacheException::class);
+        $decorator->clear();
     }
 
     public function testGetMultipleWithTenantContext(): void
@@ -123,10 +113,10 @@ final class TenantAwareSimpleCacheDecoratorTest extends TestCase
 
         $this->decoratedCache->expects($this->once())
             ->method('getMultiple')
-            ->with(['tenant_tenant-456_key1', 'tenant_tenant-456_key2'], 'default')
+            ->with(['tenant_3540319dcf8c811eb59de65d85fa6a565b8fd488c75b8531a6b8dd2648f8358c_key1', 'tenant_3540319dcf8c811eb59de65d85fa6a565b8fd488c75b8531a6b8dd2648f8358c_key2'], 'default')
             ->willReturn([
-                'tenant_tenant-456_key1' => 'value1',
-                'tenant_tenant-456_key2' => 'value2',
+                'tenant_3540319dcf8c811eb59de65d85fa6a565b8fd488c75b8531a6b8dd2648f8358c_key1' => 'value1',
+                'tenant_3540319dcf8c811eb59de65d85fa6a565b8fd488c75b8531a6b8dd2648f8358c_key2' => 'value2',
             ]);
 
         $decorator = new TenantAwareSimpleCacheDecorator($this->decoratedCache, $this->tenantContext);
@@ -142,8 +132,8 @@ final class TenantAwareSimpleCacheDecoratorTest extends TestCase
         $this->decoratedCache->expects($this->once())
             ->method('setMultiple')
             ->with([
-                'tenant_tenant-456_key1' => 'value1',
-                'tenant_tenant-456_key2' => 'value2',
+                'tenant_3540319dcf8c811eb59de65d85fa6a565b8fd488c75b8531a6b8dd2648f8358c_key1' => 'value1',
+                'tenant_3540319dcf8c811eb59de65d85fa6a565b8fd488c75b8531a6b8dd2648f8358c_key2' => 'value2',
             ], 3600)
             ->willReturn(true);
 
@@ -159,7 +149,7 @@ final class TenantAwareSimpleCacheDecoratorTest extends TestCase
 
         $this->decoratedCache->expects($this->once())
             ->method('deleteMultiple')
-            ->with(['tenant_tenant-456_key1', 'tenant_tenant-456_key2'])
+            ->with(['tenant_3540319dcf8c811eb59de65d85fa6a565b8fd488c75b8531a6b8dd2648f8358c_key1', 'tenant_3540319dcf8c811eb59de65d85fa6a565b8fd488c75b8531a6b8dd2648f8358c_key2'])
             ->willReturn(true);
 
         $decorator = new TenantAwareSimpleCacheDecorator($this->decoratedCache, $this->tenantContext);
@@ -174,7 +164,7 @@ final class TenantAwareSimpleCacheDecoratorTest extends TestCase
 
         $this->decoratedCache->expects($this->once())
             ->method('has')
-            ->with('tenant_tenant-456_test-key')
+            ->with('tenant_3540319dcf8c811eb59de65d85fa6a565b8fd488c75b8531a6b8dd2648f8358c_test-key')
             ->willReturn(true);
 
         $decorator = new TenantAwareSimpleCacheDecorator($this->decoratedCache, $this->tenantContext);

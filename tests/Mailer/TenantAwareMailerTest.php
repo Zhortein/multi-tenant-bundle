@@ -6,6 +6,7 @@ namespace Zhortein\MultiTenantBundle\Tests\Mailer;
 
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Mailer\MailerInterface;
+use Symfony\Component\Mailer\Messenger\SendEmailMessage;
 use Symfony\Component\Mime\Email;
 use Twig\Environment;
 use Zhortein\MultiTenantBundle\Context\TenantContextInterface;
@@ -42,9 +43,7 @@ class TenantAwareMailerTest extends TestCase
     public function testSendEmailWithTenantConfiguration(): void
     {
         // Arrange
-        $tenant = $this->createMock(TenantInterface::class);
-        $tenant->method('getSlug')->willReturn('acme');
-        $tenant->method('getName')->willReturn('Acme Corporation');
+        $tenant = new MailerTestTenant('acme', 'Acme Corporation');
 
         $this->tenantContext->method('getTenant')->willReturn($tenant);
         $this->configurator->method('getFromAddress')->willReturn('noreply@acme.com');
@@ -73,22 +72,110 @@ class TenantAwareMailerTest extends TestCase
                     && 'support@acme.com' === $replyTo[0]->getAddress()
                     && 1 === count($bcc)
                     && 'admin@acme.com' === $bcc[0]->getAddress()
-                    && $headers->has('X-Tenant-ID')
-                    && 'acme' === $headers->get('X-Tenant-ID')->getBody()
-                    && $headers->has('X-Tenant-Name')
-                    && 'Acme Corporation' === $headers->get('X-Tenant-Name')->getBody();
+                    && !$headers->has('X-Tenant-ID')
+                    && !$headers->has('X-Tenant-Name');
             }));
 
         // Act
         $this->mailer->send($email);
     }
 
+    public function testTenantHeadersCanBeEnabledIndependently(): void
+    {
+        $tenant = new MailerTestTenant('acme', 'Acme Corporation');
+        $this->tenantContext->method('getTenant')->willReturn($tenant);
+
+        $emailWithId = (new Email())->to('user@example.com')->text('ID only');
+        $idMailer = new TenantAwareMailer(
+            $this->innerMailer,
+            $this->configurator,
+            $this->tenantContext,
+            null,
+            true,
+            false
+        );
+        $idMailer->send($emailWithId);
+        self::assertSame('acme', $emailWithId->getHeaders()->get('X-Tenant-ID')?->getBody());
+        self::assertFalse($emailWithId->getHeaders()->has('X-Tenant-Name'));
+
+        $emailWithName = (new Email())->to('user@example.com')->text('Name only');
+        $nameMailer = new TenantAwareMailer(
+            $this->innerMailer,
+            $this->configurator,
+            $this->tenantContext,
+            null,
+            false,
+            true
+        );
+        $nameMailer->send($emailWithName);
+        self::assertFalse($emailWithName->getHeaders()->has('X-Tenant-ID'));
+        self::assertSame('Acme Corporation', $emailWithName->getHeaders()->get('X-Tenant-Name')?->getBody());
+    }
+
+    public function testExistingTenantHeaderIsNotOverwritten(): void
+    {
+        $tenant = new MailerTestTenant('resolved-tenant', 'Resolved Tenant');
+        $this->tenantContext->method('getTenant')->willReturn($tenant);
+        $email = (new Email())->to('user@example.com')->text('Existing header');
+        $email->getHeaders()->addTextHeader('X-Tenant-ID', 'application-value');
+
+        $mailer = new TenantAwareMailer(
+            $this->innerMailer,
+            $this->configurator,
+            $this->tenantContext,
+            null,
+            true
+        );
+        $mailer->send($email);
+
+        self::assertSame('application-value', $email->getHeaders()->get('X-Tenant-ID')?->getBody());
+    }
+
+    public function testUnsafeTenantHeaderValueIsRejected(): void
+    {
+        $tenant = new MailerTestTenant("acme\r\nBcc: attacker@example.com", 'Unsafe Tenant');
+        $this->tenantContext->method('getTenant')->willReturn($tenant);
+        $mailer = new TenantAwareMailer(
+            $this->innerMailer,
+            $this->configurator,
+            $this->tenantContext,
+            null,
+            true
+        );
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('not safe for an email header');
+
+        $mailer->send((new Email())->to('user@example.com')->text('Unsafe'));
+    }
+
+    public function testConfiguredHeadersSurviveAsynchronousSerialization(): void
+    {
+        $tenant = new MailerTestTenant('async-tenant', 'Async Tenant');
+        $this->tenantContext->method('getTenant')->willReturn($tenant);
+        $email = (new Email())->to('user@example.com')->text('Async');
+        $mailer = new TenantAwareMailer(
+            $this->innerMailer,
+            $this->configurator,
+            $this->tenantContext,
+            null,
+            true
+        );
+
+        $mailer->send($email);
+        $restoredMessage = unserialize(serialize(new SendEmailMessage($email)));
+
+        self::assertInstanceOf(SendEmailMessage::class, $restoredMessage);
+        $restored = $restoredMessage->getMessage();
+        self::assertInstanceOf(Email::class, $restored);
+        self::assertSame('async-tenant', $restored->getHeaders()->get('X-Tenant-ID')?->getBody());
+        self::assertFalse($restored->getHeaders()->has('X-Tenant-Name'));
+    }
+
     public function testSendTemplatedEmailWithTenantContext(): void
     {
         // Arrange
-        $tenant = $this->createMock(TenantInterface::class);
-        $tenant->method('getSlug')->willReturn('acme');
-        $tenant->method('getName')->willReturn('Acme Corporation');
+        $tenant = new MailerTestTenant('acme', 'Acme Corporation');
 
         $this->tenantContext->method('getTenant')->willReturn($tenant);
         $this->configurator->method('getFromAddress')->willReturn('noreply@acme.com');
@@ -97,11 +184,12 @@ class TenantAwareMailerTest extends TestCase
         $this->configurator->method('getPrimaryColor')->willReturn('#ff6b35');
         $this->configurator->method('getWebsiteUrl')->willReturn('https://acme.com');
 
-        // Mock template resolution
-        $this->twig->expects($this->once())
-            ->method('getLoader->exists')
-            ->with('emails/tenant/acme/welcome.html.twig')
-            ->willReturn(false);
+        $loader = $this->createMock(\Twig\Loader\LoaderInterface::class);
+        $this->twig->method('getLoader')->willReturn($loader);
+        $loader->expects($this->once())
+            ->method('getSourceContext')
+            ->with('emails/tenant/acme/emails/welcome.html.twig')
+            ->willThrowException(new \Twig\Error\LoaderError('Tenant template not found.'));
 
         $this->twig->expects($this->once())
             ->method('render')
@@ -136,16 +224,16 @@ class TenantAwareMailerTest extends TestCase
     public function testSendTemplatedEmailWithFromOverride(): void
     {
         // Arrange
-        $tenant = $this->createMock(TenantInterface::class);
-        $tenant->method('getSlug')->willReturn('acme');
-        $tenant->method('getName')->willReturn('Acme Corporation');
+        $tenant = new MailerTestTenant('acme', 'Acme Corporation');
 
         $this->tenantContext->method('getTenant')->willReturn($tenant);
         $this->configurator->method('getSenderName')->willReturn('Acme Corporation');
 
-        $this->twig->expects($this->once())
-            ->method('getLoader->exists')
-            ->willReturn(false);
+        $loader = $this->createMock(\Twig\Loader\LoaderInterface::class);
+        $this->twig->method('getLoader')->willReturn($loader);
+        $loader->expects($this->once())
+            ->method('getSourceContext')
+            ->willThrowException(new \Twig\Error\LoaderError('Tenant template not found.'));
 
         $this->twig->expects($this->once())
             ->method('render')
@@ -218,5 +306,39 @@ class TenantAwareMailerTest extends TestCase
 
         // Act
         $this->mailer->send($email);
+    }
+}
+
+final readonly class MailerTestTenant implements TenantInterface
+{
+    public function __construct(
+        private string $slug,
+        private string $name,
+    ) {
+    }
+
+    public function getId(): string|int
+    {
+        return $this->slug;
+    }
+
+    public function getSlug(): string
+    {
+        return $this->slug;
+    }
+
+    public function getName(): string
+    {
+        return $this->name;
+    }
+
+    public function getMailerDsn(): ?string
+    {
+        return null;
+    }
+
+    public function getMessengerDsn(): ?string
+    {
+        return null;
     }
 }

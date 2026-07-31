@@ -82,8 +82,8 @@ final class TenantLoggingSubscriberTest extends TestCase
         $this->assertSame('warning', $record['level']);
         $this->assertStringContainsString('Tenant resolution failed', $record['message']);
         $this->assertSame('header', $record['context']['resolver']);
-        $this->assertSame('no_tenant_found', $record['context']['reason']);
-        $this->assertSame(['uri' => '/test'], $record['context']['context']);
+        $this->assertArrayNotHasKey('reason', $record['context']);
+        $this->assertArrayNotHasKey('context', $record['context']);
     }
 
     public function testOnTenantContextStarted(): void
@@ -149,7 +149,7 @@ final class TenantLoggingSubscriberTest extends TestCase
         $this->assertSame('error', $record['level']);
         $this->assertStringContainsString('Tenant RLS application failed', $record['message']);
         $this->assertSame('123', $record['context']['tenant_id']);
-        $this->assertSame('Connection failed', $record['context']['error_message']);
+        $this->assertArrayNotHasKey('error_message', $record['context']);
     }
 
     public function testOnTenantHeaderRejected(): void
@@ -162,7 +162,7 @@ final class TenantLoggingSubscriberTest extends TestCase
         $record = $this->logRecords[0];
         $this->assertSame('warning', $record['level']);
         $this->assertStringContainsString('Tenant header rejected by allow-list', $record['message']);
-        $this->assertSame('X-Custom-Tenant', $record['context']['header_name']);
+        $this->assertSame([], $record['context']);
     }
 
     public function testWithoutLogger(): void

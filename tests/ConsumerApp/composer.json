@@ -3,15 +3,6 @@
   "type": "project",
   "description": "External consumer fixture for bundle compatibility tests",
   "license": "proprietary",
-  "repositories": [
-    {
-      "type": "path",
-      "url": "../..",
-      "options": {
-        "symlink": false
-      }
-    }
-  ],
   "require": {
     "php": ">=8.3",
     "symfony/config": "~7.4.0",

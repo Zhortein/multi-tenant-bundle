@@ -108,6 +108,8 @@ zhortein_multi_tenant:
     # Mailer configuration
     mailer:
         enabled: true  # Enable tenant-aware mailer
+        add_tenant_id_header: false  # Explicit opt-in for X-Tenant-ID
+        add_tenant_name_header: false  # Independent opt-in for X-Tenant-Name
         fallback_dsn: null  # Fallback mailer DSN
         fallback_from: null  # Fallback from address
         fallback_sender: null  # Fallback sender name

@@ -12,9 +12,11 @@ use Symfony\Component\Cache\Psr16Cache;
 use Zhortein\MultiTenantBundle\Context\TenantContext;
 use Zhortein\MultiTenantBundle\Decorator\TenantAwareCacheDecorator;
 use Zhortein\MultiTenantBundle\Decorator\TenantAwareSimpleCacheDecorator;
+use Zhortein\MultiTenantBundle\Decorator\TenantCacheException;
 use Zhortein\MultiTenantBundle\Decorator\TenantLoggerProcessor;
 use Zhortein\MultiTenantBundle\Decorator\TenantStoragePathHelper;
 use Zhortein\MultiTenantBundle\Entity\TenantInterface;
+use Zhortein\MultiTenantBundle\Storage\TenantStorageException;
 
 /**
  * Integration tests for tenant-aware decorators.
@@ -229,18 +231,19 @@ final class DecoratorIntegrationTest extends TestCase
         // No tenant set - should work without prefixing
         $this->tenantContext->clear();
 
-        // Test cache without tenant
-        $item = $cacheDecorator->getItem('no-tenant-test');
-        $item->set('no-tenant-value');
-        $cacheDecorator->save($item);
+        try {
+            $cacheDecorator->getItem('tenant_1_no-tenant-test');
+            self::fail('Tenant-aware cache must fail closed without a tenant.');
+        } catch (TenantCacheException) {
+            self::addToAssertionCount(1);
+        }
 
-        $retrievedItem = $cacheDecorator->getItem('no-tenant-test');
-        $this->assertTrue($retrievedItem->isHit());
-        $this->assertSame('no-tenant-value', $retrievedItem->get());
-
-        // Test storage without tenant
-        $path = $storageHelper->prefixPath('file.txt');
-        $this->assertSame('file.txt', $path); // No prefix
+        try {
+            $storageHelper->prefixPath('file.txt');
+            self::fail('Tenant-aware storage must fail closed without a tenant.');
+        } catch (TenantStorageException) {
+            self::addToAssertionCount(1);
+        }
 
         // Test logger without tenant
         $record = new LogRecord(

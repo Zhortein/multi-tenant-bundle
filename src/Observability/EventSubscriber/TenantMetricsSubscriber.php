@@ -61,7 +61,6 @@ final readonly class TenantMetricsSubscriber implements EventSubscriberInterface
             [
                 'resolver' => $event->getResolver(),
                 'status' => 'error',
-                'reason' => $event->getReason(),
             ]
         );
     }
@@ -84,11 +83,6 @@ final readonly class TenantMetricsSubscriber implements EventSubscriberInterface
      */
     public function onTenantHeaderRejected(TenantHeaderRejectedEvent $event): void
     {
-        $this->metricsAdapter->counter(
-            'tenant_header_rejected_total',
-            [
-                'header' => $event->getHeaderName(),
-            ]
-        );
+        $this->metricsAdapter->counter('tenant_header_rejected_total');
     }
 }

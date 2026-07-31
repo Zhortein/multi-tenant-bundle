@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Zhortein\MultiTenantBundle\Decorator;
 
 use Zhortein\MultiTenantBundle\Context\TenantContextInterface;
+use Zhortein\MultiTenantBundle\Storage\TenantStorageException;
+use Zhortein\MultiTenantBundle\Storage\TenantStoragePathResolver;
 
 /**
  * Helper for prefixing storage paths with tenant information.
@@ -15,20 +17,22 @@ use Zhortein\MultiTenantBundle\Context\TenantContextInterface;
  */
 final class TenantStoragePathHelper
 {
+    private readonly TenantStoragePathResolver $pathResolver;
+
     public function __construct(
         private readonly TenantContextInterface $tenantContext,
         private readonly bool $enabled = true,
         private readonly string $pathSeparator = '/',
     ) {
+        if ('/' !== $pathSeparator) {
+            throw new TenantStorageException('Tenant storage paths only support the forward-slash separator.');
+        }
+
+        $this->pathResolver = new TenantStoragePathResolver($tenantContext);
     }
 
     /**
-     * Prefixes a path with tenant-specific directory.
-     *
-     * @param string $path    The original path
-     * @param bool   $useSlug Whether to use tenant slug instead of ID for the prefix
-     *
-     * @return string The prefixed path or original path if no tenant context
+     * Prefixes a path with the active tenant namespace.
      */
     public function prefixPath(string $path, bool $useSlug = false): string
     {
@@ -36,26 +40,11 @@ final class TenantStoragePathHelper
             return $path;
         }
 
-        $tenant = $this->tenantContext->getTenant();
-        if (!$tenant) {
-            return $path;
-        }
-
-        $tenantIdentifier = $useSlug ? $tenant->getSlug() : (string) $tenant->getId();
-        $prefix = 'tenants'.$this->pathSeparator.$tenantIdentifier;
-
-        // Remove leading slash from path to avoid double slashes
-        $cleanPath = ltrim($path, '/\\');
-
-        return $prefix.$this->pathSeparator.$cleanPath;
+        return $this->pathResolver->resolve($path, true, $useSlug);
     }
 
     /**
-     * Gets the tenant-specific directory path.
-     *
-     * @param bool $useSlug Whether to use tenant slug instead of ID
-     *
-     * @return string|null The tenant directory path or null if no tenant context
+     * Gets the active tenant namespace, or null when this helper is disabled.
      */
     public function getTenantDirectory(bool $useSlug = false): ?string
     {
@@ -63,23 +52,11 @@ final class TenantStoragePathHelper
             return null;
         }
 
-        $tenant = $this->tenantContext->getTenant();
-        if (!$tenant) {
-            return null;
-        }
-
-        $tenantIdentifier = $useSlug ? $tenant->getSlug() : (string) $tenant->getId();
-
-        return 'tenants'.$this->pathSeparator.$tenantIdentifier;
+        return $this->pathResolver->tenantNamespace($useSlug);
     }
 
     /**
-     * Removes tenant prefix from a path.
-     *
-     * @param string $path    The prefixed path
-     * @param bool   $useSlug Whether the path was prefixed with slug instead of ID
-     *
-     * @return string The path without tenant prefix
+     * Removes the active tenant prefix from a validated path.
      */
     public function removeTenantPrefix(string $path, bool $useSlug = false): string
     {
@@ -87,28 +64,18 @@ final class TenantStoragePathHelper
             return $path;
         }
 
-        $tenant = $this->tenantContext->getTenant();
-        if (!$tenant) {
-            return $path;
+        $validatedPath = $this->pathResolver->validateRelativePath($path);
+        $prefix = $this->pathResolver->tenantNamespace($useSlug).'/';
+
+        if (str_starts_with($validatedPath, $prefix)) {
+            return substr($validatedPath, strlen($prefix));
         }
 
-        $tenantIdentifier = $useSlug ? $tenant->getSlug() : (string) $tenant->getId();
-        $prefix = 'tenants'.$this->pathSeparator.$tenantIdentifier.$this->pathSeparator;
-
-        if (str_starts_with($path, $prefix)) {
-            return substr($path, strlen($prefix));
-        }
-
-        return $path;
+        return $validatedPath;
     }
 
     /**
-     * Checks if a path is tenant-prefixed.
-     *
-     * @param string $path    The path to check
-     * @param bool   $useSlug Whether to check for slug-based prefix
-     *
-     * @return bool True if the path is tenant-prefixed
+     * Checks whether a validated path belongs to the active tenant namespace.
      */
     public function isTenantPrefixed(string $path, bool $useSlug = false): bool
     {
@@ -116,39 +83,24 @@ final class TenantStoragePathHelper
             return false;
         }
 
-        $tenant = $this->tenantContext->getTenant();
-        if (!$tenant) {
-            return false;
-        }
+        $validatedPath = $this->pathResolver->validateRelativePath($path);
+        $prefix = $this->pathResolver->tenantNamespace($useSlug).'/';
 
-        $tenantIdentifier = $useSlug ? $tenant->getSlug() : (string) $tenant->getId();
-        $prefix = 'tenants'.$this->pathSeparator.$tenantIdentifier.$this->pathSeparator;
-
-        return str_starts_with($path, $prefix);
+        return str_starts_with($validatedPath, $prefix);
     }
 
     /**
-     * Creates a tenant-aware file path for uploads.
-     *
-     * @param string $filename  The filename
-     * @param string $directory Optional subdirectory within tenant space
-     * @param bool   $useSlug   Whether to use tenant slug instead of ID
-     *
-     * @return string The full tenant-aware path
+     * Creates a tenant-aware upload path.
      */
     public function createUploadPath(string $filename, string $directory = '', bool $useSlug = false): string
     {
-        $basePath = $directory ? trim($directory, '/\\').$this->pathSeparator.$filename : $filename;
+        $basePath = '' !== $directory ? $directory.$this->pathSeparator.$filename : $filename;
 
         return $this->prefixPath($basePath, $useSlug);
     }
 
     /**
-     * Gets the current tenant identifier used for prefixing.
-     *
-     * @param bool $useSlug Whether to return slug instead of ID
-     *
-     * @return string|null The tenant identifier or null if no tenant context
+     * Gets the active tenant identifier, or null when this helper is disabled.
      */
     public function getCurrentTenantIdentifier(bool $useSlug = false): ?string
     {
@@ -156,11 +108,8 @@ final class TenantStoragePathHelper
             return null;
         }
 
-        $tenant = $this->tenantContext->getTenant();
-        if (!$tenant) {
-            return null;
-        }
+        $namespace = $this->pathResolver->tenantNamespace($useSlug);
 
-        return $useSlug ? $tenant->getSlug() : (string) $tenant->getId();
+        return substr($namespace, strlen('tenants/'));
     }
 }

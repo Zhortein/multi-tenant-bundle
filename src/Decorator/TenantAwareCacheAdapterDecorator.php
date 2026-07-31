@@ -19,11 +19,14 @@ use Zhortein\MultiTenantBundle\Context\TenantContextInterface;
  */
 final readonly class TenantAwareCacheAdapterDecorator implements AdapterInterface, CacheInterface
 {
+    private TenantCacheKeyPrefixer $keyPrefixer;
+
     public function __construct(
         private CacheItemPoolInterface $decorated,
         private TenantContextInterface $tenantContext,
         private bool $enabled = true,
     ) {
+        $this->keyPrefixer = new TenantCacheKeyPrefixer($tenantContext);
     }
 
     /**
@@ -86,10 +89,7 @@ final readonly class TenantAwareCacheAdapterDecorator implements AdapterInterfac
 
     private function adapter(): ProxyAdapter
     {
-        $tenant = $this->tenantContext->getTenant();
-        $namespace = $this->enabled && null !== $tenant
-            ? sprintf('tenant_%s_', $tenant->getId())
-            : '';
+        $namespace = $this->enabled ? $this->keyPrefixer->prefix() : '';
 
         return new ProxyAdapter($this->decorated, $namespace);
     }

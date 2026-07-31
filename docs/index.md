@@ -37,7 +37,8 @@ Welcome to the comprehensive documentation for the Zhortein Multi-Tenant Bundle,
 - [Decorators](decorators.md) - Tenant-aware decorators for caching, logging, and storage
 - [Mailer](mailer.md) - Tenant-aware email configuration and sending
 - [Messenger](messenger.md) - Tenant-aware message queues and processing
-- [Storage](storage.md) - Tenant-specific file storage mechanisms
+- [Storage](storage.md) - Fail-closed tenant-specific file storage
+- [Security Contract Migration](migration-security-contracts.md) - Breaking storage, cache, mailer, and observability migration
 - [Observability](observability.md) - Monitoring, metrics, and logging for tenant operations
 
 ### Database Management
@@ -60,6 +61,7 @@ Welcome to the comprehensive documentation for the Zhortein Multi-Tenant Bundle,
 - [Storage Usage Examples](examples/storage-usage.md) - File storage examples
 - [Database Usage Examples](examples/database-usage.md) - Entity and repository examples
 - [Observability Usage Examples](examples/observability-usage.md) - Monitoring and metrics examples
+- [Issue 12 Security Contract Audit](audit-issue-12-security-contracts.md) - Previous false positives and effective integration coverage
 
 ## Overview
 

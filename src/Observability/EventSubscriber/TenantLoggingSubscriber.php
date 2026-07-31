@@ -59,8 +59,6 @@ final readonly class TenantLoggingSubscriber implements EventSubscriberInterface
     {
         $this->logger?->warning('Tenant resolution failed', [
             'resolver' => $event->getResolver(),
-            'reason' => $event->getReason(),
-            'context' => $event->getContext(),
         ]);
     }
 
@@ -96,7 +94,6 @@ final readonly class TenantLoggingSubscriber implements EventSubscriberInterface
         } else {
             $this->logger?->error('Tenant RLS application failed', [
                 'tenant_id' => $event->getTenantId(),
-                'error_message' => $event->getErrorMessage(),
             ]);
         }
     }
@@ -106,8 +103,6 @@ final readonly class TenantLoggingSubscriber implements EventSubscriberInterface
      */
     public function onTenantHeaderRejected(TenantHeaderRejectedEvent $event): void
     {
-        $this->logger?->warning('Tenant header rejected by allow-list', [
-            'header_name' => $event->getHeaderName(),
-        ]);
+        $this->logger?->warning('Tenant header rejected by allow-list');
     }
 }

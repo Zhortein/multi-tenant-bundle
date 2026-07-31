@@ -70,7 +70,6 @@ final class TenantMetricsSubscriberTest extends TestCase
         $this->assertSame([
             'resolver' => 'header',
             'status' => 'error',
-            'reason' => 'no_tenant_found',
         ], $counter['labels']);
         $this->assertSame(1, $counter['value']);
     }
@@ -116,7 +115,7 @@ final class TenantMetricsSubscriberTest extends TestCase
 
         $counter = $counters[0];
         $this->assertSame('tenant_header_rejected_total', $counter['name']);
-        $this->assertSame(['header' => 'X-Custom-Tenant'], $counter['labels']);
+        $this->assertSame([], $counter['labels']);
         $this->assertSame(1, $counter['value']);
     }
 }

@@ -8,6 +8,7 @@ use PHPUnit\Framework\TestCase;
 use Zhortein\MultiTenantBundle\Context\TenantContextInterface;
 use Zhortein\MultiTenantBundle\Decorator\TenantStoragePathHelper;
 use Zhortein\MultiTenantBundle\Entity\TenantInterface;
+use Zhortein\MultiTenantBundle\Storage\TenantStorageException;
 
 /**
  * @covers \Zhortein\MultiTenantBundle\Decorator\TenantStoragePathHelper
@@ -50,9 +51,9 @@ final class TenantStoragePathHelperTest extends TestCase
         $this->tenantContext->method('getTenant')->willReturn(null);
 
         $helper = new TenantStoragePathHelper($this->tenantContext);
-        $result = $helper->prefixPath('uploads/file.txt');
+        $this->expectException(TenantStorageException::class);
 
-        $this->assertSame('uploads/file.txt', $result);
+        $helper->prefixPath('uploads/file.txt');
     }
 
     public function testPrefixPathWhenDisabled(): void
@@ -69,10 +70,9 @@ final class TenantStoragePathHelperTest extends TestCase
     {
         $this->tenantContext->method('getTenant')->willReturn($this->tenant);
 
-        $helper = new TenantStoragePathHelper($this->tenantContext, true, '_');
-        $result = $helper->prefixPath('uploads/file.txt');
+        $this->expectException(TenantStorageException::class);
 
-        $this->assertSame('tenants_tenant-123_uploads/file.txt', $result);
+        new TenantStoragePathHelper($this->tenantContext, true, '_');
     }
 
     public function testPrefixPathWithEmptyPath(): void
@@ -82,7 +82,7 @@ final class TenantStoragePathHelperTest extends TestCase
         $helper = new TenantStoragePathHelper($this->tenantContext);
         $result = $helper->prefixPath('');
 
-        $this->assertSame('tenants/tenant-123/', $result);
+        $this->assertSame('tenants/tenant-123', $result);
     }
 
     public function testPrefixPathWithLeadingSlash(): void
@@ -90,9 +90,9 @@ final class TenantStoragePathHelperTest extends TestCase
         $this->tenantContext->method('getTenant')->willReturn($this->tenant);
 
         $helper = new TenantStoragePathHelper($this->tenantContext);
-        $result = $helper->prefixPath('/uploads/file.txt');
+        $this->expectException(TenantStorageException::class);
 
-        $this->assertSame('tenants/tenant-123/uploads/file.txt', $result);
+        $helper->prefixPath('/uploads/file.txt');
     }
 
     public function testGetTenantDirectory(): void
@@ -120,9 +120,9 @@ final class TenantStoragePathHelperTest extends TestCase
         $this->tenantContext->method('getTenant')->willReturn(null);
 
         $helper = new TenantStoragePathHelper($this->tenantContext);
-        $result = $helper->getTenantDirectory();
+        $this->expectException(TenantStorageException::class);
 
-        $this->assertNull($result);
+        $helper->getTenantDirectory();
     }
 
     public function testGetTenantDirectoryWhenDisabled(): void
@@ -220,9 +220,9 @@ final class TenantStoragePathHelperTest extends TestCase
         $this->tenantContext->method('getTenant')->willReturn(null);
 
         $helper = new TenantStoragePathHelper($this->tenantContext);
-        $result = $helper->getCurrentTenantIdentifier();
+        $this->expectException(TenantStorageException::class);
 
-        $this->assertNull($result);
+        $helper->getCurrentTenantIdentifier();
     }
 
     public function testGetCurrentTenantIdentifierWhenDisabled(): void
@@ -233,5 +233,47 @@ final class TenantStoragePathHelperTest extends TestCase
         $result = $helper->getCurrentTenantIdentifier();
 
         $this->assertNull($result);
+    }
+
+    public function testEveryEnabledOperationFailsClosedWithoutTenant(): void
+    {
+        $this->tenantContext->method('getTenant')->willReturn(null);
+        $helper = new TenantStoragePathHelper($this->tenantContext);
+
+        $operations = [
+            static fn () => $helper->prefixPath('file.txt'),
+            static fn () => $helper->getTenantDirectory(),
+            static fn () => $helper->removeTenantPrefix('tenants/1/file.txt'),
+            static fn () => $helper->isTenantPrefixed('tenants/1/file.txt'),
+            static fn () => $helper->createUploadPath('file.txt'),
+            static fn () => $helper->getCurrentTenantIdentifier(),
+        ];
+
+        foreach ($operations as $operation) {
+            try {
+                $operation();
+                self::fail('Every enabled tenant storage helper operation must require a tenant.');
+            } catch (TenantStorageException) {
+                self::addToAssertionCount(1);
+            }
+        }
+    }
+
+    public function testUploadPathDoesNotNormalizeUnsafeDirectory(): void
+    {
+        $this->tenantContext->method('getTenant')->willReturn($this->tenant);
+        $helper = new TenantStoragePathHelper($this->tenantContext);
+
+        $this->expectException(TenantStorageException::class);
+        $helper->createUploadPath('file.txt', '../outside');
+    }
+
+    public function testPrefixedPathInspectionRejectsTraversal(): void
+    {
+        $this->tenantContext->method('getTenant')->willReturn($this->tenant);
+        $helper = new TenantStoragePathHelper($this->tenantContext);
+
+        $this->expectException(TenantStorageException::class);
+        $helper->isTenantPrefixed('tenants/tenant-123/../other/file.txt');
     }
 }

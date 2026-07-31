@@ -19,11 +19,14 @@ use Zhortein\MultiTenantBundle\Context\TenantContextInterface;
  */
 final class TenantAwareSimpleCacheDecorator implements CacheInterface
 {
+    private readonly TenantCacheKeyPrefixer $keyPrefixer;
+
     public function __construct(
         private readonly CacheInterface $decorated,
         private readonly TenantContextInterface $tenantContext,
         private readonly bool $enabled = true,
     ) {
+        $this->keyPrefixer = new TenantCacheKeyPrefixer($tenantContext);
     }
 
     public function get(string $key, mixed $default = null): mixed
@@ -43,15 +46,13 @@ final class TenantAwareSimpleCacheDecorator implements CacheInterface
 
     public function clear(): bool
     {
-        // Only clear tenant-specific items if we have a tenant context
-        if (!$this->enabled || !$this->tenantContext->getTenant()) {
+        if (!$this->enabled) {
             return $this->decorated->clear();
         }
 
-        // For tenant-aware clearing, we would need to implement a more sophisticated
-        // approach to only clear items with the current tenant prefix
-        // For now, delegate to the underlying cache
-        return $this->decorated->clear();
+        $this->keyPrefixer->prefix();
+
+        throw new TenantCacheException('This PSR-16 cache cannot guarantee tenant-scoped clear operations. Delete explicit keys or use a tenant-aware Symfony cache adapter.');
     }
 
     public function getMultiple(iterable $keys, mixed $default = null): iterable
@@ -115,11 +116,6 @@ final class TenantAwareSimpleCacheDecorator implements CacheInterface
             return $key;
         }
 
-        $tenant = $this->tenantContext->getTenant();
-        if (!$tenant) {
-            return $key;
-        }
-
-        return sprintf('tenant_%s_%s', $tenant->getId(), $key);
+        return $this->keyPrefixer->key($key);
     }
 }
