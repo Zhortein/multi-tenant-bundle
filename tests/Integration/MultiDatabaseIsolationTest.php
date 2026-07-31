@@ -143,10 +143,13 @@ final class MultiDatabaseIsolationTest extends TestCase
             }
         };
 
-        return new TenantEntityManagerFactory(
-            $resolver,
-            ORMSetup::createAttributeMetadataConfiguration([], true)
-        );
+        $ormConfiguration = ORMSetup::createAttributeMetadataConfiguration([], true);
+
+        if (PHP_VERSION_ID >= 80400) {
+            $ormConfiguration->enableNativeLazyObjects(true);
+        }
+
+        return new TenantEntityManagerFactory($resolver, $ormConfiguration);
     }
 
     /** @return list<string> */
