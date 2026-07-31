@@ -40,13 +40,13 @@ final class TenantCommandsIntegrationTest extends TestCase
         $this->tenantRegistry->addTenant($tenant2);
 
         $this->application = new Application();
-        $this->application->add(new ListTenantsCommand(
+        $this->registerCommand(new ListTenantsCommand(
             $this->tenantRegistry,
             $this->tenantContext,
             $this->createMock(\Doctrine\ORM\EntityManagerInterface::class),
             'App\\Entity\\Tenant'
         ));
-        $this->application->add(new TenantImpersonateCommand(
+        $this->registerCommand(new TenantImpersonateCommand(
             $this->tenantRegistry,
             $this->tenantContext,
             true
@@ -252,6 +252,17 @@ final class TenantCommandsIntegrationTest extends TestCase
         $this->assertSame(Command::SUCCESS, $commandTester2->getStatusCode());
         $this->assertStringContainsString('tenant2', $commandTester2->getDisplay());
         $this->assertStringNotContainsString('tenant1', $commandTester2->getDisplay());
+    }
+
+    private function registerCommand(Command $command): void
+    {
+        if (method_exists($this->application, 'addCommand')) {
+            $this->application->addCommand($command);
+
+            return;
+        }
+
+        $this->application->add($command);
     }
 
     private function createMockTenant(string $id, string $slug, string $name): TenantInterface

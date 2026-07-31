@@ -51,7 +51,7 @@ test-kit: ## Run Test Kit integration tests
 	$(DOCKER_RUN) vendor/bin/phpunit tests/Integration --no-coverage
 
 test-rls: ## Run RLS isolation tests (requires PostgreSQL)
-	docker compose -f tests/docker-compose.yml run --rm php-rls vendor/bin/phpunit tests/Integration/RlsIsolationTest.php --no-coverage
+	docker compose -f tests/docker-compose.yml run --rm php-rls vendor/bin/phpunit --group rls --no-coverage
 
 test-resolvers: ## Run resolver chain tests
 	$(DOCKER_RUN) vendor/bin/phpunit tests/Integration/ResolverChainHttpTest.php tests/Integration/ResolverChainTest.php --no-coverage
@@ -102,7 +102,7 @@ test-with-postgres: ## Run RLS tests with PostgreSQL
 	@set -e; \
 	trap 'docker compose -f tests/docker-compose.yml down' EXIT; \
 	docker compose -f tests/docker-compose.yml up -d --wait postgres; \
-	docker compose -f tests/docker-compose.yml run --rm php-rls vendor/bin/phpunit tests/Integration/RlsIsolationTest.php --no-coverage
+	docker compose -f tests/docker-compose.yml run --rm php-rls vendor/bin/phpunit --group rls --no-coverage
 
 validate-testkit: ## Validate Test Kit setup and configuration
 	docker compose -f tests/docker-compose.yml run --rm --no-deps php-rls php tests/validate-testkit.php

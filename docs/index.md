@@ -83,6 +83,7 @@ The Zhortein Multi-Tenant Bundle provides a comprehensive, production-ready solu
 
 - **PHP**: >= 8.3
 - **Symfony**: >= 7.4 | 8.0
+- **Tested matrix**: See the [compatibility policy](compatibility.md)
 - **Database**: PostgreSQL 16 (via Doctrine ORM)
 - **Extensions**: `ext-json`, `ext-pdo`
 

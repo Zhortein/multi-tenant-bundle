@@ -7,6 +7,7 @@ namespace Zhortein\MultiTenantBundle\Tests\Integration;
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\DriverManager;
 use Doctrine\DBAL\Exception;
+use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\TestCase;
 use Zhortein\MultiTenantBundle\Context\TenantContext;
 use Zhortein\MultiTenantBundle\Database\TenantSessionConfigurator;
@@ -21,6 +22,7 @@ use Zhortein\MultiTenantBundle\Tests\Fixtures\Entity\TestTenant;
  * cannot bypass the policy, and raw SQL keeps the proof independent from the
  * Doctrine tenant filter.
  */
+#[Group('rls')]
 final class RlsIsolationTest extends TestCase
 {
     private const int TENANT_A_ID = 1;
