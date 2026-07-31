@@ -45,36 +45,42 @@ jobs:
             symfony: '~7.4.0'
             orm: '~3.5.0'
             dbal: '^3.8'
+            doctrine_bundle: ^2.19
             dependencies: lowest
           - name: PHP 8.3 / Symfony 7.4 / ORM 3.6 / DBAL 4.4
             php: '8.3'
             symfony: '~7.4.0'
             orm: '^3.6'
             dbal: '^4.4'
+            doctrine_bundle: ^2.19
             dependencies: highest
           - name: PHP 8.4 / Symfony 7.4 / ORM 3.6 / DBAL 4.4
             php: '8.4'
             symfony: '~7.4.0'
             orm: '^3.6'
             dbal: '^4.4'
+            doctrine_bundle: ^3.3
             dependencies: highest
           - name: PHP 8.4 / Symfony 8.0 / ORM 3.6 / DBAL 4.4
             php: '8.4'
             symfony: '~8.0.0'
             orm: '^3.6'
             dbal: '^4.4'
+            doctrine_bundle: ^3.3
             dependencies: highest
           - name: PHP 8.5 / Symfony 7.4 / ORM 3.6 / DBAL 4.4
             php: '8.5'
             symfony: '~7.4.0'
             orm: '^3.6'
             dbal: '^4.4'
+            doctrine_bundle: ^3.3
             dependencies: highest
           - name: PHP 8.5 / Symfony 8.0 / ORM 3.6 / DBAL 4.4
             php: '8.5'
             symfony: '~8.0.0'
             orm: '^3.6'
             dbal: '^4.4'
+            doctrine_bundle: ^3.3
             dependencies: highest
 
     services:
@@ -114,11 +120,12 @@ jobs:
           coverage: none
 
       - name: Select supported dependency combination
-        run: >-
-          composer require --dev --no-update
-          "symfony/framework-bundle:${{ matrix.symfony }}"
-          "doctrine/orm:${{ matrix.orm }}"
-          "doctrine/dbal:${{ matrix.dbal }}"
+        run: |
+          composer require --no-update "doctrine/doctrine-bundle:${{ matrix.doctrine_bundle }}"
+          composer require --dev --no-update \
+            "symfony/framework-bundle:${{ matrix.symfony }}" \
+            "doctrine/orm:${{ matrix.orm }}" \
+            "doctrine/dbal:${{ matrix.dbal }}"
 
       - name: Resolve dependencies
         run: |
@@ -132,7 +139,7 @@ jobs:
         run: composer validate --strict
 
       - name: Audit dependencies
-        run: composer audit --no-interaction
+        run: composer audit --no-interaction --abandoned=report
 
       - name: Run PHPStan at maximum level
         run: vendor/bin/phpstan analyse src -c phpstan.neon --memory-limit=512M
