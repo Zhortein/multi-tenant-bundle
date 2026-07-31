@@ -103,6 +103,14 @@ final class ConfigurationTest extends TestCase
         self::assertSame('zhortein_multi_tenant.mailer.tenant_aware', (string) $container->getAlias(TenantAwareMailer::class));
         self::assertSame('zhortein_multi_tenant.messenger.configurator', (string) $container->getAlias(TenantMessengerConfigurator::class));
         self::assertSame('zhortein_multi_tenant.messenger.transport_factory', (string) $container->getAlias(TenantMessengerTransportFactory::class));
+
+        $messengerFactory = $container->getDefinition('zhortein_multi_tenant.messenger.transport_factory');
+        $messengerFactories = $messengerFactory->getArgument(1);
+        self::assertInstanceOf(TaggedIteratorArgument::class, $messengerFactories);
+        self::assertSame(
+            ['zhortein_multi_tenant.messenger.transport_factory'],
+            $messengerFactories->getExclude(),
+        );
         self::assertSame('zhortein_multi_tenant.messenger.transport_resolver', (string) $container->getAlias(TenantMessengerTransportResolver::class));
     }
 

@@ -38,6 +38,10 @@ final class Kernel extends BaseKernel
             'secret' => 'consumer-fixture-secret',
             'test' => true,
             'mailer' => ['dsn' => 'null://null'],
+            'messenger' => [
+                'default_bus' => 'messenger.bus.default',
+                'transports' => ['async' => 'sync://'],
+            ],
         ]);
         $container->loadFromExtension('doctrine', [
             'dbal' => ['url' => 'sqlite:///%kernel.cache_dir%/consumer.db'],

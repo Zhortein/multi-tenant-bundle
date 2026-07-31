@@ -570,6 +570,10 @@ final class ZhorteinMultiTenantExtension extends Extension
         $container->register('zhortein_multi_tenant.messenger.transport_factory', TenantMessengerTransportFactory::class)
             ->setAutowired(true)
             ->setAutoconfigured(true)
+            ->setArgument(1, new TaggedIteratorArgument(
+                'messenger.transport_factory',
+                exclude: ['zhortein_multi_tenant.messenger.transport_factory'],
+            ))
             ->addTag('messenger.transport_factory');
 
         // Register transport resolver middleware
