@@ -16,6 +16,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added a migration guide for these intentional pre-1.0 security-related breaking changes.
 
 ### Fixed
+- Made tenant setting fallbacks truly optional so Mailer configuration no longer fails when an unset optional default parameter is absent.
+- Registered the documented Messenger sending and worker middleware, preserved tenant context during outgoing dispatch, restored it only for received messages, and prevented duplicate tenant stamps.
 - Enforced PostgreSQL RLS for table owners with explicit read/write predicates and expanded real-database coverage for UPDATE, DELETE, rollback cleanup, and connection reuse.
 - Kept tenant-aware Symfony cache decorators compatible with traceable adapters while preserving same-tenant access and cross-tenant namespace isolation.
 - Registered a contract-correct aggregate Mailer transport factory and mapped `TenantInterface` to the configured tenant entity so real consumer containers and Doctrine metadata validate successfully.

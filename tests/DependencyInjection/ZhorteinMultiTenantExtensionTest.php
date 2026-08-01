@@ -114,6 +114,8 @@ class ZhorteinMultiTenantExtensionTest extends TestCase
             $this->assertTrue($this->container->hasDefinition('zhortein_multi_tenant.messenger.configurator'));
             $this->assertTrue($this->container->hasDefinition('zhortein_multi_tenant.messenger.transport_factory'));
             $this->assertTrue($this->container->hasDefinition('zhortein_multi_tenant.messenger.transport_resolver'));
+            $this->assertTrue($this->container->hasDefinition(\Zhortein\MultiTenantBundle\Messenger\TenantSendingMiddleware::class));
+            $this->assertTrue($this->container->hasDefinition(\Zhortein\MultiTenantBundle\Messenger\TenantWorkerMiddleware::class));
         }
     }
 

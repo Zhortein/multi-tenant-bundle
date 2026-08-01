@@ -77,6 +77,24 @@ final class TenantSettingsManagerTest extends TestCase
         $this->assertEquals('default_value', $result);
     }
 
+    public function testGetUsesConfiguredParameterFallback(): void
+    {
+        $tenant = $this->createMock(TenantInterface::class);
+        $tenant->method('getId')->willReturn('tenant-1');
+        $this->tenantContext->method('getTenant')->willReturn($tenant);
+
+        $cacheItem = $this->createMock(CacheItemInterface::class);
+        $cacheItem->method('isHit')->willReturn(true);
+        $cacheItem->method('get')->willReturn([]);
+        $this->cache->method('getItem')->willReturn($cacheItem);
+
+        $parameter = 'zhortein_multi_tenant.default_settings.email_reply_to';
+        $this->parameterBag->method('has')->with($parameter)->willReturn(true);
+        $this->parameterBag->method('get')->with($parameter)->willReturn('reply@example.test');
+
+        $this->assertSame('reply@example.test', $this->manager->get('email_reply_to'));
+    }
+
     public function testGetRequiredThrowsExceptionWhenNotFound(): void
     {
         $tenant = $this->createMock(TenantInterface::class);

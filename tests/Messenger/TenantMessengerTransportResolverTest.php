@@ -43,14 +43,14 @@ class TenantMessengerTransportResolverTest extends TestCase
         // Arrange
         $tenant = $this->createMock(TenantInterface::class);
         $tenant->method('getSlug')->willReturn('acme');
-        $tenant->method('getName')->willReturn('Acme Corporation');
+        $tenant->method('getId')->willReturn('123');
 
         $this->tenantContext->method('getTenant')->willReturn($tenant);
 
         $message = new \stdClass();
         $envelope = new Envelope($message);
 
-        $nextMiddleware = $this->createMock(StackInterface::class);
+        $nextMiddleware = $this->createMock(\Symfony\Component\Messenger\Middleware\MiddlewareInterface::class);
         $this->stack->method('next')->willReturn($nextMiddleware);
 
         $nextMiddleware->expects($this->once())
@@ -66,8 +66,7 @@ class TenantMessengerTransportResolverTest extends TestCase
                 $tenantStamp = $envelope->last(TenantStamp::class);
 
                 return $tenantStamp
-                    && 'acme' === $tenantStamp->getTenantSlug()
-                    && 'Acme Corporation' === $tenantStamp->getTenantName();
+                    && '123' === $tenantStamp->getTenantId();
             }), $this->stack)
             ->willReturn($envelope);
 
@@ -83,14 +82,14 @@ class TenantMessengerTransportResolverTest extends TestCase
         // Arrange
         $tenant = $this->createMock(TenantInterface::class);
         $tenant->method('getSlug')->willReturn('unknown');
-        $tenant->method('getName')->willReturn('Unknown Tenant');
+        $tenant->method('getId')->willReturn('456');
 
         $this->tenantContext->method('getTenant')->willReturn($tenant);
 
         $message = new \stdClass();
         $envelope = new Envelope($message);
 
-        $nextMiddleware = $this->createMock(StackInterface::class);
+        $nextMiddleware = $this->createMock(\Symfony\Component\Messenger\Middleware\MiddlewareInterface::class);
         $this->stack->method('next')->willReturn($nextMiddleware);
 
         $nextMiddleware->expects($this->once())
@@ -106,8 +105,7 @@ class TenantMessengerTransportResolverTest extends TestCase
                 $tenantStamp = $envelope->last(TenantStamp::class);
 
                 return $tenantStamp
-                    && 'unknown' === $tenantStamp->getTenantSlug()
-                    && 'Unknown Tenant' === $tenantStamp->getTenantName();
+                    && '456' === $tenantStamp->getTenantId();
             }), $this->stack)
             ->willReturn($envelope);
 
@@ -126,7 +124,7 @@ class TenantMessengerTransportResolverTest extends TestCase
         $message = new \stdClass();
         $envelope = new Envelope($message);
 
-        $nextMiddleware = $this->createMock(StackInterface::class);
+        $nextMiddleware = $this->createMock(\Symfony\Component\Messenger\Middleware\MiddlewareInterface::class);
         $this->stack->method('next')->willReturn($nextMiddleware);
 
         $nextMiddleware->expects($this->once())
@@ -157,7 +155,7 @@ class TenantMessengerTransportResolverTest extends TestCase
         // Arrange
         $tenant = $this->createMock(TenantInterface::class);
         $tenant->method('getSlug')->willReturn('acme');
-        $tenant->method('getName')->willReturn('Acme Corporation');
+        $tenant->method('getId')->willReturn('123');
 
         $this->tenantContext->method('getTenant')->willReturn($tenant);
 
@@ -165,7 +163,7 @@ class TenantMessengerTransportResolverTest extends TestCase
         $existingTransportStamp = new TransportNamesStamp(['existing_transport']);
         $envelope = new Envelope($message, [$existingTransportStamp]);
 
-        $nextMiddleware = $this->createMock(StackInterface::class);
+        $nextMiddleware = $this->createMock(\Symfony\Component\Messenger\Middleware\MiddlewareInterface::class);
         $this->stack->method('next')->willReturn($nextMiddleware);
 
         $nextMiddleware->expects($this->once())
@@ -181,8 +179,7 @@ class TenantMessengerTransportResolverTest extends TestCase
                 $tenantStamp = $envelope->last(TenantStamp::class);
 
                 return $tenantStamp
-                    && 'acme' === $tenantStamp->getTenantSlug()
-                    && 'Acme Corporation' === $tenantStamp->getTenantName();
+                    && '123' === $tenantStamp->getTenantId();
             }), $this->stack)
             ->willReturn($envelope);
 
@@ -205,14 +202,14 @@ class TenantMessengerTransportResolverTest extends TestCase
 
         $tenant = $this->createMock(TenantInterface::class);
         $tenant->method('getSlug')->willReturn('acme');
-        $tenant->method('getName')->willReturn('Acme Corporation');
+        $tenant->method('getId')->willReturn('123');
 
         $this->tenantContext->method('getTenant')->willReturn($tenant);
 
         $message = new \stdClass();
         $envelope = new Envelope($message);
 
-        $nextMiddleware = $this->createMock(StackInterface::class);
+        $nextMiddleware = $this->createMock(\Symfony\Component\Messenger\Middleware\MiddlewareInterface::class);
         $this->stack->method('next')->willReturn($nextMiddleware);
 
         $nextMiddleware->expects($this->once())

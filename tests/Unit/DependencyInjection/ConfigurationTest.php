@@ -22,6 +22,8 @@ use Zhortein\MultiTenantBundle\Mailer\TenantMailerFallbackTransportFactory;
 use Zhortein\MultiTenantBundle\Messenger\TenantMessengerConfigurator;
 use Zhortein\MultiTenantBundle\Messenger\TenantMessengerTransportFactory;
 use Zhortein\MultiTenantBundle\Messenger\TenantMessengerTransportResolver;
+use Zhortein\MultiTenantBundle\Messenger\TenantSendingMiddleware;
+use Zhortein\MultiTenantBundle\Messenger\TenantWorkerMiddleware;
 use Zhortein\MultiTenantBundle\Repository\TenantSettingRepository;
 
 /**
@@ -127,6 +129,14 @@ final class ConfigurationTest extends TestCase
             $messengerFactories->getExclude(),
         );
         self::assertSame('zhortein_multi_tenant.messenger.transport_resolver', (string) $container->getAlias(TenantMessengerTransportResolver::class));
+
+        foreach ([TenantWorkerMiddleware::class => 200, TenantSendingMiddleware::class => 150] as $service => $priority) {
+            self::assertTrue($container->hasDefinition($service));
+            self::assertSame(
+                [['priority' => $priority]],
+                $container->getDefinition($service)->getTag('messenger.middleware'),
+            );
+        }
     }
 
     public function testMailerFactoryUsesANonRecursiveFallbackAggregate(): void

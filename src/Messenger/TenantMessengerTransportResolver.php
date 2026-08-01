@@ -44,7 +44,7 @@ final readonly class TenantMessengerTransportResolver implements MiddlewareInter
         }
 
         // Add tenant information as stamps/headers if enabled
-        if ($this->addTenantHeaders && null !== $tenant) {
+        if ($this->addTenantHeaders && null !== $tenant && null === $envelope->last(TenantStamp::class)) {
             $envelope = $this->addTenantStamps($envelope, $tenant);
         }
 

@@ -9,6 +9,7 @@ use PHPUnit\Framework\TestCase;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Envelope;
 use Symfony\Component\Messenger\Middleware\StackInterface;
+use Symfony\Component\Messenger\Stamp\ReceivedStamp;
 use Zhortein\MultiTenantBundle\Context\TenantContextInterface;
 use Zhortein\MultiTenantBundle\Database\TenantSessionConfigurator;
 use Zhortein\MultiTenantBundle\Entity\TenantInterface;
@@ -56,6 +57,21 @@ class TenantWorkerMiddlewareTest extends TestCase
         $this->stack = $this->createMock(StackInterface::class);
     }
 
+    public function testOutgoingDispatchPreservesCurrentTenantContext(): void
+    {
+        $message = new \stdClass();
+        $envelope = new Envelope($message);
+        $nextMiddleware = $this->createMock(\Symfony\Component\Messenger\Middleware\MiddlewareInterface::class);
+
+        $this->tenantContext->expects($this->never())->method('clear');
+        $this->tenantContext->expects($this->never())->method('setTenant');
+        $this->tenantRegistry->expects($this->never())->method('findById');
+        $this->stack->expects($this->once())->method('next')->willReturn($nextMiddleware);
+        $nextMiddleware->expects($this->once())->method('handle')->with($envelope, $this->stack)->willReturn($envelope);
+
+        $this->assertSame($envelope, $this->middleware->handle($envelope, $this->stack));
+    }
+
     public function testHandleWithTenantStampRestoresTenantContext(): void
     {
         // Arrange
@@ -63,7 +79,7 @@ class TenantWorkerMiddlewareTest extends TestCase
         $tenantStamp = new TenantStamp('123');
 
         $message = new \stdClass();
-        $envelope = new Envelope($message, [$tenantStamp]);
+        $envelope = new Envelope($message, [$tenantStamp, new ReceivedStamp('async')]);
 
         $this->tenantRegistry->expects($this->once())
             ->method('findById')
@@ -98,7 +114,7 @@ class TenantWorkerMiddlewareTest extends TestCase
     {
         // Arrange
         $message = new \stdClass();
-        $envelope = new Envelope($message);
+        $envelope = new Envelope($message, [new ReceivedStamp('async')]);
 
         $this->tenantRegistry->expects($this->never())
             ->method('findById');
@@ -132,7 +148,7 @@ class TenantWorkerMiddlewareTest extends TestCase
         $tenantStamp = new TenantStamp('nonexistent');
 
         $message = new \stdClass();
-        $envelope = new Envelope($message, [$tenantStamp]);
+        $envelope = new Envelope($message, [$tenantStamp, new ReceivedStamp('async')]);
 
         $this->tenantRegistry->expects($this->once())
             ->method('findById')
@@ -169,7 +185,7 @@ class TenantWorkerMiddlewareTest extends TestCase
         $tenantStamp = new TenantStamp('123');
 
         $message = new \stdClass();
-        $envelope = new Envelope($message, [$tenantStamp]);
+        $envelope = new Envelope($message, [$tenantStamp, new ReceivedStamp('async')]);
 
         $this->tenantRegistry->expects($this->once())
             ->method('findById')
@@ -210,7 +226,7 @@ class TenantWorkerMiddlewareTest extends TestCase
         $tenantStamp = new TenantStamp('456');
 
         $message = new \stdClass();
-        $envelope = new Envelope($message, [$tenantStamp]);
+        $envelope = new Envelope($message, [$tenantStamp, new ReceivedStamp('async')]);
 
         $this->tenantRegistry->expects($this->once())
             ->method('findById')
@@ -249,7 +265,7 @@ class TenantWorkerMiddlewareTest extends TestCase
         $lastStamp = new TenantStamp('456');
 
         $message = new \stdClass();
-        $envelope = new Envelope($message, [$firstStamp, $lastStamp]);
+        $envelope = new Envelope($message, [$firstStamp, $lastStamp, new ReceivedStamp('async')]);
 
         // Should use the last stamp (456)
         $this->tenantRegistry->expects($this->once())
