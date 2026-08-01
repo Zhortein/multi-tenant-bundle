@@ -337,6 +337,9 @@ zhortein_multi_tenant:
             '*.dev.local': 'use_subdomain_as_slug'
 
 # config/packages/prod/zhortein_multi_tenant.yaml
+```
+
+```yaml
 zhortein_multi_tenant:
     resolver: 'hybrid'
     hybrid:

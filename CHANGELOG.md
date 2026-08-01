@@ -3,7 +3,7 @@
 All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+and releases will follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html). No tag or GitHub release has been published yet; the RC headings below preserve untagged development history and are not releases.
 
 ## [Unreleased]
 
@@ -20,10 +20,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Classified all earlier RC sections as untagged development history, removed false stable-release and production-readiness claims, and documented the authorized SemVer candidate process.
+- Added automated documentation validation for local links, YAML examples, obsolete resolver structures, and release-status claims.
 - Replaced historical Test Kit documentation for undistributed or nonexistent
   helpers with the canonical minimal API and executable consumer examples.
 
-## [1.0.0-RC3] - 2026-04-05
+## Unreleased development history: RC3 planning (2026-04-05)
 
 ### Security
 
@@ -71,7 +73,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Documentation Updates**
   - Updated `README.md` and documentation files to reflect Symfony 8 support
 
-## [1.0.0-RC2]
+## Unreleased development history: RC2 planning
 
 ### Added
 - **Observability and Monitoring**
@@ -157,7 +159,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Sensitive Data Protection**: Automatic masking of passwords and sensitive information in DSN strings across all command outputs
 - **Tenant Validation**: Comprehensive tenant existence validation before command execution with clear error messages
 
-## [1.0.0-RC1] - 2025-08-01
+## Unreleased development history: RC1 planning (2025-08-01)
 
 ### Added
 - **Core Multi-Tenancy Features**
@@ -226,7 +228,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Interface-based design for extensibility
 - Caching layer for performance optimization
 
-## [Unreleased]
+## Unreleased development history: initial RLS work
 
 ### Added
 - **PostgreSQL Row-Level Security (RLS) Integration**

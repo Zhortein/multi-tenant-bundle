@@ -4,18 +4,15 @@ This document provides a comprehensive overview of the Zhortein Multi-Tenant Bun
 
 > 📖 **Navigation**: [← FAQ](faq.md) | [Back to Documentation Index](index.md) | [RLS Implementation Summary →](rls-implementation-summary.md)
 
-## 🎯 Project Status: ✅ COMPLETE
+## Project status: pre-1.0
 
-The Zhortein Multi-Tenant Bundle is a production-ready, comprehensive solution for building multi-tenant applications with Symfony 7+ and PostgreSQL 16.
+The bundle is under active pre-1.0 verification. Supported combinations and demonstrated guarantees are defined by the compatibility matrix and required CI jobs, not by this overview.
 
 ## 📊 Project Statistics
 
-- **Total Files**: 57+ source files
-- **Lines of Code**: 3000+ lines
-- **Test Coverage**: 71 unit tests with 139 assertions
 - **PHPStan Level**: Maximum (Level 9)
 - **Code Style**: Symfony standards compliant
-- **Documentation**: Complete with examples
+- **Documentation**: validated links and YAML examples
 
 ## 🏗️ Architecture Overview
 
@@ -114,10 +111,10 @@ The Zhortein Multi-Tenant Bundle is a production-ready, comprehensive solution f
 - ✅ Comprehensive console commands
 - ✅ Extensive configuration options
 - ✅ Clear error messages and validation
-- ✅ Complete documentation with examples
+- Documented public contracts with automated link and YAML validation
 - ✅ Easy integration with existing Symfony apps
 
-### Production Ready
+### Release readiness
 - ✅ Security-first design with tenant isolation
 - ✅ Performance optimizations with caching
 - ✅ Scalable architecture for growth
@@ -216,24 +213,24 @@ class ApiKeyTenantResolver implements TenantResolverInterface
 }
 ```
 
-## 🎉 Project Success Metrics
+## Demonstrated project checks
 
 - ✅ **100% PHPStan Compliance**: Zero errors at maximum level
-- ✅ **Comprehensive Test Suite**: 71 tests with 139 assertions
+- **Comprehensive test suite**: PHPUnit and effective PostgreSQL RLS run as required CI checks
 - ✅ **Complete Documentation**: README, CHANGELOG, CONTRIBUTING, and docs/
-- ✅ **Production Ready**: Security, performance, and scalability considered
+- **Release readiness**: not yet declared; follow the release checklist and compatibility evidence
 - ✅ **Developer Friendly**: Easy setup, clear examples, extensive configuration
 - ✅ **Symfony Best Practices**: Following all Symfony 7+ conventions
 - ✅ **Modern PHP**: PHP 8.3+ features with strict typing
 - ✅ **Extensible Architecture**: Interface-based design for customization
 
-## 🏆 Final Status
+## Release status
 
-The Zhortein Multi-Tenant Bundle is **COMPLETE** and ready for:
-- ✅ Production deployment
+The bundle is not yet a published stable release. Current preparation covers:
+- Candidate validation in the external consumer and demo
 - ✅ Community contribution
-- ✅ Package publication
+- Package publication only after an explicitly authorized release
 - ✅ Documentation hosting
-- ✅ Version tagging (1.0.0)
+- No published tag exists yet
 
-The bundle provides a comprehensive, production-ready solution for multi-tenant Symfony applications with PostgreSQL 16 support, following all modern PHP and Symfony best practices.
+The bundle provides a pre-1.0 multi-tenant implementation for multi-tenant Symfony applications with PostgreSQL 16 support, following all modern PHP and Symfony best practices.

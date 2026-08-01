@@ -22,7 +22,8 @@ Welcome to the comprehensive documentation for the Zhortein Multi-Tenant Bundle,
 - [Dependency classification](dependencies.md) - Required runtime components and optional integrations
 - [Configuration](configuration.md) - Complete configuration reference
 - [Database Strategies](database-strategies.md) - Shared DB vs Multi-DB approaches
-- [Project Overview](project-overview.md) - Architecture and implementation details
+- [Project Overview](project-overview.md) - Architecture and demonstrated project status
+- [Release Process](release-process.md) - SemVer, candidate validation, and publication authorization
 
 ### Core Concepts
 - [Tenant Context](tenant-context.md) - How tenant resolution and access works
@@ -65,7 +66,7 @@ Welcome to the comprehensive documentation for the Zhortein Multi-Tenant Bundle,
 
 ## Overview
 
-The Zhortein Multi-Tenant Bundle provides a comprehensive, production-ready solution for building multi-tenant applications with Symfony 7.4 LTS and Symfony 8.x. It follows Symfony best practices and includes extensive testing and documentation.
+The Zhortein Multi-Tenant Bundle provides a pre-1.0 implementation under active verification for building multi-tenant applications with Symfony 7.4 LTS and Symfony 8.x. It follows Symfony best practices and includes extensive testing and documentation.
 
 ### Key Features
 
