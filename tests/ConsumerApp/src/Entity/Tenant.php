@@ -12,10 +12,16 @@ class Tenant implements TenantInterface
 {
     #[ORM\Id]
     #[ORM\Column]
-    private string $id = 'fixture';
+    private string $id;
 
     #[ORM\Column(unique: true)]
-    private string $slug = 'fixture';
+    private string $slug;
+
+    public function __construct(string $id = 'fixture', string $slug = 'fixture')
+    {
+        $this->id = $id;
+        $this->slug = $slug;
+    }
 
     public function getId(): string
     {
@@ -29,7 +35,7 @@ class Tenant implements TenantInterface
 
     public function getName(): string
     {
-        return 'Consumer Fixture';
+        return sprintf('Consumer %s', $this->slug);
     }
 
     public function getDomain(): ?string

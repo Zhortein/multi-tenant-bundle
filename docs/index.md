@@ -140,38 +140,19 @@ class DashboardController extends AbstractController
 }
 ```
 
-## Test Kit Highlights
+## Public Test Kit
 
-The bundle includes a **comprehensive Test Kit** that makes testing multi-tenant applications easy and reliable:
+The optional public API contains only `TenantContextScope`,
+`TenantKernelTestCase`, and `TenantWebTestCase`. It manages explicit tenant
+context safely but does not replace application authorization, repository
+criteria, resolver tests, or effective PostgreSQL RLS tests.
 
-### 🎯 **Core Features**
-- **WithTenantTrait**: Execute code within specific tenant contexts
-- **TestData Builder**: Lightweight test data creation for tenant-aware entities
-- **Base Test Classes**: Pre-configured for HTTP, CLI, and Messenger testing
-- **RLS Isolation Tests**: Prove PostgreSQL Row-Level Security works as defense-in-depth
-
-### 🔒 **Critical Security Testing**
-```php
-// The CRITICAL test - proves RLS works even when Doctrine filters are disabled
-$this->withTenant('tenant-a', function () {
-    $this->withoutDoctrineTenantFilter(function () {
-        $products = $this->repository->findAll();
-        // Should still see only tenant A products due to RLS
-        $this->assertCount(2, $products);
-    });
-});
+```shell
+make test
+make test-with-postgres
 ```
 
-### 🚀 **Quick Start**
-```bash
-make dev-setup          # Setup development environment
-make validate-testkit   # Validate Test Kit configuration
-make postgres-start     # Start PostgreSQL for testing
-make test-kit          # Run all Test Kit tests
-make test-rls          # Run critical RLS isolation tests
-```
-
-**📖 Learn More**: [Testing & Test Kit Documentation](testing.md) | [Test Kit Usage Examples](examples/test-kit-usage.md)
+See [Testing](testing.md) and the [executable consumer examples](examples/test-kit-usage.md).
 
 ## Getting Help
 

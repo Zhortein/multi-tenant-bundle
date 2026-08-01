@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App;
 
+use App\Controller\TenantContextController;
 use Doctrine\Bundle\DoctrineBundle\DoctrineBundle;
 use Doctrine\Bundle\MigrationsBundle\DoctrineMigrationsBundle;
 use Symfony\Bundle\FrameworkBundle\FrameworkBundle;
@@ -11,6 +12,7 @@ use Symfony\Bundle\FrameworkBundle\Kernel\MicroKernelTrait;
 use Symfony\Component\Config\Loader\LoaderInterface;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\HttpKernel\Kernel as BaseKernel;
+use Symfony\Component\Routing\Loader\Configurator\RoutingConfigurator;
 use Zhortein\MultiTenantBundle\ZhorteinMultiTenantBundle;
 
 final class Kernel extends BaseKernel
@@ -62,7 +64,12 @@ final class Kernel extends BaseKernel
             'tenant_entity' => "App\Entity\Tenant",
             'database' => [
                 'strategy' => $strategy,
+                'enable_filter' => false,
                 'rls' => ['enabled' => false],
+            ],
+            'listeners' => [
+                'request_listener' => false,
+                'doctrine_filter_listener' => false,
             ],
             'decorators' => [
                 'cache' => ['enabled' => false],
@@ -76,5 +83,16 @@ final class Kernel extends BaseKernel
             ],
             'storage' => ['enabled' => false],
         ]);
+
+        $container->register(TenantContextController::class)
+            ->setAutowired(true)
+            ->setAutoconfigured(true)
+            ->setPublic(true);
+    }
+
+    protected function configureRoutes(RoutingConfigurator $routes): void
+    {
+        $routes->add('consumer_tenant_context', '/_test/tenant-context')
+            ->controller(TenantContextController::class);
     }
 }

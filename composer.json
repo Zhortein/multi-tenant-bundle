@@ -83,7 +83,10 @@
   },
   "suggest": {
     "monolog/monolog": "Needed for the optional tenant-aware Monolog processor",
+    "phpunit/phpunit": "Needed by consumers extending the optional public test-kit base classes",
     "psr/simple-cache": "Needed for PSR-16 simple cache tenant-aware decorators",
+    "symfony/browser-kit": "Needed by consumers extending the optional TenantWebTestCase",
+    "symfony/dom-crawler": "Needed by consumers making crawler-based requests with TenantWebTestCase",
     "symfony/mailer": "Needed for dynamic tenant-aware mail sending",
     "symfony/twig-bundle": "Needed for templated tenant-aware emails"
   }

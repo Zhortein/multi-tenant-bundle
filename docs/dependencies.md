@@ -35,6 +35,15 @@ Mailer services are not registered when Symfony Mailer is unavailable. Templated
 
 Messenger is not optional in the current public API because `TenantSessionConfigurator` implements Symfony Messenger middleware. Changing that contract would require a separate backward-compatibility decision.
 
+## Optional consumer test dependencies
+
+`TenantContextScope` needs no additional package. Applications extending the
+public `TenantKernelTestCase` need PHPUnit and FrameworkBundle in their
+development environment. Applications extending `TenantWebTestCase` also need
+Symfony BrowserKit and DomCrawler at the same Symfony version as the
+application. These remain consumer `require-dev` dependencies and are not
+promoted to bundle production requirements.
+
 ## Development-only tools
 
 PHPUnit, PHPStan and its extensions, PHP-CS-Fixer, Symfony BrowserKit and DomCrawler, the Symfony PHPUnit Bridge, and security-advisory constraints are development dependencies. They are not installed in a production-only Composer installation.

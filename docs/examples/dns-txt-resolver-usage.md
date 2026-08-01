@@ -257,39 +257,29 @@ class DnsTxtResolverTest extends TestCase
 }
 ```
 
-### Example 8: Integration Testing with Test Kit
+### Example 8: Integration Testing
+
+DNS responses are application infrastructure and must be replaced by a
+deterministic resolver service or test DNS server. The public Test Kit does not
+mock DNS globally. After configuring that test double, use the standard Symfony
+client:
 
 ```php
 <?php
 
 namespace App\Tests\Integration;
 
-use Zhortein\MultiTenantBundle\Test\TenantWebTestCase;
+use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 
-class DnsTxtIntegrationTest extends TenantWebTestCase
+final class DnsTxtIntegrationTest extends WebTestCase
 {
     public function testDnsTxtResolution(): void
     {
-        // Create test tenant
-        $tenant = $this->createTestTenant('dns-test-tenant');
-        
-        // Mock DNS response (implementation depends on your DNS mocking strategy)
-        $this->mockDnsResponse('_tenant.test.local', 'tenant-slug=dns-test-tenant');
-        
-        $client = static::createClient();
-        $client->request('GET', 'https://test.local/api/tenant');
-        
-        $response = $client->getResponse();
-        $this->assertResponseIsSuccessful();
-        
-        $data = json_decode($response->getContent(), true);
-        $this->assertEquals('dns-test-tenant', $data['tenant_slug']);
-    }
-    
-    private function mockDnsResponse(string $query, string $response): void
-    {
-        // Implementation depends on your DNS mocking strategy
-        // This could use a test DNS server or mock the DNS resolver service
+        $client = static::createClient([], ["HTTP_HOST" => "test.local"]);
+        $client->request("GET", "/api/tenant");
+
+        self::assertResponseIsSuccessful();
+        self::assertSame("dns-test-tenant", $client->getResponse()->getContent());
     }
 }
 ```

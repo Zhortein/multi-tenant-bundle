@@ -108,6 +108,13 @@ jobs:
           "symfony/mailer:${{ matrix.symfony }}"
           "symfony/messenger:${{ matrix.symfony }}"
 
+      - name: Select compatible test dependencies
+        run: >-
+          composer require --dev --no-update
+          "phpunit/phpunit:^12.2"
+          "symfony/browser-kit:${{ matrix.symfony }}"
+          "symfony/dom-crawler:${{ matrix.symfony }}"
+
       - name: Install the bundle as an external dependency
         run: composer update --prefer-dist --no-progress --no-interaction
 
@@ -116,8 +123,18 @@ jobs:
         env:
           DATABASE_STRATEGY: shared_db
 
+      - name: Validate public test kit with shared database strategy
+        run: vendor/bin/phpunit --no-coverage
+        env:
+          DATABASE_STRATEGY: shared_db
+
       - name: Validate multi-database container
         run: php bin/validate.php
+        env:
+          DATABASE_STRATEGY: multi_db
+
+      - name: Validate public test kit with multi-database strategy
+        run: vendor/bin/phpunit --no-coverage
         env:
           DATABASE_STRATEGY: multi_db
 
