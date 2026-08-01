@@ -203,44 +203,37 @@ class DashboardController extends AbstractController
 
 ## Testing with the Bundle
 
-The bundle includes a comprehensive **Test Kit** to make testing multi-tenant applications easy and reliable:
+The optional public Test Kit provides three intentionally small APIs:
 
-### Test Kit Features
-
-- **WithTenantTrait**: Execute code within specific tenant contexts
-- **TestData**: Lightweight builders for tenant-aware test entities  
-- **Base Test Classes**: Pre-configured for HTTP, CLI, and Messenger testing
-- **RLS Isolation Tests**: Prove PostgreSQL Row-Level Security works as defense-in-depth
+- `TenantContextScope` executes a callback under a consumer-defined tenant and
+  restores the previous context in all outcomes;
+- `TenantKernelTestCase` integrates that scope with Symfony kernel tests;
+- `TenantWebTestCase` integrates the same lifecycle with Symfony functional
+  tests without selecting a resolver or database strategy.
 
 ### Quick Example
 
 ```php
 <?php
 
-use Zhortein\MultiTenantBundle\Tests\Toolkit\TenantWebTestCase;
+use App\Entity\Tenant;
+use Zhortein\MultiTenantBundle\Test\TenantKernelTestCase;
 
-class ProductControllerTest extends TenantWebTestCase
+final class ProductRepositoryTest extends TenantKernelTestCase
 {
     public function testTenantIsolation(): void
     {
-        // Seed test data
-        $this->getTestData()->seedProducts('tenant-a', 2);
-        $this->getTestData()->seedProducts('tenant-b', 1);
-        
-        // Test tenant A sees only its data
-        $this->withTenant('tenant-a', function () {
-            $products = $this->repository->findAll();
-            $this->assertCount(2, $products);
-        });
-        
-        // Test RLS isolation (critical test)
-        $this->withTenant('tenant-a', function () {
-            $this->withoutDoctrineTenantFilter(function () {
-                $products = $this->repository->findAll();
-                // Should still see only 2 products due to RLS
-                $this->assertCount(2, $products);
-            });
-        });
+        $tenantA = new Tenant("tenant-a");
+        $tenantB = new Tenant("tenant-b");
+
+        self::assertSame(
+            ["A product"],
+            $this->withTenant($tenantA, fn (): array => $this->repository->findForTenant($tenantA)),
+        );
+        self::assertSame(
+            ["B product"],
+            $this->withTenant($tenantB, fn (): array => $this->repository->findForTenant($tenantB)),
+        );
     }
 }
 ```
@@ -248,23 +241,19 @@ class ProductControllerTest extends TenantWebTestCase
 ### Running Tests
 
 ```bash
-# Run all tests
+# Run the complete bundle suite
 make test
 
-# Run unit tests only
+# Run unit and integration subsets
 make test-unit
-
-# Run integration tests only
 make test-integration
 
-# Run Test Kit RLS isolation tests
-vendor/bin/phpunit tests/Integration/RlsIsolationTest.php
-
-# Run with coverage
-make test-coverage
+# Run effective PostgreSQL RLS isolation tests
+make test-with-postgres
 ```
 
-See the [Testing Documentation](docs/testing.md) for complete Test Kit usage.
+See the [Testing Documentation](docs/testing.md) for installation, lifecycle,
+and consumer examples.
 
 ## Code Quality
 

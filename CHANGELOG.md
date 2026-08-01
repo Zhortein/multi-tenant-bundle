@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- Added the first intentional public Test Kit contract under
+  `Zhortein\MultiTenantBundle\Test`, distributed through normal package
+  autoload: `TenantContextScope`, `TenantKernelTestCase`, and
+  `TenantWebTestCase`.
+- Added external consumer tests proving context restoration after exceptions,
+  A/B/A isolation, kernel reboot behavior, functional request lifecycle, and
+  shared- and multi-database compatibility without the internal `Tests\`
+  namespace.
+
+### Changed
+
+- Replaced historical Test Kit documentation for undistributed or nonexistent
+  helpers with the canonical minimal API and executable consumer examples.
+
 ## [1.0.0-RC3] - 2026-04-05
 
 ### Security

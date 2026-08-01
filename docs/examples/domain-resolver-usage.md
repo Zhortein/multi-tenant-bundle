@@ -297,59 +297,26 @@ class DomainResolverTest extends TestCase
 
 ### Example 7: Integration Testing
 
+Resolver integration remains an application concern. Configure deterministic
+consumer tenants and domain mappings in the test kernel, then use the standard
+Symfony client:
+
 ```php
 <?php
 
 namespace App\Tests\Integration;
 
-use Zhortein\MultiTenantBundle\Test\TenantWebTestCase;
+use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 
-class DomainResolverIntegrationTest extends TenantWebTestCase
+final class DomainResolverIntegrationTest extends WebTestCase
 {
     public function testDomainResolution(): void
     {
-        // Create test tenant
-        $tenant = $this->createTestTenant('domain-test-tenant');
-        
-        // Configure domain mapping for test
-        $this->configureDomainMapping([
-            'test-domain.local' => 'domain-test-tenant'
-        ]);
-        
-        $client = static::createClient();
-        $client->request('GET', 'https://test-domain.local/api/tenant');
-        
-        $response = $client->getResponse();
-        $this->assertResponseIsSuccessful();
-        
-        $data = json_decode($response->getContent(), true);
-        $this->assertEquals('domain-test-tenant', $data['tenant_slug']);
-    }
-    
-    public function testHybridResolution(): void
-    {
-        // Test both domain mapping and subdomain resolution
-        $tenant1 = $this->createTestTenant('mapped-tenant');
-        $tenant2 = $this->createTestTenant('subdomain-tenant');
-        
-        $this->configureHybridMapping([
-            'domain_mapping' => ['mapped.local' => 'mapped-tenant'],
-            'subdomain_mapping' => ['*.test.local' => 'use_subdomain_as_slug'],
-        ]);
-        
-        $client = static::createClient();
-        
-        // Test domain mapping
-        $client->request('GET', 'https://mapped.local/api/tenant');
-        $response = $client->getResponse();
-        $data = json_decode($response->getContent(), true);
-        $this->assertEquals('mapped-tenant', $data['tenant_slug']);
-        
-        // Test subdomain resolution
-        $client->request('GET', 'https://subdomain-tenant.test.local/api/tenant');
-        $response = $client->getResponse();
-        $data = json_decode($response->getContent(), true);
-        $this->assertEquals('subdomain-tenant', $data['tenant_slug']);
+        $client = static::createClient([], ["HTTP_HOST" => "test-domain.local"]);
+        $client->request("GET", "/api/tenant");
+
+        self::assertResponseIsSuccessful();
+        self::assertSame("domain-test-tenant", $client->getResponse()->getContent());
     }
 }
 ```

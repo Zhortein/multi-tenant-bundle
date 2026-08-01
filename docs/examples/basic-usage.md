@@ -330,13 +330,13 @@ use PHPUnit\Framework\TestCase;
 use App\Service\ProductService;
 use App\Repository\ProductRepository;
 use Zhortein\MultiTenantBundle\Context\TenantContextInterface;
-use Zhortein\MultiTenantBundle\Test\TenantStub;
+use App\Entity\Tenant;
 
 class ProductServiceTest extends TestCase
 {
     public function testGetProductsWithTenant(): void
     {
-        $tenant = new TenantStub('test-tenant');
+        $tenant = new Tenant('test-tenant');
         $expectedProducts = [/* mock products */];
 
         $productRepository = $this->createMock(ProductRepository::class);
