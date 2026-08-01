@@ -36,9 +36,36 @@ final readonly class TenantEntityManagerFactory
     public function createForTenant(TenantInterface $tenant): EntityManagerInterface
     {
         $connectionParams = $this->connectionResolver->resolveParameters($tenant);
+        // @phpstan-ignore-next-line
         $connection = DriverManager::getConnection($connectionParams);
 
         return new EntityManager($connection, $this->ormConfiguration);
+    }
+
+    /**
+     * Executes work with a fresh tenant-specific entity manager.
+     *
+     * The entity manager and its connection are always cleared and closed before
+     * control returns to the caller, including when tenant work throws.
+     *
+     * @template TResult
+     *
+     * @param callable(EntityManagerInterface): TResult $operation
+     *
+     * @return TResult
+     */
+    public function runForTenant(TenantInterface $tenant, callable $operation): mixed
+    {
+        $entityManager = $this->createForTenant($tenant);
+
+        try {
+            return $operation($entityManager);
+        } finally {
+            $connection = $entityManager->getConnection();
+            $entityManager->clear();
+            $entityManager->close();
+            $connection->close();
+        }
     }
 
     /**

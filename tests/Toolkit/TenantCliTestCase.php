@@ -9,6 +9,7 @@ use Symfony\Bundle\FrameworkBundle\Console\Application;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Tester\CommandTester;
+use Symfony\Component\Console\Tester\ExecutionResult;
 use Zhortein\MultiTenantBundle\Context\TenantContextInterface;
 use Zhortein\MultiTenantBundle\Registry\TenantRegistryInterface;
 
@@ -202,12 +203,19 @@ abstract class TenantCliTestCase extends KernelTestCase
      *
      * @param CommandTester $commandTester The command tester
      */
-    protected function assertCommandIsSuccessful(CommandTester $commandTester): void
+    public function assertCommandIsSuccessful(CommandTester|ExecutionResult $commandTester, string $message = ''): void
     {
+        if ($commandTester instanceof ExecutionResult) {
+            $parentMethod = new \ReflectionMethod(parent::class, __FUNCTION__);
+            $parentMethod->invoke($this, $commandTester, $message);
+
+            return;
+        }
+
         $this->assertSame(
             Command::SUCCESS,
             $commandTester->getStatusCode(),
-            sprintf('Command failed with output: %s', $commandTester->getDisplay())
+            $message ?: sprintf('Command failed with output: %s', $commandTester->getDisplay())
         );
     }
 
@@ -216,12 +224,19 @@ abstract class TenantCliTestCase extends KernelTestCase
      *
      * @param CommandTester $commandTester The command tester
      */
-    protected function assertCommandFailed(CommandTester $commandTester): void
+    public function assertCommandFailed(CommandTester|ExecutionResult $commandTester, string $message = ''): void
     {
+        if ($commandTester instanceof ExecutionResult) {
+            $parentMethod = new \ReflectionMethod(parent::class, __FUNCTION__);
+            $parentMethod->invoke($this, $commandTester, $message);
+
+            return;
+        }
+
         $this->assertNotSame(
             Command::SUCCESS,
             $commandTester->getStatusCode(),
-            'Command should have failed'
+            $message ?: 'Command should have failed'
         );
     }
 

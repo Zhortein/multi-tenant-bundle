@@ -1,9 +1,9 @@
 # Zhortein Multi-Tenant Bundle
 
-A comprehensive Symfony 7+ bundle for building multi-tenant applications with PostgreSQL 16 support.
+A comprehensive Symfony 7.4 LTS and Symfony 8.x bundle for building multi-tenant applications with PostgreSQL 16 support.
 
 [![PHP Version](https://img.shields.io/badge/php-%3E%3D8.3-blue.svg)](https://php.net/)
-[![Symfony Version](https://img.shields.io/badge/symfony-%3E%3D7.0-green.svg)](https://symfony.com/)
+[![Symfony Version](https://img.shields.io/badge/symfony-%3E%3D7.4%20%7C%208.0-green.svg)](https://symfony.com/)
 [![PostgreSQL Version](https://img.shields.io/badge/postgresql-16-blue.svg)](https://www.postgresql.org/)
 
 ## Features
@@ -24,8 +24,10 @@ A comprehensive Symfony 7+ bundle for building multi-tenant applications with Po
 Install the bundle via Composer:
 
 ```bash
-composer require zhortein/multi-tenant-bundle
+composer require "zhortein/multi-tenant-bundle:1.0.0-rc.1"
 ```
+
+The core dependency set and optional Mailer, Twig, Monolog, and PSR-16 integrations are listed in the [dependency classification](docs/dependencies.md).
 
 Enable the bundle in your `config/bundles.php`:
 
@@ -93,13 +95,15 @@ Create `config/packages/zhortein_multi_tenant.yaml`:
 ```yaml
 zhortein_multi_tenant:
     tenant_entity: 'App\Entity\Tenant'
-    resolver:
-        type: 'subdomain'
-        options:
-            base_domain: 'example.com'
     database:
         strategy: 'shared_db'
         enable_filter: true
+        rls:
+            enabled: false
+    fixtures:
+        enabled: false
+    mailer:
+        enabled: false
 ```
 
 ### 3. Create Tenant-Aware Entities
@@ -164,6 +168,7 @@ class DashboardController extends AbstractController
 
 ### 🚀 Getting Started
 - [Installation & Setup](docs/installation.md) - Complete installation guide
+- [Compatibility Policy](docs/compatibility.md) - Tested PHP, Symfony, and Doctrine combinations
 - [Configuration Reference](docs/configuration.md) - All configuration options
 - [Database Strategies](docs/database-strategies.md) - Shared DB vs Multi-DB
 
@@ -178,7 +183,8 @@ class DashboardController extends AbstractController
 ### 🔧 Service Integration
 - [Mailer](docs/mailer.md) - Tenant-aware email with templated support
 - [Messenger](docs/messenger.md) - Tenant-aware queues with automatic context propagation
-- [Storage](docs/storage.md) - File storage isolation
+- [Storage](docs/storage.md) - Fail-closed file storage isolation
+- [Security Contract Migration](docs/migration-security-contracts.md) - Required storage, cache, mailer, and observability migration
 
 ### 🗄️ Database Management
 - [Migrations](docs/migrations.md) - Database migrations
@@ -197,44 +203,37 @@ class DashboardController extends AbstractController
 
 ## Testing with the Bundle
 
-The bundle includes a comprehensive **Test Kit** to make testing multi-tenant applications easy and reliable:
+The optional public Test Kit provides three intentionally small APIs:
 
-### Test Kit Features
-
-- **WithTenantTrait**: Execute code within specific tenant contexts
-- **TestData**: Lightweight builders for tenant-aware test entities  
-- **Base Test Classes**: Pre-configured for HTTP, CLI, and Messenger testing
-- **RLS Isolation Tests**: Prove PostgreSQL Row-Level Security works as defense-in-depth
+- `TenantContextScope` executes a callback under a consumer-defined tenant and
+  restores the previous context in all outcomes;
+- `TenantKernelTestCase` integrates that scope with Symfony kernel tests;
+- `TenantWebTestCase` integrates the same lifecycle with Symfony functional
+  tests without selecting a resolver or database strategy.
 
 ### Quick Example
 
 ```php
 <?php
 
-use Zhortein\MultiTenantBundle\Tests\Toolkit\TenantWebTestCase;
+use App\Entity\Tenant;
+use Zhortein\MultiTenantBundle\Test\TenantKernelTestCase;
 
-class ProductControllerTest extends TenantWebTestCase
+final class ProductRepositoryTest extends TenantKernelTestCase
 {
     public function testTenantIsolation(): void
     {
-        // Seed test data
-        $this->getTestData()->seedProducts('tenant-a', 2);
-        $this->getTestData()->seedProducts('tenant-b', 1);
-        
-        // Test tenant A sees only its data
-        $this->withTenant('tenant-a', function () {
-            $products = $this->repository->findAll();
-            $this->assertCount(2, $products);
-        });
-        
-        // Test RLS isolation (critical test)
-        $this->withTenant('tenant-a', function () {
-            $this->withoutDoctrineTenantFilter(function () {
-                $products = $this->repository->findAll();
-                // Should still see only 2 products due to RLS
-                $this->assertCount(2, $products);
-            });
-        });
+        $tenantA = new Tenant("tenant-a");
+        $tenantB = new Tenant("tenant-b");
+
+        self::assertSame(
+            ["A product"],
+            $this->withTenant($tenantA, fn (): array => $this->repository->findForTenant($tenantA)),
+        );
+        self::assertSame(
+            ["B product"],
+            $this->withTenant($tenantB, fn (): array => $this->repository->findForTenant($tenantB)),
+        );
     }
 }
 ```
@@ -242,23 +241,19 @@ class ProductControllerTest extends TenantWebTestCase
 ### Running Tests
 
 ```bash
-# Run all tests
+# Run the complete bundle suite
 make test
 
-# Run unit tests only
+# Run unit and integration subsets
 make test-unit
-
-# Run integration tests only
 make test-integration
 
-# Run Test Kit RLS isolation tests
-vendor/bin/phpunit tests/Integration/RlsIsolationTest.php
-
-# Run with coverage
-make test-coverage
+# Run effective PostgreSQL RLS isolation tests
+make test-with-postgres
 ```
 
-See the [Testing Documentation](docs/testing.md) for complete Test Kit usage.
+See the [Testing Documentation](docs/testing.md) for installation, lifecycle,
+and consumer examples.
 
 ## Code Quality
 

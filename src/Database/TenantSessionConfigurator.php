@@ -6,6 +6,7 @@ namespace Zhortein\MultiTenantBundle\Database;
 
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\Exception;
+use Doctrine\DBAL\Platforms\PostgreSQLPlatform;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 use Symfony\Component\HttpKernel\Event\RequestEvent;
@@ -108,6 +109,16 @@ final readonly class TenantSessionConfigurator implements MiddlewareInterface
     }
 
     /**
+     * Clears the configured tenant session before a connection is reused.
+     */
+    public function clearConfig(): void
+    {
+        if ($this->rlsEnabled) {
+            $this->clearTenantSession();
+        }
+    }
+
+    /**
      * Configures the PostgreSQL session variable with current tenant ID.
      */
     private function configureTenantSession(): void
@@ -116,6 +127,7 @@ final readonly class TenantSessionConfigurator implements MiddlewareInterface
 
         if (null === $tenant) {
             $this->logger?->debug('No tenant context available for RLS configuration');
+            $this->clearTenantSession();
 
             return;
         }
@@ -132,7 +144,7 @@ final readonly class TenantSessionConfigurator implements MiddlewareInterface
 
             // Set the session variable for RLS policies
             $this->connection->executeStatement(
-                'SELECT set_config(?, ?, true)',
+                'SELECT set_config(?, ?, false)',
                 [$this->sessionVariable, $tenantId]
             );
 
@@ -168,8 +180,8 @@ final readonly class TenantSessionConfigurator implements MiddlewareInterface
         try {
             if ($this->isPostgreSQL()) {
                 $this->connection->executeStatement(
-                    'SELECT set_config(?, NULL, true)',
-                    [$this->sessionVariable]
+                    'SELECT set_config(?, ?, false)',
+                    [$this->sessionVariable, '']
                 );
 
                 $this->logger?->debug('Cleared PostgreSQL session variable for RLS', [
@@ -189,6 +201,6 @@ final readonly class TenantSessionConfigurator implements MiddlewareInterface
      */
     private function isPostgreSQL(): bool
     {
-        return str_contains($this->connection->getDatabasePlatform()->getName(), 'postgresql');
+        return $this->connection->getDatabasePlatform() instanceof PostgreSQLPlatform;
     }
 }

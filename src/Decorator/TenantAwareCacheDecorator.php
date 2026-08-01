@@ -17,11 +17,14 @@ use Zhortein\MultiTenantBundle\Context\TenantContextInterface;
  */
 final class TenantAwareCacheDecorator implements CacheItemPoolInterface
 {
+    private readonly TenantCacheKeyPrefixer $keyPrefixer;
+
     public function __construct(
         private readonly CacheItemPoolInterface $decorated,
         private readonly TenantContextInterface $tenantContext,
         private readonly bool $enabled = true,
     ) {
+        $this->keyPrefixer = new TenantCacheKeyPrefixer($tenantContext);
     }
 
     public function getItem(string $key): CacheItemInterface
@@ -46,11 +49,11 @@ final class TenantAwareCacheDecorator implements CacheItemPoolInterface
         $keyMap = array_combine($prefixedKeys, $keys);
 
         foreach ($items as $prefixedKey => $item) {
-            if (!$item instanceof CacheItemInterface) {
+            if (!$item instanceof CacheItemInterface || !is_string($prefixedKey)) {
                 continue;
             }
             $originalKey = $keyMap[$prefixedKey] ?? $prefixedKey;
-            $result[(string) $originalKey] = new TenantAwareCacheItem($item, (string) $originalKey);
+            $result[$originalKey] = new TenantAwareCacheItem($item, $originalKey);
         }
 
         return $result;
@@ -63,15 +66,13 @@ final class TenantAwareCacheDecorator implements CacheItemPoolInterface
 
     public function clear(): bool
     {
-        // Only clear tenant-specific items if we have a tenant context
-        if (!$this->enabled || !$this->tenantContext->getTenant()) {
+        if (!$this->enabled) {
             return $this->decorated->clear();
         }
 
-        // For tenant-aware clearing, we would need to implement a more sophisticated
-        // approach to only clear items with the current tenant prefix
-        // For now, delegate to the underlying cache
-        return $this->decorated->clear();
+        $this->keyPrefixer->prefix();
+
+        throw new TenantCacheException('This PSR-6 pool cannot guarantee tenant-scoped clear operations. Delete explicit keys or use the Symfony cache adapter decorator.');
     }
 
     public function deleteItem(string $key): bool
@@ -92,6 +93,10 @@ final class TenantAwareCacheDecorator implements CacheItemPoolInterface
             return $this->decorated->save($item->getDecoratedItem());
         }
 
+        if ($this->enabled) {
+            throw new TenantCacheException('Tenant-aware cache only accepts items returned by this decorator.');
+        }
+
         return $this->decorated->save($item);
     }
 
@@ -99,6 +104,10 @@ final class TenantAwareCacheDecorator implements CacheItemPoolInterface
     {
         if ($item instanceof TenantAwareCacheItem) {
             return $this->decorated->saveDeferred($item->getDecoratedItem());
+        }
+
+        if ($this->enabled) {
+            throw new TenantCacheException('Tenant-aware cache only accepts items returned by this decorator.');
         }
 
         return $this->decorated->saveDeferred($item);
@@ -118,11 +127,6 @@ final class TenantAwareCacheDecorator implements CacheItemPoolInterface
             return $key;
         }
 
-        $tenant = $this->tenantContext->getTenant();
-        if (!$tenant) {
-            return $key;
-        }
-
-        return sprintf('tenant_%s_%s', $tenant->getId(), $key);
+        return $this->keyPrefixer->key($key);
     }
 }

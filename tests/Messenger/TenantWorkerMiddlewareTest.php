@@ -9,6 +9,7 @@ use PHPUnit\Framework\TestCase;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Envelope;
 use Symfony\Component\Messenger\Middleware\StackInterface;
+use Symfony\Component\Messenger\Stamp\ReceivedStamp;
 use Zhortein\MultiTenantBundle\Context\TenantContextInterface;
 use Zhortein\MultiTenantBundle\Database\TenantSessionConfigurator;
 use Zhortein\MultiTenantBundle\Entity\TenantInterface;
@@ -34,9 +35,7 @@ class TenantWorkerMiddlewareTest extends TestCase
 
         // Create a real TenantSessionConfigurator with mocked dependencies
         $connection = $this->createMock(Connection::class);
-        $platform = $this->createMock(\Doctrine\DBAL\Platforms\AbstractPlatform::class);
-        $platform->method('getName')->willReturn('postgresql');
-        $connection->method('getDatabasePlatform')->willReturn($platform);
+        $connection->method('getDatabasePlatform')->willReturn(new \Doctrine\DBAL\Platforms\PostgreSQLPlatform());
 
         $logger = $this->createMock(LoggerInterface::class);
 
@@ -58,6 +57,21 @@ class TenantWorkerMiddlewareTest extends TestCase
         $this->stack = $this->createMock(StackInterface::class);
     }
 
+    public function testOutgoingDispatchPreservesCurrentTenantContext(): void
+    {
+        $message = new \stdClass();
+        $envelope = new Envelope($message);
+        $nextMiddleware = $this->createMock(\Symfony\Component\Messenger\Middleware\MiddlewareInterface::class);
+
+        $this->tenantContext->expects($this->never())->method('clear');
+        $this->tenantContext->expects($this->never())->method('setTenant');
+        $this->tenantRegistry->expects($this->never())->method('findById');
+        $this->stack->expects($this->once())->method('next')->willReturn($nextMiddleware);
+        $nextMiddleware->expects($this->once())->method('handle')->with($envelope, $this->stack)->willReturn($envelope);
+
+        $this->assertSame($envelope, $this->middleware->handle($envelope, $this->stack));
+    }
+
     public function testHandleWithTenantStampRestoresTenantContext(): void
     {
         // Arrange
@@ -65,7 +79,7 @@ class TenantWorkerMiddlewareTest extends TestCase
         $tenantStamp = new TenantStamp('123');
 
         $message = new \stdClass();
-        $envelope = new Envelope($message, [$tenantStamp]);
+        $envelope = new Envelope($message, [$tenantStamp, new ReceivedStamp('async')]);
 
         $this->tenantRegistry->expects($this->once())
             ->method('findById')
@@ -76,7 +90,7 @@ class TenantWorkerMiddlewareTest extends TestCase
             ->method('setTenant')
             ->with($tenant);
 
-        $this->tenantContext->expects($this->once())
+        $this->tenantContext->expects($this->exactly(2))
             ->method('clear');
 
         $nextMiddleware = $this->createMock(\Symfony\Component\Messenger\Middleware\MiddlewareInterface::class);
@@ -100,7 +114,7 @@ class TenantWorkerMiddlewareTest extends TestCase
     {
         // Arrange
         $message = new \stdClass();
-        $envelope = new Envelope($message);
+        $envelope = new Envelope($message, [new ReceivedStamp('async')]);
 
         $this->tenantRegistry->expects($this->never())
             ->method('findById');
@@ -108,7 +122,7 @@ class TenantWorkerMiddlewareTest extends TestCase
         $this->tenantContext->expects($this->never())
             ->method('setTenant');
 
-        $this->tenantContext->expects($this->never())
+        $this->tenantContext->expects($this->once())
             ->method('clear');
 
         $nextMiddleware = $this->createMock(\Symfony\Component\Messenger\Middleware\MiddlewareInterface::class);
@@ -134,7 +148,7 @@ class TenantWorkerMiddlewareTest extends TestCase
         $tenantStamp = new TenantStamp('nonexistent');
 
         $message = new \stdClass();
-        $envelope = new Envelope($message, [$tenantStamp]);
+        $envelope = new Envelope($message, [$tenantStamp, new ReceivedStamp('async')]);
 
         $this->tenantRegistry->expects($this->once())
             ->method('findById')
@@ -144,7 +158,7 @@ class TenantWorkerMiddlewareTest extends TestCase
         $this->tenantContext->expects($this->never())
             ->method('setTenant');
 
-        $this->tenantContext->expects($this->never())
+        $this->tenantContext->expects($this->once())
             ->method('clear');
 
         $nextMiddleware = $this->createMock(\Symfony\Component\Messenger\Middleware\MiddlewareInterface::class);
@@ -171,7 +185,7 @@ class TenantWorkerMiddlewareTest extends TestCase
         $tenantStamp = new TenantStamp('123');
 
         $message = new \stdClass();
-        $envelope = new Envelope($message, [$tenantStamp]);
+        $envelope = new Envelope($message, [$tenantStamp, new ReceivedStamp('async')]);
 
         $this->tenantRegistry->expects($this->once())
             ->method('findById')
@@ -195,7 +209,7 @@ class TenantWorkerMiddlewareTest extends TestCase
             ->willThrowException($exception);
 
         // Expect clear to be called even when exception is thrown
-        $this->tenantContext->expects($this->once())
+        $this->tenantContext->expects($this->exactly(2))
             ->method('clear');
 
         // Act & Assert
@@ -212,7 +226,7 @@ class TenantWorkerMiddlewareTest extends TestCase
         $tenantStamp = new TenantStamp('456');
 
         $message = new \stdClass();
-        $envelope = new Envelope($message, [$tenantStamp]);
+        $envelope = new Envelope($message, [$tenantStamp, new ReceivedStamp('async')]);
 
         $this->tenantRegistry->expects($this->once())
             ->method('findById')
@@ -223,7 +237,7 @@ class TenantWorkerMiddlewareTest extends TestCase
             ->method('setTenant')
             ->with($tenant);
 
-        $this->tenantContext->expects($this->once())
+        $this->tenantContext->expects($this->exactly(2))
             ->method('clear');
 
         $nextMiddleware = $this->createMock(\Symfony\Component\Messenger\Middleware\MiddlewareInterface::class);
@@ -251,7 +265,7 @@ class TenantWorkerMiddlewareTest extends TestCase
         $lastStamp = new TenantStamp('456');
 
         $message = new \stdClass();
-        $envelope = new Envelope($message, [$firstStamp, $lastStamp]);
+        $envelope = new Envelope($message, [$firstStamp, $lastStamp, new ReceivedStamp('async')]);
 
         // Should use the last stamp (456)
         $this->tenantRegistry->expects($this->once())
@@ -263,7 +277,7 @@ class TenantWorkerMiddlewareTest extends TestCase
             ->method('setTenant')
             ->with($tenant);
 
-        $this->tenantContext->expects($this->once())
+        $this->tenantContext->expects($this->exactly(2))
             ->method('clear');
 
         $nextMiddleware = $this->createMock(\Symfony\Component\Messenger\Middleware\MiddlewareInterface::class);

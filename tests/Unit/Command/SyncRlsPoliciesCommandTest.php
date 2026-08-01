@@ -12,7 +12,6 @@ use Doctrine\ORM\Mapping\ClassMetadata;
 use Doctrine\ORM\Mapping\ClassMetadataFactory;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
-use Symfony\Component\Console\Application;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Tester\CommandTester;
 use Zhortein\MultiTenantBundle\Attribute\AsTenantAware;
@@ -48,15 +47,12 @@ final class SyncRlsPoliciesCommandTest extends TestCase
             'tenant_isolation'
         );
 
-        $application = new Application();
-        $application->add($this->command);
         $this->commandTester = new CommandTester($this->command);
     }
 
     public function testExecuteWithNonPostgreSQLDatabase(): void
     {
         $platform = $this->createMock(\Doctrine\DBAL\Platforms\MySQLPlatform::class);
-        $platform->method('getName')->willReturn('mysql');
 
         $this->connection
             ->method('getDatabasePlatform')
@@ -132,7 +128,9 @@ final class SyncRlsPoliciesCommandTest extends TestCase
 
         $this->assertStringContainsString('Found 1 tenant-aware entities', $output);
         $this->assertStringContainsString('ALTER TABLE "products" ENABLE ROW LEVEL SECURITY', $output);
-        $this->assertStringContainsString('CREATE POLICY "tenant_isolation_products" ON "products"', $output);
+        $this->assertStringContainsString('ALTER TABLE "products" FORCE ROW LEVEL SECURITY', $output);
+        $this->assertStringContainsString('CREATE POLICY "tenant_isolation_products" ON "products" FOR ALL', $output);
+        $this->assertStringContainsString('WITH CHECK (tenant_id::text = current_setting', $output);
         $this->assertStringContainsString('tenant_id::text = current_setting(\'app.tenant_id\', true)', $output);
         $this->assertStringContainsString('Use --apply option to execute', $output);
     }
@@ -180,22 +178,23 @@ final class SyncRlsPoliciesCommandTest extends TestCase
         // Expect SQL statements to be executed
         $expectedCalls = [
             'ALTER TABLE "products" ENABLE ROW LEVEL SECURITY;',
-            'CREATE POLICY "tenant_isolation_products" ON "products" USING (tenant_id::text = current_setting(\'app.tenant_id\', true));',
+            'ALTER TABLE "products" FORCE ROW LEVEL SECURITY;',
+            "CREATE POLICY \"tenant_isolation_products\" ON \"products\" FOR ALL USING (tenant_id::text = current_setting('app.tenant_id', true)) WITH CHECK (tenant_id::text = current_setting('app.tenant_id', true));",
         ];
 
         $this->connection
-            ->expects($this->exactly(2))
+            ->expects($this->exactly(3))
             ->method('executeStatement')
             ->willReturnCallback(function ($sql) use (&$expectedCalls) {
                 $this->assertContains($sql, $expectedCalls);
 
-                return null;
+                return 1;
             });
 
         $exitCode = $this->commandTester->execute(['--apply' => true]);
 
         $this->assertSame(Command::SUCCESS, $exitCode);
-        $this->assertStringContainsString('Successfully applied 2 SQL statements', $this->commandTester->getDisplay());
+        $this->assertStringContainsString('Successfully applied 3 SQL statements', $this->commandTester->getDisplay());
     }
 
     public function testExecuteWithForceOption(): void
@@ -228,7 +227,7 @@ final class SyncRlsPoliciesCommandTest extends TestCase
         // Mock connection methods - RLS enabled, policy exists
         $this->connection
             ->method('fetchOne')
-            ->willReturnOnConsecutiveCalls(true, true); // RLS enabled, policy exists
+            ->willReturnOnConsecutiveCalls(true, true, true); // RLS enabled, forced, and policy exists
 
         $this->connection
             ->method('quoteIdentifier')
@@ -278,7 +277,7 @@ final class SyncRlsPoliciesCommandTest extends TestCase
         // Mock connection methods to throw exception
         $this->connection
             ->method('fetchOne')
-            ->willThrowException(new Exception('Database error'));
+            ->willThrowException($this->createMock(Exception::class));
 
         $this->connection
             ->method('quoteIdentifier')
@@ -295,6 +294,7 @@ final class SyncRlsPoliciesCommandTest extends TestCase
         $output = $this->commandTester->getDisplay();
 
         $this->assertStringContainsString('ALTER TABLE "products" ENABLE ROW LEVEL SECURITY', $output);
+        $this->assertStringContainsString('ALTER TABLE "products" FORCE ROW LEVEL SECURITY', $output);
         $this->assertStringContainsString('CREATE POLICY "tenant_isolation_products"', $output);
     }
 

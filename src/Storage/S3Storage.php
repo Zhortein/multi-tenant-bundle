@@ -19,14 +19,17 @@ use Zhortein\MultiTenantBundle\Context\TenantContextInterface;
  */
 final readonly class S3Storage implements TenantFileStorageInterface
 {
+    private TenantStoragePathResolver $pathResolver;
+
     public function __construct(
-        private TenantContextInterface $tenantContext,
+        TenantContextInterface $tenantContext,
         private string $bucket, // @phpstan-ignore-line
         private string $region, // @phpstan-ignore-line
         private string $baseUrl,
         private ?string $accessKey = null, // @phpstan-ignore-line
         private ?string $secretKey = null, // @phpstan-ignore-line
     ) {
+        $this->pathResolver = new TenantStoragePathResolver($tenantContext);
     }
 
     public function upload(File $file, string $path): string
@@ -83,7 +86,7 @@ final readonly class S3Storage implements TenantFileStorageInterface
 
     public function listFiles(string $directory = ''): array
     {
-        $tenantDirectory = $this->getTenantPath($directory);
+        $tenantDirectory = $this->getTenantPath($directory, true);
 
         // This is a simplified implementation
         // In production, use AWS SDK or Flysystem
@@ -93,12 +96,9 @@ final readonly class S3Storage implements TenantFileStorageInterface
     /**
      * Gets the tenant-specific S3 path.
      */
-    private function getTenantPath(string $path): string
+    private function getTenantPath(string $path, bool $allowEmpty = false): string
     {
-        $tenant = $this->tenantContext->getTenant();
-        $tenantSlug = $tenant?->getSlug() ?? 'default';
-
-        return $tenantSlug.'/'.ltrim($path, '/');
+        return $this->pathResolver->resolve($path, $allowEmpty);
     }
 
     /**

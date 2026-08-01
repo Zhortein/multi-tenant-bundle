@@ -24,6 +24,8 @@ final readonly class TenantAwareMailer implements MailerInterface
         private TenantMailerConfigurator $configurator,
         private TenantContextInterface $tenantContext,
         private ?Environment $twig = null,
+        private bool $addTenantIdHeader = false,
+        private bool $addTenantNameHeader = false,
     ) {
     }
 
@@ -32,6 +34,7 @@ final readonly class TenantAwareMailer implements MailerInterface
         // Configure tenant-specific settings for Email messages
         if ($message instanceof Email) {
             $this->configureTenantEmail($message);
+            $this->configureTenantMetadataHeaders($message);
         }
 
         $this->mailer->send($message, $envelope);
@@ -85,12 +88,6 @@ final readonly class TenantAwareMailer implements MailerInterface
             $email->from($fromOverride);
         }
 
-        // Add tenant-specific headers
-        if (null !== $tenant) {
-            $email->getHeaders()->addTextHeader('X-Tenant-ID', $tenant->getSlug());
-            $email->getHeaders()->addTextHeader('X-Tenant-Name', $tenant->getName());
-        }
-
         $this->send($email);
     }
 
@@ -128,6 +125,45 @@ final readonly class TenantAwareMailer implements MailerInterface
         }
     }
 
+    private function configureTenantMetadataHeaders(Email $email): void
+    {
+        $tenant = $this->tenantContext->getTenant();
+        if (null === $tenant) {
+            return;
+        }
+
+        $headers = $email->getHeaders();
+
+        if ($this->addTenantIdHeader && !$headers->has('X-Tenant-ID')) {
+            $headers->addTextHeader('X-Tenant-ID', $this->safeHeaderValue($tenant->getSlug(), 'tenant identifier'));
+        }
+
+        if ($this->addTenantNameHeader && !$headers->has('X-Tenant-Name')) {
+            $headers->addTextHeader('X-Tenant-Name', $this->safeHeaderValue($this->tenantName($tenant), 'tenant name'));
+        }
+    }
+
+    private function tenantName(\Zhortein\MultiTenantBundle\Entity\TenantInterface $tenant): string
+    {
+        if (method_exists($tenant, 'getName')) {
+            $name = $tenant->getName();
+            if (is_string($name) && '' !== $name) {
+                return $name;
+            }
+        }
+
+        return $tenant->getSlug();
+    }
+
+    private function safeHeaderValue(string $value, string $label): string
+    {
+        if ('' === $value || preg_match('/[\x00\r\n]/', $value)) {
+            throw new \InvalidArgumentException(sprintf('The %s is not safe for an email header.', $label));
+        }
+
+        return $value;
+    }
+
     /**
      * Enhances template context with tenant-specific data.
      *
@@ -145,7 +181,7 @@ final readonly class TenantAwareMailer implements MailerInterface
 
         // Add tenant data to context
         $context['tenant'] = [
-            'name' => $tenant->getName(),
+            'name' => $this->tenantName($tenant),
             'slug' => $tenant->getSlug(),
             'logoUrl' => $this->configurator->getLogoUrl(),
             'primaryColor' => $this->configurator->getPrimaryColor(),

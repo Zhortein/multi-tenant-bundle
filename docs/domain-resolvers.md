@@ -343,6 +343,9 @@ zhortein_multi_tenant:
         base_domain: 'myplatform.com'
 
 # New hybrid configuration
+```
+
+```yaml
 zhortein_multi_tenant:
     resolver: 'hybrid'
     hybrid:
@@ -358,6 +361,9 @@ zhortein_multi_tenant:
     resolver: 'path'
 
 # New domain configuration for custom domains
+```
+
+```yaml
 zhortein_multi_tenant:
     resolver: 'domain'
     domain:
@@ -429,5 +435,4 @@ php bin/console tenant:resolve --domain=bio.myplatform.com
 
 For complete working examples, see:
 - [Domain Resolver Examples](examples/domain-resolver-usage.md)
-- [Hybrid Resolver Examples](examples/hybrid-resolver-usage.md)
-- [Multi-Environment Setup](examples/multi-environment-domains.md)
+- [Domain and Hybrid Resolver Examples](examples/domain-resolver-usage.md)

@@ -15,6 +15,7 @@ use Symfony\Component\Console\Question\ConfirmationQuestion;
 use Symfony\Component\Console\Style\SymfonyStyle;
 use Zhortein\MultiTenantBundle\Context\TenantContextInterface;
 use Zhortein\MultiTenantBundle\Doctrine\TenantConnectionResolverInterface;
+use Zhortein\MultiTenantBundle\Doctrine\TenantEntityManagerFactory;
 use Zhortein\MultiTenantBundle\Registry\TenantRegistryInterface;
 
 /**
@@ -37,6 +38,7 @@ class LoadTenantFixturesCommand extends AbstractTenantAwareCommand
         private readonly TenantConnectionResolverInterface $connectionResolver,
         private readonly EntityManagerInterface $entityManager,
         private readonly ?object $fixturesLoader = null, // SymfonyFixturesLoader when available
+        private readonly ?TenantEntityManagerFactory $entityManagerFactory = null,
     ) {
         parent::__construct($tenantRegistry, $tenantContext);
     }
@@ -116,61 +118,69 @@ EOT
             }
 
             $io->title('Tenant Fixtures Loading');
+            $entityManagerFactory = $this->entityManagerFactory ?? new TenantEntityManagerFactory(
+                $this->connectionResolver,
+                $this->entityManager->getConfiguration()
+            );
 
             foreach ($tenants as $tenant) {
                 $io->section(sprintf('Loading fixtures for tenant: %s', $tenant->getSlug()));
 
-                // Set tenant context
-                $this->tenantContext->setTenant($tenant);
-
-                // Switch to tenant connection
                 $this->connectionResolver->switchToTenantConnection($tenant);
+                $this->tenantContext->setTenant($tenant);
 
                 // Confirm before purging data (unless appending)
                 if (!$append && !$this->confirmPurge($io, $tenant->getSlug())) {
                     $io->note(sprintf('Skipping fixtures for tenant %s', $tenant->getSlug()));
+                    $this->tenantContext->clear();
                     continue;
                 }
 
-                // Create purger - using dynamic class instantiation
-                $purgerClass = 'Doctrine\\Common\\DataFixtures\\Purger\\ORMPurger';
-                if (!class_exists($purgerClass)) {
-                    $io->error('ORMPurger class not found. Please install doctrine/doctrine-fixtures-bundle.');
+                $entityManagerFactory->runForTenant(
+                    $tenant,
+                    function (EntityManagerInterface $tenantEntityManager) use ($append, $fixtures, $io, $purgeExclusions, $purgeWithTruncate, $tenant): void {
+                        // Create purger - using dynamic class instantiation
+                        $purgerClass = 'Doctrine\\Common\\DataFixtures\\Purger\\ORMPurger';
+                        if (!class_exists($purgerClass)) {
+                            $io->error('ORMPurger class not found. Please install doctrine/doctrine-fixtures-bundle.');
 
-                    return Command::FAILURE;
-                }
+                            throw new \RuntimeException('The tenant fixture runtime is unavailable.');
+                        }
 
-                /** @phpstan-ignore-next-line */
-                $purger = new $purgerClass($this->entityManager);
-                $purgeMode = $purgeWithTruncate ? 2 : 1; // PURGE_MODE_TRUNCATE : PURGE_MODE_DELETE
-                /* @phpstan-ignore-next-line */
-                $purger->setPurgeMode($purgeMode);
+                        /** @phpstan-ignore-next-line */
+                        $purger = new $purgerClass($tenantEntityManager);
+                        $purgeMode = $purgeWithTruncate ? 2 : 1; // PURGE_MODE_TRUNCATE : PURGE_MODE_DELETE
+                        /* @phpstan-ignore-next-line */
+                        $purger->setPurgeMode($purgeMode);
 
-                if (!empty($purgeExclusions)) {
-                    /* @phpstan-ignore-next-line */
-                    $purger->setExclusions($purgeExclusions);
-                }
+                        if (!empty($purgeExclusions)) {
+                            /* @phpstan-ignore-next-line */
+                            $purger->setExclusions($purgeExclusions);
+                        }
 
-                // Create executor
-                $executorClass = 'Doctrine\\Common\\DataFixtures\\Executor\\ORMExecutor';
-                if (!class_exists($executorClass)) {
-                    $io->error('ORMExecutor class not found. Please install doctrine/doctrine-fixtures-bundle.');
+                        // Create executor
+                        $executorClass = 'Doctrine\\Common\\DataFixtures\\Executor\\ORMExecutor';
+                        if (!class_exists($executorClass)) {
+                            $io->error('ORMExecutor class not found. Please install doctrine/doctrine-fixtures-bundle.');
 
-                    return Command::FAILURE;
-                }
-                /** @phpstan-ignore-next-line */
-                $executor = new $executorClass($this->entityManager, $purger);
+                            throw new \RuntimeException('The tenant fixture runtime is unavailable.');
+                        }
+                        /** @phpstan-ignore-next-line */
+                        $executor = new $executorClass($tenantEntityManager, $purger);
 
-                // Execute fixtures
-                /* @phpstan-ignore-next-line */
-                $executor->execute($fixtures, $append);
+                        // Execute fixtures
+                        /* @phpstan-ignore-next-line */
+                        $executor->execute($fixtures, $append);
 
-                $io->success(sprintf(
-                    'Successfully loaded %d fixtures for tenant %s',
-                    /* @phpstan-ignore-next-line */
-                    count($fixtures),
-                    $tenant->getSlug()
-                ));
+                        $io->success(sprintf(
+                            'Successfully loaded %d fixtures for tenant %s',
+                            /* @phpstan-ignore-next-line */
+                            count($fixtures),
+                            $tenant->getSlug()
+                        ));
+                    }
+                );
+                $this->tenantContext->clear();
             }
 
             $io->success('Tenant fixtures loading completed successfully.');

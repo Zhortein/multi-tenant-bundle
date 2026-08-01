@@ -17,6 +17,9 @@ use Zhortein\MultiTenantBundle\Entity\TenantInterface;
 )]
 final class CreateTenantCommand extends Command
 {
+    /**
+     * @param class-string<TenantInterface> $tenantEntityClass
+     */
     public function __construct(
         private readonly EntityManagerInterface $em,
         private readonly string $tenantEntityClass,

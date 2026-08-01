@@ -92,33 +92,30 @@ EOT
             foreach ($tenants as $tenant) {
                 $io->section(sprintf('Creating schema for tenant: %s', $tenant->getSlug()));
 
-                // Set tenant context
+                // Switch first so a failed resolution cannot publish a stale context.
+                $this->connectionResolver->switchToTenantConnection($tenant);
                 $this->tenantContext->setTenant($tenant);
 
-                // Switch to tenant connection
-                $this->connectionResolver->switchToTenantConnection($tenant);
+                $this->entityManagerFactory->runForTenant(
+                    $tenant,
+                    function (EntityManagerInterface $tenantEntityManager) use ($dumpSql, $io, $metadatas, $tenant): void {
+                        $schemaTool = new SchemaTool($tenantEntityManager);
 
-                // Create tenant-specific entity manager
-                $tenantEntityManager = $this->entityManagerFactory->createForTenant($tenant);
-
-                // Create schema tool
-                $schemaTool = new SchemaTool($tenantEntityManager);
-
-                if ($dumpSql) {
-                    $sqls = $schemaTool->getCreateSchemaSql($metadatas);
-                    if (!empty($sqls)) {
-                        $io->text(sprintf('SQL for tenant %s:', $tenant->getSlug()));
-                        $io->block($sqls);
-                    } else {
-                        $io->note(sprintf('No SQL to execute for tenant %s', $tenant->getSlug()));
+                        if ($dumpSql) {
+                            $sqls = $schemaTool->getCreateSchemaSql($metadatas);
+                            if (!empty($sqls)) {
+                                $io->text(sprintf('SQL for tenant %s:', $tenant->getSlug()));
+                                $io->block($sqls);
+                            } else {
+                                $io->note(sprintf('No SQL to execute for tenant %s', $tenant->getSlug()));
+                            }
+                        } else {
+                            $schemaTool->createSchema($metadatas);
+                            $io->success(sprintf('Successfully created schema for tenant %s', $tenant->getSlug()));
+                        }
                     }
-                } else {
-                    $schemaTool->createSchema($metadatas);
-                    $io->success(sprintf('Successfully created schema for tenant %s', $tenant->getSlug()));
-                }
-
-                // Close the tenant entity manager
-                $tenantEntityManager->close();
+                );
+                $this->tenantContext->clear();
             }
 
             if ($dumpSql) {

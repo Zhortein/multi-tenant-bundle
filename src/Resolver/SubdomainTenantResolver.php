@@ -19,11 +19,19 @@ final class SubdomainTenantResolver implements TenantResolverInterface
     /** @var string[] Common subdomains to exclude from tenant resolution */
     private const array EXCLUDED_SUBDOMAINS = ['www', 'api', 'admin', 'mail', 'ftp'];
 
+    /**
+     * @param class-string<TenantInterface> $tenantEntityClass  Tenant entity class
+     * @param string[]                      $excludedSubdomains Common subdomains to exclude from tenant resolution
+     */
     public function __construct(
         private readonly EntityManagerInterface $em,
         private readonly string $tenantEntityClass,
         private readonly string $baseDomain,
+        private array $excludedSubdomains,
     ) {
+        if (empty($this->excludedSubdomains)) {
+            $this->excludedSubdomains = self::EXCLUDED_SUBDOMAINS;
+        }
     }
 
     /**
@@ -44,7 +52,7 @@ final class SubdomainTenantResolver implements TenantResolverInterface
         $subdomain = str_replace('.'.$this->baseDomain, '', $host);
 
         // Skip if it's the base domain itself or an excluded subdomain
-        if ($subdomain === $this->baseDomain || in_array($subdomain, self::EXCLUDED_SUBDOMAINS, true)) {
+        if ($subdomain === $this->baseDomain || in_array($subdomain, $this->excludedSubdomains, true)) {
             return null;
         }
 

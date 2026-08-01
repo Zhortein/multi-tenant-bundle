@@ -170,7 +170,7 @@ trait WithTenantTrait
     private function setPostgreSQLTenantId(Connection $connection, string $tenantId): void
     {
         $connection->executeStatement(
-            'SELECT set_config(?, ?, true)',
+            'SELECT set_config(?, ?, false)',
             ['app.tenant_id', $tenantId]
         );
     }
@@ -183,8 +183,8 @@ trait WithTenantTrait
     private function clearPostgreSQLTenantId(Connection $connection): void
     {
         $connection->executeStatement(
-            'SELECT set_config(?, NULL, true)',
-            ['app.tenant_id']
+            'SELECT set_config(?, ?, false)',
+            ['app.tenant_id', '']
         );
     }
 

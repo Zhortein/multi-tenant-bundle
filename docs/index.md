@@ -1,6 +1,6 @@
 # Zhortein Multi-Tenant Bundle Documentation
 
-Welcome to the comprehensive documentation for the Zhortein Multi-Tenant Bundle, a powerful Symfony 7+ solution for building multi-tenant applications with PostgreSQL 16 support.
+Welcome to the comprehensive documentation for the Zhortein Multi-Tenant Bundle, a powerful Symfony 7.4 LTS and Symfony 8.x solution for building multi-tenant applications with PostgreSQL 16 support.
 
 > 📖 **Quick Start**: New to the bundle? Check out the [main README](../README.md) for installation and quick start guide.
 
@@ -19,9 +19,11 @@ Welcome to the comprehensive documentation for the Zhortein Multi-Tenant Bundle,
 
 ### Getting Started
 - [Installation](installation.md) - Install and enable the bundle
+- [Dependency classification](dependencies.md) - Required runtime components and optional integrations
 - [Configuration](configuration.md) - Complete configuration reference
 - [Database Strategies](database-strategies.md) - Shared DB vs Multi-DB approaches
-- [Project Overview](project-overview.md) - Architecture and implementation details
+- [Project Overview](project-overview.md) - Architecture and demonstrated project status
+- [Release Process](release-process.md) - SemVer, candidate validation, and publication authorization
 
 ### Core Concepts
 - [Tenant Context](tenant-context.md) - How tenant resolution and access works
@@ -36,7 +38,8 @@ Welcome to the comprehensive documentation for the Zhortein Multi-Tenant Bundle,
 - [Decorators](decorators.md) - Tenant-aware decorators for caching, logging, and storage
 - [Mailer](mailer.md) - Tenant-aware email configuration and sending
 - [Messenger](messenger.md) - Tenant-aware message queues and processing
-- [Storage](storage.md) - Tenant-specific file storage mechanisms
+- [Storage](storage.md) - Fail-closed tenant-specific file storage
+- [Security Contract Migration](migration-security-contracts.md) - Breaking storage, cache, mailer, and observability migration
 - [Observability](observability.md) - Monitoring, metrics, and logging for tenant operations
 
 ### Database Management
@@ -59,10 +62,11 @@ Welcome to the comprehensive documentation for the Zhortein Multi-Tenant Bundle,
 - [Storage Usage Examples](examples/storage-usage.md) - File storage examples
 - [Database Usage Examples](examples/database-usage.md) - Entity and repository examples
 - [Observability Usage Examples](examples/observability-usage.md) - Monitoring and metrics examples
+- [Issue 12 Security Contract Audit](audit-issue-12-security-contracts.md) - Previous false positives and effective integration coverage
 
 ## Overview
 
-The Zhortein Multi-Tenant Bundle provides a comprehensive, production-ready solution for building multi-tenant applications with Symfony 7+. It follows Symfony best practices and includes extensive testing and documentation.
+The Zhortein Multi-Tenant Bundle provides a pre-1.0 implementation under active verification for building multi-tenant applications with Symfony 7.4 LTS and Symfony 8.x. It follows Symfony best practices and includes extensive testing and documentation.
 
 ### Key Features
 
@@ -82,7 +86,8 @@ The Zhortein Multi-Tenant Bundle provides a comprehensive, production-ready solu
 ### Technical Requirements
 
 - **PHP**: >= 8.3
-- **Symfony**: >= 7.0
+- **Symfony**: >= 7.4 | 8.0
+- **Tested matrix**: See the [compatibility policy](compatibility.md)
 - **Database**: PostgreSQL 16 (via Doctrine ORM)
 - **Extensions**: `ext-json`, `ext-pdo`
 
@@ -136,38 +141,19 @@ class DashboardController extends AbstractController
 }
 ```
 
-## Test Kit Highlights
+## Public Test Kit
 
-The bundle includes a **comprehensive Test Kit** that makes testing multi-tenant applications easy and reliable:
+The optional public API contains only `TenantContextScope`,
+`TenantKernelTestCase`, and `TenantWebTestCase`. It manages explicit tenant
+context safely but does not replace application authorization, repository
+criteria, resolver tests, or effective PostgreSQL RLS tests.
 
-### 🎯 **Core Features**
-- **WithTenantTrait**: Execute code within specific tenant contexts
-- **TestData Builder**: Lightweight test data creation for tenant-aware entities
-- **Base Test Classes**: Pre-configured for HTTP, CLI, and Messenger testing
-- **RLS Isolation Tests**: Prove PostgreSQL Row-Level Security works as defense-in-depth
-
-### 🔒 **Critical Security Testing**
-```php
-// The CRITICAL test - proves RLS works even when Doctrine filters are disabled
-$this->withTenant('tenant-a', function () {
-    $this->withoutDoctrineTenantFilter(function () {
-        $products = $this->repository->findAll();
-        // Should still see only tenant A products due to RLS
-        $this->assertCount(2, $products);
-    });
-});
+```shell
+make test
+make test-with-postgres
 ```
 
-### 🚀 **Quick Start**
-```bash
-make dev-setup          # Setup development environment
-make validate-testkit   # Validate Test Kit configuration
-make postgres-start     # Start PostgreSQL for testing
-make test-kit          # Run all Test Kit tests
-make test-rls          # Run critical RLS isolation tests
-```
-
-**📖 Learn More**: [Testing & Test Kit Documentation](testing.md) | [Test Kit Usage Examples](examples/test-kit-usage.md)
+See [Testing](testing.md) and the [executable consumer examples](examples/test-kit-usage.md).
 
 ## Getting Help
 

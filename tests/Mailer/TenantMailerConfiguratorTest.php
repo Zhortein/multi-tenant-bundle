@@ -5,8 +5,6 @@ declare(strict_types=1);
 namespace Zhortein\MultiTenantBundle\Tests\Mailer;
 
 use PHPUnit\Framework\TestCase;
-use Zhortein\MultiTenantBundle\Context\TenantContextInterface;
-use Zhortein\MultiTenantBundle\Entity\TenantInterface;
 use Zhortein\MultiTenantBundle\Mailer\TenantMailerConfigurator;
 use Zhortein\MultiTenantBundle\Manager\TenantSettingsManagerInterface;
 
@@ -15,17 +13,14 @@ use Zhortein\MultiTenantBundle\Manager\TenantSettingsManagerInterface;
  */
 class TenantMailerConfiguratorTest extends TestCase
 {
-    private TenantContextInterface $tenantContext;
     private TenantSettingsManagerInterface $settingsManager;
     private TenantMailerConfigurator $configurator;
 
     protected function setUp(): void
     {
-        $this->tenantContext = $this->createMock(TenantContextInterface::class);
         $this->settingsManager = $this->createMock(TenantSettingsManagerInterface::class);
 
         $this->configurator = new TenantMailerConfigurator(
-            $this->tenantContext,
             $this->settingsManager,
             'smtp://localhost:1025',
             'noreply@example.com',
@@ -36,8 +31,6 @@ class TenantMailerConfiguratorTest extends TestCase
     public function testGetMailerDsnWithTenantSetting(): void
     {
         // Arrange
-        $tenant = $this->createMock(TenantInterface::class);
-        $this->tenantContext->method('getTenant')->willReturn($tenant);
         $this->settingsManager->method('get')
             ->with('mailer_dsn', 'smtp://localhost:1025')
             ->willReturn('smtp://tenant.smtp.com:587');
@@ -52,8 +45,6 @@ class TenantMailerConfiguratorTest extends TestCase
     public function testGetMailerDsnWithFallback(): void
     {
         // Arrange
-        $this->tenantContext->method('getTenant')->willReturn(null);
-
         // Act
         $result = $this->configurator->getMailerDsn();
 
@@ -64,8 +55,6 @@ class TenantMailerConfiguratorTest extends TestCase
     public function testGetFromAddressWithTenantSetting(): void
     {
         // Arrange
-        $tenant = $this->createMock(TenantInterface::class);
-        $this->tenantContext->method('getTenant')->willReturn($tenant);
         $this->settingsManager->method('get')
             ->with('email_from', 'noreply@example.com')
             ->willReturn('noreply@tenant.com');
@@ -80,8 +69,6 @@ class TenantMailerConfiguratorTest extends TestCase
     public function testGetSenderNameWithTenantSetting(): void
     {
         // Arrange
-        $tenant = $this->createMock(TenantInterface::class);
-        $this->tenantContext->method('getTenant')->willReturn($tenant);
         $this->settingsManager->method('get')
             ->with('email_sender', 'Default App')
             ->willReturn('Acme Corporation');
@@ -96,8 +83,6 @@ class TenantMailerConfiguratorTest extends TestCase
     public function testGetReplyToAddressWithTenantSetting(): void
     {
         // Arrange
-        $tenant = $this->createMock(TenantInterface::class);
-        $this->tenantContext->method('getTenant')->willReturn($tenant);
         $this->settingsManager->method('get')
             ->with('email_reply_to', null)
             ->willReturn('support@tenant.com');
@@ -112,8 +97,6 @@ class TenantMailerConfiguratorTest extends TestCase
     public function testGetBccAddressWithTenantSetting(): void
     {
         // Arrange
-        $tenant = $this->createMock(TenantInterface::class);
-        $this->tenantContext->method('getTenant')->willReturn($tenant);
         $this->settingsManager->method('get')
             ->with('email_bcc', null)
             ->willReturn('admin@tenant.com');
@@ -128,8 +111,6 @@ class TenantMailerConfiguratorTest extends TestCase
     public function testGetLogoUrlWithTenantSetting(): void
     {
         // Arrange
-        $tenant = $this->createMock(TenantInterface::class);
-        $this->tenantContext->method('getTenant')->willReturn($tenant);
         $this->settingsManager->method('get')
             ->with('logo_url', null)
             ->willReturn('https://tenant.com/logo.png');
@@ -144,10 +125,8 @@ class TenantMailerConfiguratorTest extends TestCase
     public function testGetPrimaryColorWithTenantSetting(): void
     {
         // Arrange
-        $tenant = $this->createMock(TenantInterface::class);
-        $this->tenantContext->method('getTenant')->willReturn($tenant);
         $this->settingsManager->method('get')
-            ->with('primary_color', null)
+            ->with('primary_color', '#007bff')
             ->willReturn('#ff6b35');
 
         // Act
@@ -160,8 +139,6 @@ class TenantMailerConfiguratorTest extends TestCase
     public function testGetWebsiteUrlWithTenantSetting(): void
     {
         // Arrange
-        $tenant = $this->createMock(TenantInterface::class);
-        $this->tenantContext->method('getTenant')->willReturn($tenant);
         $this->settingsManager->method('get')
             ->with('website_url', null)
             ->willReturn('https://tenant.com');
@@ -176,8 +153,6 @@ class TenantMailerConfiguratorTest extends TestCase
     public function testGetAllSettingsWithoutTenant(): void
     {
         // Arrange
-        $this->tenantContext->method('getTenant')->willReturn(null);
-
         // Act & Assert
         $this->assertSame('smtp://localhost:1025', $this->configurator->getMailerDsn());
         $this->assertSame('noreply@example.com', $this->configurator->getFromAddress());
@@ -185,7 +160,7 @@ class TenantMailerConfiguratorTest extends TestCase
         $this->assertNull($this->configurator->getReplyToAddress());
         $this->assertNull($this->configurator->getBccAddress());
         $this->assertNull($this->configurator->getLogoUrl());
-        $this->assertNull($this->configurator->getPrimaryColor());
+        $this->assertSame('#007bff', $this->configurator->getPrimaryColor());
         $this->assertNull($this->configurator->getWebsiteUrl());
     }
 }

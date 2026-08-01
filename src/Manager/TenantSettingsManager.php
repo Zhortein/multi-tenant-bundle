@@ -40,7 +40,15 @@ final readonly class TenantSettingsManager implements TenantSettingsManagerInter
     {
         $settings = $this->all();
 
-        return $settings[$key] ?? $this->parameterBag->get("zhortein_multi_tenant.default_settings.$key") ?? $default;
+        if (array_key_exists($key, $settings)) {
+            return $settings[$key];
+        }
+
+        $parameter = "zhortein_multi_tenant.default_settings.$key";
+
+        return $this->parameterBag->has($parameter)
+            ? $this->parameterBag->get($parameter)
+            : $default;
     }
 
     /**

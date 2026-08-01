@@ -986,10 +986,9 @@ doctrine:
 # config/packages/zhortein_multi_tenant.yaml
 zhortein_multi_tenant:
     tenant_entity: 'App\Entity\Tenant'
-    resolver:
-        type: 'subdomain'
-        options:
-            header_name: 'X-Tenant-ID'
+    resolver: 'subdomain'
+    subdomain:
+        base_domain: 'example.com'
     database:
         enabled: true
         dispatch_database_switch: true

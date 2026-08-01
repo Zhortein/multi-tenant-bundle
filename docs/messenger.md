@@ -131,8 +131,8 @@ public function configureMessenger(TenantSettingsManager $settings): void
 
 The tenant propagation middleware is automatically registered when the bundle is enabled. The middleware stack includes:
 
-1. **TenantSendingMiddleware** (Priority: 100) - Attaches tenant context to outgoing messages
-2. **TenantWorkerMiddleware** (Priority: 100) - Restores tenant context in workers
+1. **TenantWorkerMiddleware** (Priority: 200) - Restores tenant context for received messages
+2. **TenantSendingMiddleware** (Priority: 150) - Attaches tenant context to outgoing messages
 3. **TenantMessengerTransportResolver** (Priority: 100) - Routes messages to tenant-specific transports
 
 ### Manual Middleware Configuration
@@ -144,11 +144,11 @@ If you need to customize middleware registration, you can configure it manually:
 services:
     Zhortein\MultiTenantBundle\Messenger\TenantSendingMiddleware:
         tags:
-            - { name: messenger.middleware, priority: 100 }
+            - { name: messenger.middleware, priority: 150 }
     
     Zhortein\MultiTenantBundle\Messenger\TenantWorkerMiddleware:
         tags:
-            - { name: messenger.middleware, priority: 100 }
+            - { name: messenger.middleware, priority: 200 }
 ```
 
 ## Usage

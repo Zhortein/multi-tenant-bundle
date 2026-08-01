@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Zhortein\MultiTenantBundle\Tests\Unit\Command;
 
-use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Tester\CommandTester;
@@ -20,20 +19,16 @@ final class ListTenantsCommandTest extends TestCase
 {
     private TenantRegistryInterface $tenantRegistry;
     private TenantContextInterface $tenantContext;
-    private EntityManagerInterface $entityManager;
     private ListTenantsCommand $command;
 
     protected function setUp(): void
     {
         $this->tenantRegistry = $this->createMock(TenantRegistryInterface::class);
         $this->tenantContext = $this->createMock(TenantContextInterface::class);
-        $this->entityManager = $this->createMock(EntityManagerInterface::class);
 
         $this->command = new ListTenantsCommand(
             $this->tenantRegistry,
-            $this->tenantContext,
-            $this->entityManager,
-            'App\\Entity\\Tenant'
+            $this->tenantContext
         );
     }
 

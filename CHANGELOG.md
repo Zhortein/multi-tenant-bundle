@@ -3,9 +3,132 @@
 All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+and releases will follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html). Published versions are identified by Git tags and GitHub releases; headings explicitly labelled as development history remain untagged planning records.
 
 ## [Unreleased]
+
+## [1.0.0-rc.1] - 2026-08-01
+
+This is the first published release candidate. It is intended for integration
+validation and real-world feedback before 1.0.0 stable; it is not a claim of
+broad production adoption or proven production readiness.
+
+### Added
+
+- Public Test Kit APIs under `Zhortein\MultiTenantBundle\Test`:
+  `TenantContextScope`, `TenantKernelTestCase`, and `TenantWebTestCase`,
+  distributed through production autoload.
+- Shared-database Doctrine isolation, PostgreSQL 16 row-level security defense
+  in depth, and multi-database connection switching with long-running A/B/A
+  isolation coverage.
+- Tenant-aware Mailer, Messenger, cache, storage, observability, console, and
+  resolver integrations, with optional dependencies remaining optional.
+- External consumer validation for shared and multi-database strategies on
+  Symfony 7.4, 8.0, and 8.1.
+
+### Security
+
+- Tenant-aware storage and cache operations now fail closed without an active
+  tenant context.
+- Storage paths use `tenants/{safe-tenant-slug}/...`; the former implicit
+  `default/` fallback was removed. Absolute paths, traversal, encoded or
+  ambiguous separators, null bytes, and symbolic-link escapes are rejected.
+- Tenant e-mail metadata headers are disabled by default. `X-Tenant-ID` and
+  `X-Tenant-Name` require separate explicit opt-ins and reject header
+  injection values.
+- PostgreSQL RLS policies include explicit read and write predicates and are
+  exercised through a non-owner application role with the Doctrine filter
+  bypassed.
+- Cache namespaces are tenant-specific and generic unsafe cache clearing is
+  rejected where isolation cannot be guaranteed.
+
+### Changed
+
+- The canonical resolver configuration is the scalar `resolver` key; obsolete
+  nested `resolver.type` and `resolution.strategy` forms are rejected.
+- Tenant storage namespaces changed to the fail-closed `tenants/{slug}/...`
+  layout. Applications must migrate existing files explicitly.
+- Messenger middleware now propagates and restores tenant context around
+  received messages without leaking context between jobs.
+- PHP support is 8.3 through 8.5. The verified framework matrix covers Symfony
+  7.4, 8.0, and 8.1; Doctrine ORM 3.5 and 3.6; Doctrine DBAL 3.8 and 4.4;
+  DoctrineBundle 2.19 and 3.3; and PostgreSQL 16 for RLS.
+
+### Migration guidance
+
+- Move existing tenant files from legacy paths into
+  `tenants/{safe-tenant-slug}/...` and remove any reliance on global fallback
+  storage.
+- Establish tenant context explicitly before using tenant-aware storage or
+  cache services.
+- Replace obsolete resolver configuration with the canonical scalar
+  `resolver` key.
+- Enable tenant e-mail headers only when disclosure is intended and downstream
+  systems require them.
+- Replace internal `Tests\` helpers with the public
+  `Zhortein\MultiTenantBundle\Test` APIs.
+- Review the complete [security contract migration guide](docs/migration-security-contracts.md).
+
+### Known limitations
+
+- This is a pre-release; public contracts may still receive compatibility fixes
+  before 1.0.0 stable.
+- PostgreSQL RLS applies only to the `shared_db` strategy and requires
+  PostgreSQL 16 plus correctly provisioned non-owner application roles.
+- The `multi_db` strategy requires the consuming application to provide its
+  tenant connection resolver and database lifecycle operations.
+- Optional Mailer, Twig, PSR-16, and browser testing integrations require their
+  documented optional packages.
+
+## Unreleased development history: RC3 planning (2026-04-05)
+
+### Security
+
+- Made tenant-aware storage fail closed without an active tenant, replaced the ambiguous `default/` fallback with `tenants/{safe-tenant-slug}/...`, rejected unsafe paths and symbolic-link escapes, and documented explicit global storage.
+- Made tenant-aware cache decorators fail closed, isolated keys with non-forgeable hashed namespaces, and rejected generic cache clearing when it cannot be scoped safely.
+- Disabled public tenant email headers by default, added independent opt-ins for `X-Tenant-ID` and `X-Tenant-Name`, preserved application headers, and rejected injection values.
+- Bounded default metric labels and removed arbitrary or confidential failure fields from default logs.
+- Added a migration guide for these intentional pre-1.0 security-related breaking changes.
+
+### Fixed
+- Made tenant setting fallbacks truly optional so Mailer configuration no longer fails when an unset optional default parameter is absent.
+- Registered the documented Messenger sending and worker middleware, preserved tenant context during outgoing dispatch, restored it only for received messages, and prevented duplicate tenant stamps.
+- Enforced PostgreSQL RLS for table owners with explicit read/write predicates and expanded real-database coverage for UPDATE, DELETE, rollback cleanup, and connection reuse.
+- Kept tenant-aware Symfony cache decorators compatible with traceable adapters while preserving same-tenant access and cross-tenant namespace isolation.
+- Registered a contract-correct aggregate Mailer transport factory and mapped `TenantInterface` to the configured tenant entity so real consumer containers and Doctrine metadata validate successfully.
+- Injected the non-recursive Symfony transport factory iterator required by the tenant Messenger integration.
+- Wired the tenant Mailer factory to a non-recursive aggregate of Symfony transport factories and registered its settings repository so consumer containers compile with Mailer enabled.
+- Added class aliases for optional Mailer and Messenger services so real consumer containers can autowire their concrete dependencies.
+- Kept the tenant CLI test helper compatible with Symfony 8.1's public command assertion while preserving existing CommandTester calls.
+- Corrected historically invalid `resolver.type` and `resolution.strategy` documentation examples to the only supported scalar `resolver` syntax; invalid nested structures now fail with actionable errors.
+- Declared the PSR Simple Cache 3 requirement used by the optional typed PSR-16 decorator and updated Console tests for Symfony 8.
+- Replaced the false-positive RLS target with six effective PostgreSQL 16 tests using a non-superuser application role and raw DBAL queries.
+- Persisted the PostgreSQL tenant setting for the database session and clear stale tenant state when no context is active.
+
+### Added
+- Added required Symfony 8.1 and PHP 8.5 compatibility and external consumer jobs while retaining Symfony 7.4 LTS and Symfony 8.0 lower-bound coverage.
+- Added an external consumer application that compiles shared and multi-database configurations on Symfony 7.4, 8.0, and 8.1.
+- Replaced Symfony ORM and test packs with direct component requirements and added a production-only minimal installation check.
+- Documented required, optional, suggested, and development-only dependencies.
+- Added a required PHP 8.3–8.5, Symfony 7.4/8.0/8.1, Doctrine ORM 3.5/3.6, and DBAL 3.8/4.4 compatibility matrix.
+- Documented the supported combinations and compatibility removal policy.
+- **Symfony 8.0 & 7.4 Compatibility**
+  - Updated `composer.json` to support Symfony `^7.4` and `^8.0` components
+  - Updated `symfony/contracts` to support `^3.4` and `^4.0`
+  - Ensured compatibility with PHP 8.3+ (as required by Symfony 8)
+- **Doctrine DBAL 4 Support**
+  - Refactored database platform detection to use `instanceof PostgreSQLPlatform` instead of deprecated `getName()`
+  - Updated `DriverManager::getConnection()` calls to handle stricter type-hinting in DBAL 4
+  - Updated `executeStatement()` return type handling in tests (now returns `int|string`)
+  - Updated `Doctrine\DBAL\Exception` handling for interface-based exceptions in DBAL 4
+- **Test Suite Updates**
+  - Updated `SubdomainTenantResolver` tests for correct constructor arguments
+  - Fixed various unit tests to support DBAL 4 changes and stricter typing
+  - Updated `Makefile` to use `docker compose` (v2) instead of legacy `docker-compose`
+- **Documentation Updates**
+  - Updated `README.md` and documentation files to reflect Symfony 8 support
+
+## Unreleased development history: RC2 planning
 
 ### Added
 - **Observability and Monitoring**
@@ -91,7 +214,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Sensitive Data Protection**: Automatic masking of passwords and sensitive information in DSN strings across all command outputs
 - **Tenant Validation**: Comprehensive tenant existence validation before command execution with clear error messages
 
-## [1.0.0-RC1] - 2025-08-01
+## Unreleased development history: RC1 planning (2025-08-01)
 
 ### Added
 - **Core Multi-Tenancy Features**
@@ -160,7 +283,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Interface-based design for extensibility
 - Caching layer for performance optimization
 
-## [Unreleased]
+## Unreleased development history: initial RLS work
 
 ### Added
 - **PostgreSQL Row-Level Security (RLS) Integration**
@@ -214,3 +337,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Tenant user interface and authentication integration
 - Advanced file storage adapters (S3, etc.)
 - Tenant-specific routing capabilities
+
+- Hardened multi-database long-running processes with fresh tenant EntityManagers, explicit DBAL connection closure, fail-closed context switching, worker cleanup, and real PostgreSQL A/B/A isolation coverage.

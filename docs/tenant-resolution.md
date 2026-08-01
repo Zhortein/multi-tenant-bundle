@@ -15,11 +15,10 @@ Resolves tenants based on the subdomain of the request URL.
 ```yaml
 # config/packages/zhortein_multi_tenant.yaml
 zhortein_multi_tenant:
-    resolver:
-        type: 'subdomain'
-        options:
-            base_domain: 'example.com'
-            excluded_subdomains: ['www', 'api', 'admin', 'mail', 'ftp']
+    resolver: 'subdomain'
+    subdomain:
+        base_domain: 'example.com'
+        excluded_subdomains: ['www', 'api', 'admin', 'mail', 'ftp']
 ```
 
 **Examples:**
@@ -65,10 +64,7 @@ Resolves tenants based on the first segment of the URL path.
 ```yaml
 # config/packages/zhortein_multi_tenant.yaml
 zhortein_multi_tenant:
-    resolver:
-        type: 'path'
-        options:
-            position: 1 # Position in path (1-based)
+    resolver: 'path'
 ```
 
 **Examples:**
@@ -126,10 +122,9 @@ Resolves tenants based on HTTP headers.
 ```yaml
 # config/packages/zhortein_multi_tenant.yaml
 zhortein_multi_tenant:
-    resolver:
-        type: 'header'
-        options:
-            header_name: 'X-Tenant-ID'
+    resolver: 'header'
+    header:
+        name: 'X-Tenant-ID'
 ```
 
 **Examples:**
@@ -396,9 +391,10 @@ class DatabaseTenantResolver implements TenantResolverInterface
 ```yaml
 # config/services.yaml
 services:
-    App\Resolver\DatabaseTenantResolver:
-        tags:
-            - { name: 'zhortein.tenant_resolver', priority: 10 }
+    App\Resolver\DatabaseTenantResolver: ~
+
+    Zhortein\MultiTenantBundle\Resolver\TenantResolverInterface:
+        alias: App\Resolver\DatabaseTenantResolver
 ```
 
 **Configuration:**
@@ -406,9 +402,7 @@ services:
 ```yaml
 # config/packages/zhortein_multi_tenant.yaml
 zhortein_multi_tenant:
-    resolver:
-        type: 'custom'
-        service: 'App\Resolver\DatabaseTenantResolver'
+    resolver: 'custom'
 ```
 
 ## Advanced Custom Resolvers
@@ -551,23 +545,9 @@ class DomainMappingTenantResolver implements TenantResolverInterface
 }
 ```
 
-## Resolver Priority
+## Custom Composition
 
-When multiple resolvers are registered, they are executed in priority order:
-
-```yaml
-# config/services.yaml
-services:
-    App\Resolver\PrimaryResolver:
-        tags:
-            - { name: 'zhortein.tenant_resolver', priority: 100 }
-    
-    App\Resolver\FallbackResolver:
-        tags:
-            - { name: 'zhortein.tenant_resolver', priority: 10 }
-```
-
-Higher priority resolvers are executed first. The first resolver that returns a tenant wins.
+The built-in chain accepts only `path`, `subdomain`, `header`, `query`, `domain`, `hybrid`, and `dns_txt`. It does not collect tagged services. To combine application-specific resolvers, implement that composition in one `TenantResolverInterface` service, select `resolver: 'custom'`, and alias the interface to that service.
 
 ## Configuration Options
 
@@ -580,21 +560,10 @@ zhortein_multi_tenant:
     tenant_entity: 'App\Entity\Tenant'
     
     # Resolver configuration
-    resolver:
-        type: 'subdomain' # subdomain, path, header, or custom
-        options:
-            # Subdomain resolver options
-            base_domain: 'example.com'
-            excluded_subdomains: ['www', 'api', 'admin']
-            
-            # Path resolver options
-            position: 1
-            
-            # Header resolver options
-            header_name: 'X-Tenant-ID'
-            
-            # Custom resolver options
-            service: 'App\Resolver\CustomResolver'
+    resolver: 'subdomain'
+    subdomain:
+        base_domain: 'example.com'
+        excluded_subdomains: ['www', 'api', 'admin']
     
     # Default tenant (optional)
     default_tenant: null
@@ -608,17 +577,16 @@ zhortein_multi_tenant:
 ```yaml
 # config/packages/dev/zhortein_multi_tenant.yaml
 zhortein_multi_tenant:
-    resolver:
-        type: 'path' # Use path resolver in development
-        options:
-            position: 1
+    resolver: 'path' # Use path resolver in development
 
 # config/packages/prod/zhortein_multi_tenant.yaml
+```
+
+```yaml
 zhortein_multi_tenant:
-    resolver:
-        type: 'subdomain' # Use subdomain resolver in production
-        options:
-            base_domain: '%env(APP_DOMAIN)%'
+    resolver: 'subdomain' # Use subdomain resolver in production
+    subdomain:
+        base_domain: '%env(APP_DOMAIN)%'
 ```
 
 ## Testing Resolvers

@@ -32,7 +32,8 @@ final class SubdomainTenantResolverTest extends TestCase
         $this->resolver = new SubdomainTenantResolver(
             $this->entityManager,
             'App\\Entity\\Tenant',
-            'example.com'
+            'example.com',
+            []
         );
     }
 

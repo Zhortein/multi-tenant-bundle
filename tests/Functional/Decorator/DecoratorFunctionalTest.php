@@ -68,7 +68,7 @@ final class DecoratorFunctionalTest extends TestCase
         $this->assertSame('functional-value', $retrievedItem->get());
 
         // Verify base cache has prefixed key
-        $baseItem = $baseCache->getItem('tenant_functional-test_functional-key');
+        $baseItem = $baseCache->getItem('tenant_9a8717d5f0d279246abc583155895d8f6448b53ace7b867b15f692920c0d5d69_functional-key');
         $this->assertTrue($baseItem->isHit());
         $this->assertSame('functional-value', $baseItem->get());
     }
@@ -96,8 +96,8 @@ final class DecoratorFunctionalTest extends TestCase
         $this->assertTrue($cache->has('simple-key'));
 
         // Verify base cache has prefixed key
-        $this->assertTrue($baseCache->has('tenant_simple-test_simple-key'));
-        $this->assertSame('simple-value', $baseCache->get('tenant_simple-test_simple-key'));
+        $this->assertTrue($baseCache->has('tenant_a805e1ed2cb1bfbfa660d027d8f69d2337a7a967d1f05afc893cc53fdc4a91f9_simple-key'));
+        $this->assertSame('simple-value', $baseCache->get('tenant_a805e1ed2cb1bfbfa660d027d8f69d2337a7a967d1f05afc893cc53fdc4a91f9_simple-key'));
     }
 
     public function testLoggerProcessorInServiceContainer(): void
@@ -250,8 +250,8 @@ final class DecoratorFunctionalTest extends TestCase
         // Both tenants should have their own data
         $this->assertSame($tenant1Prefs->get(), $tenant2Prefs->get());
         // But they should be stored separately in the base cache
-        $tenant1BaseItem = $baseCache->getItem('tenant_company-a_user_preferences');
-        $tenant2BaseItem = $baseCache->getItem('tenant_company-b_user_preferences');
+        $tenant1BaseItem = $baseCache->getItem('tenant_6d8c40e6f1b9865f2666cec255dadc9324ec9d103cc4ddcbd89593a511b7256e_user_preferences');
+        $tenant2BaseItem = $baseCache->getItem('tenant_13618f5e64eda77e2c7b4d9fa72647bf8c6f6ab62dade97a9539b124f4b1b9a1_user_preferences');
         $this->assertTrue($tenant1BaseItem->isHit());
         $this->assertTrue($tenant2BaseItem->isHit());
     }

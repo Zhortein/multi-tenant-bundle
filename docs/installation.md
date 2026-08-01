@@ -1,22 +1,24 @@
 # Installation & Setup
 
-This guide walks you through installing and configuring the Zhortein Multi-Tenant Bundle for Symfony 7+ applications.
+This guide walks you through installing and configuring the Zhortein Multi-Tenant Bundle for Symfony 7.4 LTS and Symfony 8.x applications.
 
 > 📖 **Navigation**: [← Back to Documentation Index](index.md) | [Configuration →](configuration.md)
 
 ## Requirements
 
 - **PHP**: >= 8.3
-- **Symfony**: >= 7.0
+- **Symfony**: >= 7.4 | 8.0
 - **PostgreSQL**: >= 16 (recommended)
-- **Doctrine ORM**: >= 3.0
+- **Doctrine ORM**: >= 3.5
+- **Doctrine DBAL**: >= 3.8 or >= 4.4
+- **Dependencies**: See the [required and optional component classification](dependencies.md)
 
 ## Installation
 
 ### 1. Install via Composer
 
 ```bash
-composer require zhortein/multi-tenant-bundle
+composer require "zhortein/multi-tenant-bundle:1.0.0-rc.1"
 ```
 
 ### 2. Enable the Bundle
@@ -138,10 +140,9 @@ zhortein_multi_tenant:
     tenant_entity: 'App\Entity\Tenant'
     
     # Tenant resolution strategy
-    resolver:
-        type: 'subdomain'  # 'subdomain', 'path', 'header', or 'custom'
-        options:
-            base_domain: 'example.com'
+    resolver: 'subdomain'
+    subdomain:
+        base_domain: 'example.com'
     
     # Database strategy
     database:

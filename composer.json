@@ -1,7 +1,7 @@
 {
   "name": "zhortein/multi-tenant-bundle",
   "type": "symfony-bundle",
-  "description": "A comprehensive Symfony 7+ bundle for building multi-tenant applications with PostgreSQL 16 support, featuring multiple resolution strategies, tenant-aware services, and automatic database filtering.",
+  "description": "A comprehensive Symfony 7.4 LTS and Symfony 8.x bundle for building multi-tenant applications with PostgreSQL 16 support, featuring multiple resolution strategies, tenant-aware services, and automatic database filtering.",
   "keywords": ["symfony", "symfony-bundle", "multi-tenant", "multitenant", "tenant", "multi-tenancy", "subdomain", "domain", "dns", "postgresql", "doctrine", "orm", "mailer", "messenger", "storage", "saas", "hosting"],
   "homepage": "https://github.com/zhortein/multi-tenant-bundle",
   "license": "MIT",
@@ -20,32 +20,42 @@
   ],
   "require": {
     "php": ">=8.3",
-    "doctrine/annotations": "^2.0",
-    "doctrine/doctrine-bundle": "^2.7",
+    "doctrine/dbal": "^3.8 || ^4.4",
+    "doctrine/doctrine-bundle": "^2.7 || ^3.3",
     "doctrine/doctrine-migrations-bundle": "^3.0",
-    "monolog/monolog": "^3",
-    "symfony/cache": "^7.0",
-    "symfony/config": " ^7.0",
-    "symfony/contracts": " ^3.0",
-    "symfony/dependency-injection": "^7.0",
-    "symfony/filesystem": "^7.0",
-    "symfony/http-kernel": " ^7.0",
-    "symfony/orm-pack": "^2.0"
+    "doctrine/migrations": "^3.0",
+    "doctrine/orm": "^3.5",
+    "doctrine/persistence": "^3.3 || ^4.0",
+    "psr/cache": "^3.0",
+    "psr/event-dispatcher": "^1.0",
+    "psr/log": "^3.0",
+    "symfony/config": "^7.4 || ^8.0",
+    "symfony/console": "^7.4 || ^8.0",
+    "symfony/dependency-injection": "^7.4 || ^8.0",
+    "symfony/event-dispatcher": "^7.4 || ^8.0",
+    "symfony/event-dispatcher-contracts": "^3.4",
+    "symfony/filesystem": "^7.4 || ^8.0",
+    "symfony/finder": "^7.4 || ^8.0",
+    "symfony/http-foundation": "^7.4 || ^8.0",
+    "symfony/http-kernel": "^7.4 || ^8.0",
+    "symfony/messenger": "^7.4 || ^8.0"
   },
   "require-dev": {
     "friendsofphp/php-cs-fixer": "^v3.75.0",
+    "monolog/monolog": "^3.0",
     "phpstan/phpstan": "^2.1",
     "phpstan/phpstan-doctrine": "^2.0",
     "phpstan/phpstan-symfony": "^2.0",
     "phpunit/php-code-coverage": "^12.3.1",
     "phpunit/phpunit": "^12.2.5",
-    "psr/simple-cache": "*",
+    "psr/simple-cache": "^3.0",
     "roave/security-advisories": "dev-latest",
-    "symfony/mailer": "^7.0",
-    "symfony/messenger": "^7.0",
-    "symfony/phpunit-bridge": "^7.3",
-    "symfony/test-pack": "^1.0",
-    "symfony/twig-bundle": "^7.0"
+    "symfony/browser-kit": "^7.4 || ^8.0",
+    "symfony/dom-crawler": "^7.4 || ^8.0",
+    "symfony/mailer": "^7.4 || ^8.0",
+    "symfony/phpunit-bridge": "^7.4 || ^8.0",
+    "symfony/twig-bundle": "^7.4 || ^8.0",
+    "symfony/yaml": "^7.4 || ^8.0"
   },
   "config": {
     "sort-packages": true
@@ -68,9 +78,16 @@
   "scripts": {
     "php-cs-fixer": "php-cs-fixer fix src --verbose --rules=@Symfony"
   },
+  "conflict": {
+    "psr/simple-cache": "<3.0"
+  },
   "suggest": {
+    "monolog/monolog": "Needed for the optional tenant-aware Monolog processor",
+    "phpunit/phpunit": "Needed by consumers extending the optional public test-kit base classes",
+    "psr/simple-cache": "Needed for PSR-16 simple cache tenant-aware decorators",
+    "symfony/browser-kit": "Needed by consumers extending the optional TenantWebTestCase",
+    "symfony/dom-crawler": "Needed by consumers making crawler-based requests with TenantWebTestCase",
     "symfony/mailer": "Needed for dynamic tenant-aware mail sending",
-    "symfony/messenger": "Needed for dynamic tenant-aware async message dispatching",
     "symfony/twig-bundle": "Needed for templated tenant-aware emails"
   }
 }
