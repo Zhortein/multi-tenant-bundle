@@ -1,6 +1,6 @@
 # Release process
 
-No tag or GitHub release currently exists. Changelog entries labelled as historical RC planning describe untagged development work and must not be interpreted as published versions.
+Published releases and pre-releases are identified only by Git tags and GitHub releases. Changelog sections labelled as historical RC planning describe untagged development work and must not be interpreted as published versions.
 
 ## Versioning
 

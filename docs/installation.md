@@ -18,7 +18,7 @@ This guide walks you through installing and configuring the Zhortein Multi-Tenan
 ### 1. Install via Composer
 
 ```bash
-composer require zhortein/multi-tenant-bundle
+composer require "zhortein/multi-tenant-bundle:1.0.0-rc.1"
 ```
 
 ### 2. Enable the Bundle

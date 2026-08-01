@@ -24,7 +24,7 @@ A comprehensive Symfony 7.4 LTS and Symfony 8.x bundle for building multi-tenant
 Install the bundle via Composer:
 
 ```bash
-composer require zhortein/multi-tenant-bundle
+composer require "zhortein/multi-tenant-bundle:1.0.0-rc.1"
 ```
 
 The core dependency set and optional Mailer, Twig, Monolog, and PSR-16 integrations are listed in the [dependency classification](docs/dependencies.md).
