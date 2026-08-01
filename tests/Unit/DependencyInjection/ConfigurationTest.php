@@ -184,6 +184,32 @@ final class ConfigurationTest extends TestCase
         );
     }
 
+    public function testMessengerMiddlewareIsPrependedToTheConfiguredBus(): void
+    {
+        $container = new ContainerBuilder();
+        $container->registerExtension(new \Symfony\Bundle\FrameworkBundle\DependencyInjection\FrameworkExtension());
+        $extension = new ZhorteinMultiTenantExtension();
+        $container->registerExtension($extension);
+        $container->loadFromExtension($extension->getAlias(), [
+            'messenger' => [
+                'enabled' => true,
+                'fallback_bus' => 'application.bus',
+            ],
+        ]);
+
+        $extension->prepend($container);
+
+        $frameworkConfig = $container->getExtensionConfig('framework');
+        self::assertSame(
+            [
+                TenantWorkerMiddleware::class,
+                TenantSendingMiddleware::class,
+                TenantMessengerTransportResolver::class,
+            ],
+            $frameworkConfig[0]['messenger']['buses']['application.bus']['middleware'],
+        );
+    }
+
     public function testReferenceUsesCanonicalResolverSyntax(): void
     {
         $reference = (new YamlReferenceDumper())->dump(new Configuration());

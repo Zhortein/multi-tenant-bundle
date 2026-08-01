@@ -78,22 +78,40 @@ final class ZhorteinMultiTenantExtension extends Extension implements PrependExt
 {
     public function prepend(ContainerBuilder $container): void
     {
-        if (!$container->hasExtension('doctrine')) {
-            return;
-        }
-
         $config = $this->processConfiguration(
             new Configuration(),
             $container->getExtensionConfig($this->getAlias()),
         );
 
-        $container->prependExtensionConfig('doctrine', [
-            'orm' => [
-                'resolve_target_entities' => [
-                    TenantInterface::class => $config['tenant_entity'],
+        if ($container->hasExtension('doctrine')) {
+            $container->prependExtensionConfig('doctrine', [
+                'orm' => [
+                    'resolve_target_entities' => [
+                        TenantInterface::class => $config['tenant_entity'],
+                    ],
                 ],
-            ],
-        ]);
+            ]);
+        }
+
+        $messengerConfig = $config['messenger'] ?? [];
+        $messengerEnabled = is_array($messengerConfig) && true === ($messengerConfig['enabled'] ?? false);
+        $fallbackBus = is_array($messengerConfig) ? ($messengerConfig['fallback_bus'] ?? null) : null;
+
+        if ($messengerEnabled && is_string($fallbackBus) && $container->hasExtension('framework')) {
+            $container->prependExtensionConfig('framework', [
+                'messenger' => [
+                    'buses' => [
+                        $fallbackBus => [
+                            'middleware' => [
+                                TenantWorkerMiddleware::class,
+                                TenantSendingMiddleware::class,
+                                TenantMessengerTransportResolver::class,
+                            ],
+                        ],
+                    ],
+                ],
+            ]);
+        }
     }
 
     public function load(array $configs, ContainerBuilder $container): void

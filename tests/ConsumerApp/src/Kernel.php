@@ -40,7 +40,7 @@ final class Kernel extends BaseKernel
             'mailer' => ['dsn' => 'null://null'],
             'messenger' => [
                 'default_bus' => 'messenger.bus.default',
-                'transports' => ['async' => 'sync://'],
+                'transports' => ['async' => 'in-memory://'],
             ],
         ]);
         $container->loadFromExtension('doctrine', [
