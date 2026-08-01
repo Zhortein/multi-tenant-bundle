@@ -580,6 +580,9 @@ zhortein_multi_tenant:
     resolver: 'path' # Use path resolver in development
 
 # config/packages/prod/zhortein_multi_tenant.yaml
+```
+
+```yaml
 zhortein_multi_tenant:
     resolver: 'subdomain' # Use subdomain resolver in production
     subdomain:

@@ -28,6 +28,9 @@ jobs:
         with:
           dependency-versions: highest
 
+      - name: Validate documentation
+        run: php tests/validate-documentation.php
+
       - name: Check coding style
         run: vendor/bin/php-cs-fixer fix --dry-run --diff
 

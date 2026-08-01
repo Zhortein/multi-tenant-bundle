@@ -380,21 +380,7 @@ Brief description of the changes.
 
 ## Release Process
 
-### Versioning
-
-The project follows [Semantic Versioning](https://semver.org/):
-- **MAJOR**: Breaking changes
-- **MINOR**: New features (backward compatible)
-- **PATCH**: Bug fixes (backward compatible)
-
-### Release Checklist
-
-1. Update CHANGELOG.md
-2. Update version in composer.json
-3. Run full test suite
-4. Create release tag
-5. Update documentation
-6. Announce release
+No release or tag is created as part of ordinary contribution work. The canonical versioning, candidate validation, demo verification, migration, and authorization checklist is documented in [the release process](docs/release-process.md).
 
 ## Getting Help
 

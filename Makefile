@@ -1,6 +1,6 @@
 # —— 🛠️ Configuration ————————————————————————————————————————————————————————————————
 .DEFAULT_GOAL := help
-.PHONY: help csfixer phpstan installdeps updatedeps composer test test-unit test-integration clean bundle-validate
+.PHONY: help csfixer phpstan installdeps updatedeps composer test test-unit test-integration clean bundle-validate docs-validate
 
 PHP_IMAGE := php:8.3-cli
 DOCKER_VOLUME := -v "$(PWD)":/app -w /app
@@ -105,6 +105,9 @@ test-with-postgres: ## Run RLS tests with PostgreSQL
 validate-testkit: ## Validate Test Kit setup and configuration
 	docker compose -f tests/docker-compose.yml run --rm --no-deps php-rls php tests/validate-testkit.php
 
+docs-validate: ## Validate documentation links and release claims
+	$(DOCKER_RUN) php tests/validate-documentation.php
+
 ## —— 🔧 Bundle-specific ———————————————————————————————————————————————————————————————————
 bundle-validate: ## Validate bundle structure
 	@echo "🔍 Validating bundle structure..."
@@ -130,7 +133,7 @@ dev-setup: installdeps validate-testkit ## Complete development setup
 
 dev-check: composer-validate phpstan csfixer-check test-unit test-kit ## Run all development checks
 
-ci-check: composer-validate phpstan test ## Run CI checks
+ci-check: composer-validate docs-validate phpstan test ## Run CI checks
 
 ci-check-full: composer-validate phpstan test test-with-postgres ## Run CI checks with PostgreSQL
 

@@ -627,6 +627,9 @@ zhortein_multi_tenant:
 # _tenant.tenant1.platform.com TXT "tenant1"
 # _tenant.tenant2.platform.com TXT "tenant2"
 
+```
+
+```yaml
 zhortein_multi_tenant:
     resolver: 'dns_txt'
     dns_txt:
@@ -650,6 +653,9 @@ zhortein_multi_tenant:
 # _tenant.acme.com TXT "acme"
 # _tenant.bio.org TXT "bio"
 
+```
+
+```yaml
 zhortein_multi_tenant:
     resolver: 'dns_txt'
 ```
