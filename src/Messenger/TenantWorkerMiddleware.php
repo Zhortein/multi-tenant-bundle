@@ -7,6 +7,7 @@ namespace Zhortein\MultiTenantBundle\Messenger;
 use Symfony\Component\Messenger\Envelope;
 use Symfony\Component\Messenger\Middleware\MiddlewareInterface;
 use Symfony\Component\Messenger\Middleware\StackInterface;
+use Symfony\Component\Messenger\Stamp\ReceivedStamp;
 use Zhortein\MultiTenantBundle\Context\TenantContextInterface;
 use Zhortein\MultiTenantBundle\Database\TenantSessionConfigurator;
 use Zhortein\MultiTenantBundle\Doctrine\TenantConnectionResolverInterface;
@@ -24,16 +25,20 @@ final readonly class TenantWorkerMiddleware implements MiddlewareInterface
     public function __construct(
         private TenantContextInterface $tenantContext,
         private TenantRegistryInterface $tenantRegistry,
-        private TenantSessionConfigurator $sessionConfigurator,
+        private ?TenantSessionConfigurator $sessionConfigurator = null,
         private ?TenantConnectionResolverInterface $connectionResolver = null,
     ) {
     }
 
     public function handle(Envelope $envelope, StackInterface $stack): Envelope
     {
+        if (null === $envelope->last(ReceivedStamp::class)) {
+            return $stack->next()->handle($envelope, $stack);
+        }
+
         // A reused worker must start without state from the previous message.
         $this->tenantContext->clear();
-        $this->sessionConfigurator->clearConfig();
+        $this->sessionConfigurator?->clearConfig();
 
         $tenantStamp = $envelope->last(TenantStamp::class);
 
@@ -56,14 +61,14 @@ final readonly class TenantWorkerMiddleware implements MiddlewareInterface
 
         try {
             // Configure database session using TenantSessionConfigurator
-            $this->sessionConfigurator->setConfig();
+            $this->sessionConfigurator?->setConfig();
 
             // Process the message with tenant context
             return $stack->next()->handle($envelope, $stack);
         } finally {
             // Always clear both PHP and database session state after processing.
             $this->tenantContext->clear();
-            $this->sessionConfigurator->clearConfig();
+            $this->sessionConfigurator?->clearConfig();
         }
     }
 }

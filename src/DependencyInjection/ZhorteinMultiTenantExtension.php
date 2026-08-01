@@ -46,6 +46,8 @@ use Zhortein\MultiTenantBundle\Manager\TenantSettingsManagerInterface;
 use Zhortein\MultiTenantBundle\Messenger\TenantMessengerConfigurator;
 use Zhortein\MultiTenantBundle\Messenger\TenantMessengerTransportFactory;
 use Zhortein\MultiTenantBundle\Messenger\TenantMessengerTransportResolver;
+use Zhortein\MultiTenantBundle\Messenger\TenantSendingMiddleware;
+use Zhortein\MultiTenantBundle\Messenger\TenantWorkerMiddleware;
 use Zhortein\MultiTenantBundle\Observability\EventSubscriber\TenantLoggingSubscriber;
 use Zhortein\MultiTenantBundle\Observability\EventSubscriber\TenantMetricsSubscriber;
 use Zhortein\MultiTenantBundle\Observability\Metrics\MetricsAdapterInterface;
@@ -608,6 +610,16 @@ final class ZhorteinMultiTenantExtension extends Extension implements PrependExt
                 exclude: ['zhortein_multi_tenant.messenger.transport_factory'],
             ))
             ->addTag('messenger.transport_factory');
+
+        $container->register(TenantWorkerMiddleware::class)
+            ->setAutowired(true)
+            ->setAutoconfigured(true)
+            ->addTag('messenger.middleware', ['priority' => 200]);
+
+        $container->register(TenantSendingMiddleware::class)
+            ->setAutowired(true)
+            ->setAutoconfigured(true)
+            ->addTag('messenger.middleware', ['priority' => 150]);
 
         // Register transport resolver middleware
         $container->setAlias(TenantMessengerTransportFactory::class, 'zhortein_multi_tenant.messenger.transport_factory');
