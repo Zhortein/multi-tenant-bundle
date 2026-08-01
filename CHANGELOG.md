@@ -3,27 +3,82 @@
 All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
-and releases will follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html). No tag or GitHub release has been published yet; the RC headings below preserve untagged development history and are not releases.
+and releases will follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html). Published versions are identified by Git tags and GitHub releases; headings explicitly labelled as development history remain untagged planning records.
 
 ## [Unreleased]
 
+## [1.0.0-rc.1] - 2026-08-01
+
+This is the first published release candidate. It is intended for integration
+validation and real-world feedback before 1.0.0 stable; it is not a claim of
+broad production adoption or proven production readiness.
+
 ### Added
 
-- Added the first intentional public Test Kit contract under
-  `Zhortein\MultiTenantBundle\Test`, distributed through normal package
-  autoload: `TenantContextScope`, `TenantKernelTestCase`, and
-  `TenantWebTestCase`.
-- Added external consumer tests proving context restoration after exceptions,
-  A/B/A isolation, kernel reboot behavior, functional request lifecycle, and
-  shared- and multi-database compatibility without the internal `Tests\`
-  namespace.
+- Public Test Kit APIs under `Zhortein\MultiTenantBundle\Test`:
+  `TenantContextScope`, `TenantKernelTestCase`, and `TenantWebTestCase`,
+  distributed through production autoload.
+- Shared-database Doctrine isolation, PostgreSQL 16 row-level security defense
+  in depth, and multi-database connection switching with long-running A/B/A
+  isolation coverage.
+- Tenant-aware Mailer, Messenger, cache, storage, observability, console, and
+  resolver integrations, with optional dependencies remaining optional.
+- External consumer validation for shared and multi-database strategies on
+  Symfony 7.4, 8.0, and 8.1.
+
+### Security
+
+- Tenant-aware storage and cache operations now fail closed without an active
+  tenant context.
+- Storage paths use `tenants/{safe-tenant-slug}/...`; the former implicit
+  `default/` fallback was removed. Absolute paths, traversal, encoded or
+  ambiguous separators, null bytes, and symbolic-link escapes are rejected.
+- Tenant e-mail metadata headers are disabled by default. `X-Tenant-ID` and
+  `X-Tenant-Name` require separate explicit opt-ins and reject header
+  injection values.
+- PostgreSQL RLS policies include explicit read and write predicates and are
+  exercised through a non-owner application role with the Doctrine filter
+  bypassed.
+- Cache namespaces are tenant-specific and generic unsafe cache clearing is
+  rejected where isolation cannot be guaranteed.
 
 ### Changed
 
-- Classified all earlier RC sections as untagged development history, removed false stable-release and production-readiness claims, and documented the authorized SemVer candidate process.
-- Added automated documentation validation for local links, YAML examples, obsolete resolver structures, and release-status claims.
-- Replaced historical Test Kit documentation for undistributed or nonexistent
-  helpers with the canonical minimal API and executable consumer examples.
+- The canonical resolver configuration is the scalar `resolver` key; obsolete
+  nested `resolver.type` and `resolution.strategy` forms are rejected.
+- Tenant storage namespaces changed to the fail-closed `tenants/{slug}/...`
+  layout. Applications must migrate existing files explicitly.
+- Messenger middleware now propagates and restores tenant context around
+  received messages without leaking context between jobs.
+- PHP support is 8.3 through 8.5. The verified framework matrix covers Symfony
+  7.4, 8.0, and 8.1; Doctrine ORM 3.5 and 3.6; Doctrine DBAL 3.8 and 4.4;
+  DoctrineBundle 2.19 and 3.3; and PostgreSQL 16 for RLS.
+
+### Migration guidance
+
+- Move existing tenant files from legacy paths into
+  `tenants/{safe-tenant-slug}/...` and remove any reliance on global fallback
+  storage.
+- Establish tenant context explicitly before using tenant-aware storage or
+  cache services.
+- Replace obsolete resolver configuration with the canonical scalar
+  `resolver` key.
+- Enable tenant e-mail headers only when disclosure is intended and downstream
+  systems require them.
+- Replace internal `Tests\` helpers with the public
+  `Zhortein\MultiTenantBundle\Test` APIs.
+- Review the complete [security contract migration guide](docs/migration-security-contracts.md).
+
+### Known limitations
+
+- This is a pre-release; public contracts may still receive compatibility fixes
+  before 1.0.0 stable.
+- PostgreSQL RLS applies only to the `shared_db` strategy and requires
+  PostgreSQL 16 plus correctly provisioned non-owner application roles.
+- The `multi_db` strategy requires the consuming application to provide its
+  tenant connection resolver and database lifecycle operations.
+- Optional Mailer, Twig, PSR-16, and browser testing integrations require their
+  documented optional packages.
 
 ## Unreleased development history: RC3 planning (2026-04-05)
 
