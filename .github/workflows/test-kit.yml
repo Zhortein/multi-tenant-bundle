@@ -306,15 +306,13 @@ jobs:
           composer --working-dir=/tmp/consumer config --json repositories.bundle "{\"type\":\"path\",\"url\":\"${GITHUB_WORKSPACE}\",\"options\":{\"symlink\":false}}"
           composer --working-dir=/tmp/consumer config platform.php 8.5.9
 
-      - name: Setup PHP 8.5.9
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: '8.5.9'
-          extensions: pdo_pgsql
-          coverage: none
+      - name: Build the exact PHP 8.5.9 consumer runtime
+        working-directory: ${{ github.workspace }}
+        run: docker build --tag services-locaux-consumer --file tests/ConsumerApp/Dockerfile tests/ConsumerApp
 
       - name: Select the exact root dependency graph
         run: >-
+          docker run --rm --volume /tmp/consumer:/consumer services-locaux-consumer
           composer require --no-update
           "php:8.5.9"
           "symfony/config:8.1.5"
@@ -334,24 +332,31 @@ jobs:
           "doctrine/doctrine-migrations-bundle:4.0.1"
 
       - name: Install the checkout as an external dependency
-        run: composer update --prefer-dist --no-progress --no-interaction --with-all-dependencies
+        run: >-
+          docker run --rm --volume /tmp/consumer:/consumer
+          --volume "${GITHUB_WORKSPACE}:${GITHUB_WORKSPACE}:ro"
+          services-locaux-consumer
+          composer update --prefer-dist --no-progress --no-interaction --with-all-dependencies
 
       - name: Assert exact installed versions
-        run: php bin/assert-exact-versions.php
+        run: docker run --rm --volume /tmp/consumer:/consumer services-locaux-consumer php bin/assert-exact-versions.php
 
       - name: Validate container and Doctrine metadata
         run: |
-          php bin/validate.php
-          php bin/console doctrine:schema:validate --skip-sync
+          docker run --rm --network host --volume /tmp/consumer:/consumer --env DATABASE_URL --env DATABASE_STRATEGY --env EXACT_CONSUMER services-locaux-consumer php bin/validate.php
+          docker run --rm --network host --volume /tmp/consumer:/consumer --env DATABASE_URL --env DATABASE_STRATEGY --env EXACT_CONSUMER services-locaux-consumer php bin/console doctrine:schema:validate --skip-sync
 
       - name: Exercise migration up, down, and up
         run: |
-          php bin/console doctrine:migrations:migrate --no-interaction
-          php bin/console doctrine:migrations:execute --down 'DoctrineMigrations\Version20260831000000' --no-interaction
-          php bin/console doctrine:migrations:migrate --no-interaction
+          docker run --rm --network host --volume /tmp/consumer:/consumer --env DATABASE_URL --env DATABASE_STRATEGY --env EXACT_CONSUMER services-locaux-consumer php bin/console doctrine:migrations:migrate --no-interaction
+          docker run --rm --network host --volume /tmp/consumer:/consumer --env DATABASE_URL --env DATABASE_STRATEGY --env EXACT_CONSUMER services-locaux-consumer php bin/console doctrine:migrations:execute --down 'DoctrineMigrations\Version20260831000000' --no-interaction
+          docker run --rm --network host --volume /tmp/consumer:/consumer --env DATABASE_URL --env DATABASE_STRATEGY --env EXACT_CONSUMER services-locaux-consumer php bin/console doctrine:migrations:migrate --no-interaction
 
       - name: Prove fail-closed consumer boundaries
-        run: vendor/bin/phpunit --no-coverage --filter ServicesLocauxCompatibilityTest
+        run: >-
+          docker run --rm --network host --volume /tmp/consumer:/consumer
+          --env DATABASE_URL --env DATABASE_STRATEGY --env EXACT_CONSUMER services-locaux-consumer
+          php vendor/bin/phpunit --no-coverage --filter ServicesLocauxCompatibilityTest
 
   compatibility:
     name: ${{ matrix.name }}
