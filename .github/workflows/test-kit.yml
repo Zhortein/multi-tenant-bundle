@@ -58,12 +58,8 @@ jobs:
         with:
           dependency-versions: highest
 
-      - name: Create isolated functional databases
-        run: |
-          PGPASSWORD=test_password createdb -h 127.0.0.1 -U test_user multi_tenant_kernel_test
-          PGPASSWORD=test_password createdb -h 127.0.0.1 -U test_user messenger_tenant_a_test
-          PGPASSWORD=test_password createdb -h 127.0.0.1 -U test_user messenger_tenant_b_test
-          PGPASSWORD=test_password createdb -h 127.0.0.1 -U test_user messenger_global_test
+      - name: Provision isolated functional databases
+        run: PGPASSWORD="$TEST_DATABASE_PASSWORD" psql -h "$TEST_DATABASE_HOST" -p "$TEST_DATABASE_PORT" -U "$TEST_DATABASE_USER" -d "$TEST_DATABASE_NAME" -f tests/sql/provision-databases.sql
 
       - name: Run shared-database, CLI, HTTP, and Messenger recipes on PostgreSQL
         run: vendor/bin/phpunit --configuration phpunit.xml.dist --exclude-group rls --no-coverage
@@ -335,6 +331,9 @@ jobs:
 
       - name: Run PHPStan at maximum level
         run: vendor/bin/phpstan analyse src -c phpstan.neon --memory-limit=512M
+
+      - name: Provision isolated functional databases
+        run: PGPASSWORD="$TEST_DATABASE_PASSWORD" psql -h "$TEST_DATABASE_HOST" -p "$TEST_DATABASE_PORT" -U "$TEST_DATABASE_USER" -d "$TEST_DATABASE_NAME" -f tests/sql/provision-databases.sql
 
       - name: Run PHPUnit outside the dedicated RLS group
         run: vendor/bin/phpunit --configuration phpunit.xml.dist --exclude-group rls --no-coverage

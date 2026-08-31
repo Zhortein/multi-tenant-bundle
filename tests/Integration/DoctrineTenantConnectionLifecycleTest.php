@@ -230,6 +230,7 @@ final class DoctrineTenantConnectionLifecycleTest extends TestCase
         $manager->method('getConnection')->willReturn($connection);
         $registry = $this->createStub(ManagerRegistry::class);
         $registry->method('getManagers')->willReturn(['default' => $manager]);
+        $registry->method('getConnections')->willReturn([]);
 
         return $registry;
     }
@@ -238,6 +239,7 @@ final class DoctrineTenantConnectionLifecycleTest extends TestCase
     {
         $registry = $this->createStub(ManagerRegistry::class);
         $registry->method('getManagers')->willReturn(['default' => $manager]);
+        $registry->method('getConnections')->willReturn([]);
 
         return $registry;
     }

@@ -10,6 +10,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql
       - ./sql/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./sql/provision-databases.sql:/docker-entrypoint-initdb.d/provision-databases.sql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U test_user -d multi_tenant_test"]
       interval: 10s

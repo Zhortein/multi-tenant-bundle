@@ -1,9 +1,6 @@
 -- Initialize PostgreSQL database for multi-tenant testing
 
-CREATE DATABASE multi_tenant_kernel_test;
-CREATE DATABASE messenger_tenant_a_test;
-CREATE DATABASE messenger_tenant_b_test;
-CREATE DATABASE messenger_global_test;
+\ir provision-databases.sql
 
 \connect multi_tenant_test
 
