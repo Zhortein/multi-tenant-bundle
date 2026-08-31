@@ -167,25 +167,17 @@ class ProcessTenantDataHandler
 
     public function __invoke(ProcessTenantDataMessage $message, Envelope $envelope): void
     {
-        // Get tenant information from the stamp
-        $tenantStamp = $envelope->last(TenantStamp::class);
-        
-        if ($tenantStamp) {
-            // Set tenant context for the handler
-            $tenant = $this->tenantRegistry->getBySlug($tenantStamp->getTenantSlug());
-            $this->tenantContext->setTenant($tenant);
-            
-            // Process message with tenant context
-            $this->processDataForTenant(
-                $message->getDataType(),
-                $message->getData(),
-                $tenantStamp->getTenantSlug(),
-                $tenantStamp->getTenantName()
-            );
-        } else {
-            // Handle messages without tenant context
-            $this->processDataWithoutTenant($message);
-        }
+        // TenantWorkerMiddleware has already required a valid TenantStamp,
+        // resolved its tenant, and installed the tenant context.
+        $tenant = $this->tenantContext->getTenant()
+            ?? throw new \LogicException('Tenant-aware handlers require tenant context.');
+
+        $this->processDataForTenant(
+            $message->getDataType(),
+            $message->getData(),
+            $tenant->getSlug(),
+            $tenant->getName()
+        );
     }
     
     private function processDataForTenant(string $type, array $data, string $slug, string $name): void

@@ -33,7 +33,7 @@ TENANT_ID=acme php bin/console tenant:migrate
 1. `--tenant` command option (highest priority)
 2. `TENANT_ID` environment variable
 3. `TENANT_ID` server variable
-4. No tenant context (operates on all tenants)
+4. No tenant context (only commands with an explicitly global contract may operate across tenants)
 
 ## Tenant Management
 

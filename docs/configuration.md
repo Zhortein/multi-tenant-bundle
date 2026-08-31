@@ -335,7 +335,7 @@ zhortein_multi_tenant:
 **Benefits:**
 - Defense-in-depth security
 - Database-level tenant isolation
-- Works even if Doctrine filters are disabled
+- Remains effective in dedicated defense-in-depth tests that bypass the Doctrine filter; application code must use the explicit global Doctrine scope
 - Automatic policy creation for tenant-aware entities
 
 ## Service Integration

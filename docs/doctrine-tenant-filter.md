@@ -67,12 +67,8 @@ The filter provides detailed logging for troubleshooting:
     "constraint": "p.tenant_id = 123"
 }
 
-// When tenant parameter is missing
-[DEBUG] No tenant_id parameter set, skipping filter
-{
-    "entity": "App\\Entity\\Product",
-    "reason": "no_tenant_parameter"
-}
+// Missing context or invalid tenant metadata throws a dedicated exception;
+// a tenant-aware query is never allowed to continue unfiltered.
 ```
 
 ## Enhanced Features
@@ -81,9 +77,9 @@ The filter provides detailed logging for troubleshooting:
 
 The filter includes robust error handling:
 
-1. **Missing Metadata**: Gracefully handles entities without proper metadata
-2. **Invalid Parameters**: Safely skips filtering when tenant parameters are invalid
-3. **Reflection Errors**: Falls back to safe defaults when reflection fails
+1. **Missing Metadata**: Rejects invalid tenant-aware mappings
+2. **Invalid Parameters**: Rejects missing or invalid tenant parameters
+3. **Reflection Errors**: Rejects protection setup failures instead of continuing unfiltered
 4. **Type Conversion**: Handles various tenant ID types automatically
 
 ### Performance Considerations
@@ -851,7 +847,7 @@ class TenantFilterIntegrationTest extends WebTestCase
 1. **Filter Not Applied**: Check debug logs for skip reasons (entity not tenant-aware, no tenant column, etc.)
 2. **Wrong Results**: Verify tenant context is set correctly and check debug logs
 3. **Performance Issues**: Ensure proper database indexes on tenant columns
-4. **Cross-Tenant Queries**: Temporarily disable filter when needed
+4. **Cross-Tenant Queries**: Use an application-authorized `GlobalDoctrineScopeInterface::run()` callback
 5. **Parameter Type Issues**: Check debug logs for parameter type detection
 
 ### Debug Commands
@@ -914,7 +910,7 @@ tail -f var/log/dev.log | grep "not_tenant_aware\|no_tenant_column\|no_tenant_pa
 5. **Handle Edge Cases**: Consider scenarios where tenant context might be missing
 6. **Use Attributes**: Prefer `#[AsTenantAware]` over interface implementation
 7. **Validate Data**: Ensure tenant_id is set when creating entities
-8. **Document Exceptions**: Clearly document when filter is disabled
+8. **Explicit Global Work**: Keep direct filter disabling outside application code; use the supported global scope
 9. **Monitor Performance**: Use profiling to identify slow queries
 10. **Review Debug Logs**: Regularly check debug logs for filter application issues
 

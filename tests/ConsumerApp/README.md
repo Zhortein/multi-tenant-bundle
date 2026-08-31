@@ -17,3 +17,5 @@ docker run --rm -e DATABASE_STRATEGY=multi_db -v /tmp/multi-tenant-consumer:/con
 ```
 
 The Symfony 8.1 job resolves the same direct components at `~8.1.0` and executes both container and Test Kit validations with PHP 8.5. The suite proves that consumer entities use only the public `TenantInterface`, internal `Tests\Toolkit` classes are unavailable, exceptions restore context, and sequential A/B/A plus kernel reboot scenarios do not leak context. Use an isolated copy if a different dependency resolution is already present in the fixture.
+
+The stable `Consumer / Services Locaux exact graph` CI check pins the confirmed consumer graph exactly: PHP 8.5.9, FrameworkBundle 8.1.5, Doctrine ORM 3.6.8, DBAL 4.4.4, DoctrineBundle 3.3.1, DoctrineMigrationsBundle 4.0.1, and PostgreSQL 18. It compiles the container, validates Doctrine metadata, exercises a migration up/down/up cycle, and proves the essential fail-closed Doctrine and Messenger boundaries. Separate consumer jobs test the supported DoctrineMigrationsBundle 3 lower and upper bounds. The check name is a CI contract and must remain stable if selected by a repository ruleset.
