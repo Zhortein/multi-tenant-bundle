@@ -264,7 +264,7 @@ jobs:
       - name: Exercise migration up, down, and up
         run: |
           php bin/console doctrine:migrations:migrate --no-interaction
-          php bin/console doctrine:migrations:execute --down 'DoctrineMigrations\\Version20260831000000' --no-interaction
+          php bin/console doctrine:migrations:execute --down 'DoctrineMigrations\Version20260831000000' --no-interaction
           php bin/console doctrine:migrations:migrate --no-interaction
 
       - name: Run consumer tests
@@ -338,7 +338,7 @@ jobs:
 
       - name: Assert exact installed versions
         run: |
-          composer show php | grep 'versions' | grep '8.5.9'
+          php -r 'exit(PHP_VERSION === "8.5.9" ? 0 : 1);'
           composer show symfony/framework-bundle | grep 'versions' | grep '8.1.5'
           composer show doctrine/orm | grep 'versions' | grep '3.6.8'
           composer show doctrine/dbal | grep 'versions' | grep '4.4.4'
@@ -353,7 +353,7 @@ jobs:
       - name: Exercise migration up, down, and up
         run: |
           php bin/console doctrine:migrations:migrate --no-interaction
-          php bin/console doctrine:migrations:execute --down 'DoctrineMigrations\\Version20260831000000' --no-interaction
+          php bin/console doctrine:migrations:execute --down 'DoctrineMigrations\Version20260831000000' --no-interaction
           php bin/console doctrine:migrations:migrate --no-interaction
 
       - name: Prove fail-closed consumer boundaries
