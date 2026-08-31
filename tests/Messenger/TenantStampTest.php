@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Zhortein\MultiTenantBundle\Tests\Messenger;
 
 use PHPUnit\Framework\TestCase;
+use Zhortein\MultiTenantBundle\Exception\InvalidTenantIdentifierException;
 use Zhortein\MultiTenantBundle\Messenger\TenantStamp;
 
 /**
@@ -28,5 +29,11 @@ class TenantStampTest extends TestCase
 
         // Assert
         $this->assertSame('tenant-uuid-123', $stamp->getTenantId());
+    }
+
+    public function testEmptyIdentifierIsRejected(): void
+    {
+        $this->expectException(InvalidTenantIdentifierException::class);
+        new TenantStamp('   ');
     }
 }

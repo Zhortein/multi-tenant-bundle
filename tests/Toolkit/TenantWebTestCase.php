@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace Zhortein\MultiTenantBundle\Tests\Toolkit;
 
 use Doctrine\ORM\EntityManagerInterface;
+use Doctrine\ORM\Tools\SchemaTool;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Zhortein\MultiTenantBundle\Context\TenantContextInterface;
+use Zhortein\MultiTenantBundle\Doctrine\GlobalDoctrineScopeInterface;
 use Zhortein\MultiTenantBundle\Registry\TenantRegistryInterface;
 
 /**
@@ -36,13 +38,22 @@ abstract class TenantWebTestCase extends WebTestCase
 
         parent::setUp();
 
-        $this->client = static::createClient();
+        $this->client = static::createClient(['debug' => false]);
         $container = static::getContainer();
 
         $this->entityManager = $container->get('doctrine.orm.entity_manager');
         $this->tenantContext = $container->get(TenantContextInterface::class);
         $this->tenantRegistry = $container->get(TenantRegistryInterface::class);
-        $this->testData = new TestData($this->entityManager, $this->tenantRegistry);
+        $this->testData = new TestData(
+            $this->entityManager,
+            $this->tenantRegistry,
+            $this->tenantContext,
+            $container->get(GlobalDoctrineScopeInterface::class),
+        );
+        $schemaTool = new SchemaTool($this->entityManager);
+        $metadata = $this->entityManager->getMetadataFactory()->getAllMetadata();
+        $schemaTool->dropSchema($metadata);
+        $schemaTool->createSchema($metadata);
     }
 
     protected function tearDown(): void
@@ -51,6 +62,7 @@ abstract class TenantWebTestCase extends WebTestCase
         $this->tenantContext?->clear();
 
         parent::tearDown();
+        restore_exception_handler();
     }
 
     /**
@@ -67,6 +79,17 @@ abstract class TenantWebTestCase extends WebTestCase
             // KERNEL_CLASS not set or kernel class not found
             return false;
         }
+    }
+
+    /** @param array<string, mixed> $server */
+    private function configuredClient(array $server): KernelBrowser
+    {
+        if (null === $this->client) {
+            throw new \LogicException('The functional client is not initialized.');
+        }
+        $this->client->setServerParameters($server);
+
+        return $this->client;
     }
 
     /**
@@ -87,7 +110,7 @@ abstract class TenantWebTestCase extends WebTestCase
     ): KernelBrowser {
         $server['HTTP_HOST'] = sprintf('%s.%s', $tenantSlug, $baseDomain);
 
-        return static::createClient($options, $server);
+        return $this->configuredClient($server);
     }
 
     /**
@@ -108,7 +131,7 @@ abstract class TenantWebTestCase extends WebTestCase
     ): KernelBrowser {
         $server['HTTP_'.str_replace('-', '_', strtoupper($headerName))] = $tenantSlug;
 
-        return static::createClient($options, $server);
+        return $this->configuredClient($server);
     }
 
     /**
@@ -121,7 +144,7 @@ abstract class TenantWebTestCase extends WebTestCase
      */
     protected function createPathClient(array $options = [], array $server = []): KernelBrowser
     {
-        return static::createClient($options, $server);
+        return $this->configuredClient($server);
     }
 
     /**
@@ -134,7 +157,7 @@ abstract class TenantWebTestCase extends WebTestCase
      */
     protected function createQueryClient(array $options = [], array $server = []): KernelBrowser
     {
-        return static::createClient($options, $server);
+        return $this->configuredClient($server);
     }
 
     /**
@@ -153,7 +176,7 @@ abstract class TenantWebTestCase extends WebTestCase
     ): KernelBrowser {
         $server['HTTP_HOST'] = $domain;
 
-        return static::createClient($options, $server);
+        return $this->configuredClient($server);
     }
 
     /**

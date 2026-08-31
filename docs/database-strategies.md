@@ -359,13 +359,13 @@ namespace App\Service;
 use Doctrine\DBAL\DriverManager;
 use Doctrine\ORM\EntityManagerInterface;
 use Zhortein\MultiTenantBundle\Context\TenantContextInterface;
-use Zhortein\MultiTenantBundle\Doctrine\TenantConnectionResolverInterface;
+use Zhortein\MultiTenantBundle\Doctrine\TenantConnectionParametersProviderInterface;
 
 class TenantDatabaseService
 {
     public function __construct(
         private TenantContextInterface $tenantContext,
-        private TenantConnectionResolverInterface $connectionResolver,
+        private TenantConnectionParametersProviderInterface $connectionParametersProvider,
     ) {}
 
     public function switchToTenantDatabase(): void
@@ -376,8 +376,8 @@ class TenantDatabaseService
             throw new \RuntimeException('No tenant context available');
         }
 
-        // Switch to tenant-specific database connection
-        $this->connectionResolver->switchToTenantConnection($tenant);
+        // Publishing the context performs the prepared, reversible transition.
+        $this->tenantContext->setTenant($tenant);
     }
 
     public function createTenantDatabase(TenantInterface $tenant): void

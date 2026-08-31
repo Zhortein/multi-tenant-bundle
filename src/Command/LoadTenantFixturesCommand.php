@@ -14,7 +14,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Question\ConfirmationQuestion;
 use Symfony\Component\Console\Style\SymfonyStyle;
 use Zhortein\MultiTenantBundle\Context\TenantContextInterface;
-use Zhortein\MultiTenantBundle\Doctrine\TenantConnectionResolverInterface;
+use Zhortein\MultiTenantBundle\Doctrine\TenantConnectionParametersProviderInterface;
 use Zhortein\MultiTenantBundle\Doctrine\TenantEntityManagerFactory;
 use Zhortein\MultiTenantBundle\Registry\TenantRegistryInterface;
 
@@ -35,7 +35,7 @@ class LoadTenantFixturesCommand extends AbstractTenantAwareCommand
     public function __construct(
         TenantRegistryInterface $tenantRegistry,
         TenantContextInterface $tenantContext,
-        private readonly TenantConnectionResolverInterface $connectionResolver,
+        private readonly TenantConnectionParametersProviderInterface $connectionParametersProvider,
         private readonly EntityManagerInterface $entityManager,
         private readonly ?object $fixturesLoader = null, // SymfonyFixturesLoader when available
         private readonly ?TenantEntityManagerFactory $entityManagerFactory = null,
@@ -119,14 +119,13 @@ EOT
 
             $io->title('Tenant Fixtures Loading');
             $entityManagerFactory = $this->entityManagerFactory ?? new TenantEntityManagerFactory(
-                $this->connectionResolver,
+                $this->connectionParametersProvider,
                 $this->entityManager->getConfiguration()
             );
 
             foreach ($tenants as $tenant) {
                 $io->section(sprintf('Loading fixtures for tenant: %s', $tenant->getSlug()));
 
-                $this->connectionResolver->switchToTenantConnection($tenant);
                 $this->tenantContext->setTenant($tenant);
 
                 // Confirm before purging data (unless appending)

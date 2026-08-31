@@ -1,6 +1,6 @@
 services:
   postgres:
-    image: postgres:16-alpine
+    image: ${POSTGRES_IMAGE:-postgres:18-alpine}
     environment:
       POSTGRES_DB: multi_tenant_test
       POSTGRES_USER: test_user
@@ -8,7 +8,7 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql
       - ./sql/init.sql:/docker-entrypoint-initdb.d/init.sql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U test_user -d multi_tenant_test"]
@@ -31,6 +31,8 @@ services:
       TEST_DATABASE_USER: test_user
       TEST_DATABASE_PASSWORD: test_password
       TEST_DATABASE_REQUIRED: 1
+      TEST_DATABASE_SERVER_VERSION: ${POSTGRES_VERSION:-18}
+      TEST_KERNEL_DATABASE_URL: postgresql://test_user:test_password@postgres:5432/multi_tenant_kernel_test
     depends_on:
       postgres:
         condition: service_healthy

@@ -1,5 +1,12 @@
 -- Initialize PostgreSQL database for multi-tenant testing
 
+CREATE DATABASE multi_tenant_kernel_test;
+CREATE DATABASE messenger_tenant_a_test;
+CREATE DATABASE messenger_tenant_b_test;
+CREATE DATABASE messenger_global_test;
+
+\connect multi_tenant_test
+
 -- Enable Row-Level Security
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 

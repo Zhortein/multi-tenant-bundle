@@ -10,6 +10,67 @@ permissions:
   contents: read
 
 jobs:
+  postgresql:
+    name: PostgreSQL ${{ matrix.postgresql }} / required security recipes
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        postgresql: ['16', '18']
+    services:
+      postgres:
+        image: postgres:${{ matrix.postgresql }}
+        env:
+          POSTGRES_DB: multi_tenant_test
+          POSTGRES_USER: test_user
+          POSTGRES_PASSWORD: test_password
+        options: >-
+          --health-cmd "pg_isready -U test_user -d multi_tenant_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    env:
+      TEST_DATABASE_HOST: 127.0.0.1
+      TEST_DATABASE_PORT: 5432
+      TEST_DATABASE_NAME: multi_tenant_test
+      TEST_DATABASE_USER: test_user
+      TEST_DATABASE_PASSWORD: test_password
+      TEST_DATABASE_APP_USER: rls_test_app
+      TEST_DATABASE_APP_PASSWORD: rls_test_password
+      TEST_DATABASE_REQUIRED: 1
+      TEST_DATABASE_SERVER_VERSION: ${{ matrix.postgresql }}
+      TEST_KERNEL_DATABASE_URL: postgresql://test_user:test_password@127.0.0.1:5432/multi_tenant_kernel_test
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5.9'
+          extensions: pdo_pgsql
+          coverage: none
+
+      - name: Install dependencies
+        uses: ramsey/composer-install@v4
+        with:
+          dependency-versions: highest
+
+      - name: Create isolated functional databases
+        run: |
+          PGPASSWORD=test_password createdb -h 127.0.0.1 -U test_user multi_tenant_kernel_test
+          PGPASSWORD=test_password createdb -h 127.0.0.1 -U test_user messenger_tenant_a_test
+          PGPASSWORD=test_password createdb -h 127.0.0.1 -U test_user messenger_tenant_b_test
+          PGPASSWORD=test_password createdb -h 127.0.0.1 -U test_user messenger_global_test
+
+      - name: Run shared-database, CLI, HTTP, and Messenger recipes on PostgreSQL
+        run: vendor/bin/phpunit --configuration phpunit.xml.dist --exclude-group rls --no-coverage
+
+      - name: Run RLS and multi-database recipes on PostgreSQL
+        run: vendor/bin/phpunit --configuration phpunit.xml.dist --group rls --no-coverage
+
   quality:
     name: Code style
     runs-on: ubuntu-latest
@@ -73,7 +134,7 @@ jobs:
             php: "8.4"
             symfony: "~8.0.0"
           - name: Symfony 8.1
-            php: "8.5"
+            php: "8.5.9"
             symfony: "~8.1.0"
     defaults:
       run:
@@ -190,8 +251,8 @@ jobs:
             dbal: '^4.4'
             doctrine_bundle: ^3.3
             dependencies: highest
-          - name: PHP 8.5 / Symfony 8.1 / ORM 3.6 / DBAL 4.4
-            php: '8.5'
+          - name: PHP 8.5.9 / Symfony 8.1 / ORM 3.6 / DBAL 4.4 / PostgreSQL 18
+            php: '8.5.9'
             symfony: '~8.1.0'
             orm: '^3.6'
             dbal: '^4.4'
@@ -200,7 +261,7 @@ jobs:
 
     services:
       postgres:
-        image: postgres:16
+        image: postgres:18
         env:
           POSTGRES_DB: multi_tenant_test
           POSTGRES_USER: test_user

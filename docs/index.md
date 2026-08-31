@@ -1,6 +1,6 @@
 # Zhortein Multi-Tenant Bundle Documentation
 
-Welcome to the comprehensive documentation for the Zhortein Multi-Tenant Bundle, a powerful Symfony 7.4 LTS and Symfony 8.x solution for building multi-tenant applications with PostgreSQL 16 support.
+Welcome to the documentation for the fail-closed Zhortein Multi-Tenant Bundle for Symfony 7.4 LTS and Symfony 8.x, with PostgreSQL 16+ RLS as optional defense in depth.
 
 > 📖 **Quick Start**: New to the bundle? Check out the [main README](../README.md) for installation and quick start guide.
 
@@ -40,6 +40,7 @@ Welcome to the comprehensive documentation for the Zhortein Multi-Tenant Bundle,
 - [Messenger](messenger.md) - Tenant-aware message queues and processing
 - [Storage](storage.md) - Fail-closed tenant-specific file storage
 - [Security Contract Migration](migration-security-contracts.md) - Breaking storage, cache, mailer, and observability migration
+- [RC1 to RC2 Migration](migration-rc1-to-rc2.md) - Fail-closed Doctrine and Messenger migration
 - [Observability](observability.md) - Monitoring, metrics, and logging for tenant operations
 
 ### Database Management
@@ -88,7 +89,7 @@ The Zhortein Multi-Tenant Bundle provides a pre-1.0 implementation under active 
 - **PHP**: >= 8.3
 - **Symfony**: >= 7.4 | 8.0
 - **Tested matrix**: See the [compatibility policy](compatibility.md)
-- **Database**: PostgreSQL 16 (via Doctrine ORM)
+- **Database**: PostgreSQL >= 16, tested with PostgreSQL 16 and PostgreSQL 18 (via Doctrine ORM)
 - **Extensions**: `ext-json`, `ext-pdo`
 
 ### Architecture Highlights

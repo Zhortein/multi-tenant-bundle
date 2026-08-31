@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Zhortein\MultiTenantBundle\Command;
 
+use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\DriverManager;
 use Doctrine\Migrations\Configuration\Configuration;
 use Doctrine\Migrations\Configuration\Connection\ExistingConnection;
@@ -16,7 +17,8 @@ use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 use Zhortein\MultiTenantBundle\Context\TenantContextInterface;
-use Zhortein\MultiTenantBundle\Doctrine\TenantConnectionResolverInterface;
+use Zhortein\MultiTenantBundle\Doctrine\TenantConnectionParametersProviderInterface;
+use Zhortein\MultiTenantBundle\Doctrine\TenantConnectionState;
 use Zhortein\MultiTenantBundle\Registry\TenantRegistryInterface;
 
 /**
@@ -37,8 +39,9 @@ class MigrateTenantsCommand extends AbstractTenantAwareCommand
     public function __construct(
         TenantRegistryInterface $tenantRegistry,
         TenantContextInterface $tenantContext,
-        private readonly TenantConnectionResolverInterface $connectionResolver,
+        private readonly TenantConnectionParametersProviderInterface $connectionParametersProvider,
         private readonly Configuration $migrationConfiguration,
+        private readonly Connection $defaultConnection,
         private readonly string $databaseStrategy = 'shared_db',
     ) {
         parent::__construct($tenantRegistry, $tenantContext);
@@ -157,10 +160,9 @@ EOT
             $dependencyFactory = null;
 
             try {
-                $this->connectionResolver->switchToTenantConnection($tenant);
                 $this->tenantContext->setTenant($tenant);
 
-                $connectionParams = $this->connectionResolver->resolveParameters($tenant);
+                $connectionParams = $this->connectionParametersProvider->parametersFor(TenantConnectionState::tenant($tenant));
                 $dependencyFactory = $this->createTenantDependencyFactory($connectionParams);
                 $migrator = $dependencyFactory->getMigrator();
                 $migrations = $dependencyFactory->getMigrationRepository()->getMigrations();
@@ -230,8 +232,9 @@ EOT
      */
     private function createDefaultDependencyFactory(): DependencyFactory
     {
-        return DependencyFactory::fromConfiguration(
-            new ExistingConfiguration($this->migrationConfiguration)
+        return DependencyFactory::fromConnection(
+            new ExistingConfiguration($this->migrationConfiguration),
+            new ExistingConnection($this->defaultConnection),
         );
     }
 

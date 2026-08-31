@@ -33,7 +33,7 @@ $testContainer = $container->get('test.service_container');
 $tenantContext = $testContainer->get(Zhortein\MultiTenantBundle\Context\TenantContextInterface::class);
 $tenantContext->setTenant(new App\Entity\Tenant());
 $testContainer->get(Symfony\Component\Messenger\MessageBusInterface::class)->dispatch(
-    new stdClass(),
+    new App\Message\TenantMessage(),
 );
 $transport = $testContainer->get('messenger.transport.async');
 if (!$transport instanceof Symfony\Component\Messenger\Transport\InMemory\InMemoryTransport) {

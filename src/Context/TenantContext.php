@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Zhortein\MultiTenantBundle\Context;
 
 use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
+use Zhortein\MultiTenantBundle\Doctrine\TenantConnectionState;
+use Zhortein\MultiTenantBundle\Doctrine\TenantContextSynchronizerInterface;
 use Zhortein\MultiTenantBundle\Entity\TenantInterface;
 use Zhortein\MultiTenantBundle\Observability\Event\TenantContextEndedEvent;
 use Zhortein\MultiTenantBundle\Observability\Event\TenantContextStartedEvent;
@@ -18,12 +20,17 @@ final class TenantContext implements TenantContextInterface
 
     public function __construct(
         private readonly ?EventDispatcherInterface $eventDispatcher = null,
+        private readonly ?TenantContextSynchronizerInterface $synchronizer = null,
     ) {
     }
 
     public function setTenant(TenantInterface $tenant): void
     {
         $previousTenant = $this->tenant;
+        $this->synchronizer?->transition(
+            null === $previousTenant ? TenantConnectionState::none() : TenantConnectionState::tenant($previousTenant),
+            TenantConnectionState::tenant($tenant),
+        );
         $this->tenant = $tenant;
 
         // Dispatch context ended event for previous tenant
@@ -54,6 +61,10 @@ final class TenantContext implements TenantContextInterface
     public function clear(): void
     {
         $previousTenant = $this->tenant;
+        $this->synchronizer?->transition(
+            null === $previousTenant ? TenantConnectionState::none() : TenantConnectionState::tenant($previousTenant),
+            TenantConnectionState::none(),
+        );
         $this->tenant = null;
 
         // Dispatch context ended event

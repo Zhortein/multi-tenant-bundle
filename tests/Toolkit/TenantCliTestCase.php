@@ -5,12 +5,14 @@ declare(strict_types=1);
 namespace Zhortein\MultiTenantBundle\Tests\Toolkit;
 
 use Doctrine\ORM\EntityManagerInterface;
+use Doctrine\ORM\Tools\SchemaTool;
 use Symfony\Bundle\FrameworkBundle\Console\Application;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Tester\CommandTester;
 use Symfony\Component\Console\Tester\ExecutionResult;
 use Zhortein\MultiTenantBundle\Context\TenantContextInterface;
+use Zhortein\MultiTenantBundle\Doctrine\GlobalDoctrineScopeInterface;
 use Zhortein\MultiTenantBundle\Registry\TenantRegistryInterface;
 
 /**
@@ -39,8 +41,7 @@ abstract class TenantCliTestCase extends KernelTestCase
 
         parent::setUp();
 
-        $kernel = static::createKernel();
-        $kernel->boot();
+        $kernel = static::bootKernel(['debug' => false]);
 
         $this->application = new Application($kernel);
         $container = static::getContainer();
@@ -48,7 +49,16 @@ abstract class TenantCliTestCase extends KernelTestCase
         $this->entityManager = $container->get('doctrine.orm.entity_manager');
         $this->tenantContext = $container->get(TenantContextInterface::class);
         $this->tenantRegistry = $container->get(TenantRegistryInterface::class);
-        $this->testData = new TestData($this->entityManager, $this->tenantRegistry);
+        $this->testData = new TestData(
+            $this->entityManager,
+            $this->tenantRegistry,
+            $this->tenantContext,
+            $container->get(GlobalDoctrineScopeInterface::class),
+        );
+        $schemaTool = new SchemaTool($this->entityManager);
+        $metadata = $this->entityManager->getMetadataFactory()->getAllMetadata();
+        $schemaTool->dropSchema($metadata);
+        $schemaTool->createSchema($metadata);
     }
 
     protected function tearDown(): void
@@ -57,6 +67,7 @@ abstract class TenantCliTestCase extends KernelTestCase
         $this->tenantContext?->clear();
 
         parent::tearDown();
+        restore_exception_handler();
     }
 
     /**

@@ -2,7 +2,7 @@
 .DEFAULT_GOAL := help
 .PHONY: help csfixer phpstan installdeps updatedeps composer test test-unit test-integration clean bundle-validate docs-validate
 
-PHP_IMAGE := php:8.3-cli
+PHP_IMAGE := php:8.5.9-cli
 DOCKER_VOLUME := -v "$(PWD)":/app -w /app
 DOCKER_RUN := docker run --rm $(DOCKER_VOLUME) $(PHP_IMAGE)
 
@@ -29,9 +29,9 @@ composer: ## Run composer in container (usage: make composer ARGS="require symfo
 	@$(DOCKER_RUN) php composer.phar $(ARGS)
 
 composer-validate: ## Validate composer.json
-	$(DOCKER_RUN) php composer.phar validate --strict
+	$(DOCKER_RUN) php composer.phar validate --strict --no-check-lock
 
-php: ## Open PHP 8.3 shell in container
+php: ## Open the reference PHP 8.5.9 shell in container
 	@$(DOCKER_RUN) bash
 
 ## —— 🧪 Testing ———————————————————————————————————————————————————————————————————————————
@@ -96,11 +96,20 @@ postgres-logs: ## Show PostgreSQL logs
 postgres-shell: ## Connect to PostgreSQL shell
 	cd tests && docker compose exec postgres psql -U test_user -d multi_tenant_test
 
+POSTGRES_IMAGE ?= postgres:18-alpine
+
 test-with-postgres: ## Run RLS tests with PostgreSQL
 	@set -e; \
-	trap 'docker compose -f tests/docker-compose.yml down' EXIT; \
-	docker compose -f tests/docker-compose.yml up -d --wait postgres; \
-	docker compose -f tests/docker-compose.yml run --rm php-rls vendor/bin/phpunit --group rls --no-coverage
+	trap 'POSTGRES_IMAGE=$(POSTGRES_IMAGE) docker compose -f tests/docker-compose.yml down -v' EXIT; \
+	POSTGRES_IMAGE=$(POSTGRES_IMAGE) docker compose -f tests/docker-compose.yml up -d --wait postgres; \
+	POSTGRES_IMAGE=$(POSTGRES_IMAGE) docker compose -f tests/docker-compose.yml exec -T postgres postgres --version; \
+	POSTGRES_IMAGE=$(POSTGRES_IMAGE) docker compose -f tests/docker-compose.yml run --rm php-rls vendor/bin/phpunit --group rls --no-coverage
+
+test-with-postgres-16: ## Run mandatory RLS and multi-database tests with PostgreSQL 16
+	$(MAKE) test-with-postgres POSTGRES_IMAGE=postgres:16-alpine
+
+test-with-postgres-18: ## Run mandatory RLS and multi-database tests with PostgreSQL 18
+	$(MAKE) test-with-postgres POSTGRES_IMAGE=postgres:18-alpine
 
 validate-testkit: ## Validate Test Kit setup and configuration
 	docker compose -f tests/docker-compose.yml run --rm --no-deps php-rls php tests/validate-testkit.php

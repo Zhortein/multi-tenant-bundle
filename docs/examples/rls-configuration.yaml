@@ -272,7 +272,7 @@ docker_compose_example: |
   version: '3.8'
   services:
     postgres:
-      image: postgres:16
+      image: postgres:18
       environment:
         POSTGRES_DB: multi_tenant_app
         POSTGRES_USER: app_user

@@ -17,11 +17,20 @@ The tenant-aware messenger system consists of several components:
 
 ## Tenant Propagation
 
+Every application message must implement exactly one public marker interface:
+
+- `TenantAwareMessageInterface` for business messages requiring a tenant;
+- `GlobalMessageInterface` for explicitly global messages.
+
+Third-party messages must be wrapped in a classified application message. Unclassified messages, doubly classified messages, global messages carrying a `TenantStamp`, and tenant-aware messages sent without context are rejected before downstream middleware. Existing identical stamps are retained; contradictory stamps are rejected.
+
 The bundle automatically propagates tenant context across asynchronous message processing:
 
 1. **Sending Phase**: When dispatching a message, `TenantSendingMiddleware` automatically attaches a `TenantStamp` containing the current tenant ID
 2. **Worker Phase**: When processing messages, `TenantWorkerMiddleware` reads the `TenantStamp`, restores the tenant context, and configures the database session
-3. **Cleanup**: After processing, the tenant context is automatically cleared to prevent leakage between messages
+3. **Cleanup**: After success, handler exception, retry, or redelivery, PHP and database tenant state is cleared in `finally`
+
+On receipt, a tenant-aware message requires one or more mutually consistent, non-empty `TenantStamp` values and a tenant resolvable by the registry. Missing metadata throws `MissingTenantStampException`; an unavailable tenant throws `UnknownTenantException`. The handler is never called on these failures. `UnknownTenantException` is non-retryable unless the application knows that registry availability is transient; transport or registry infrastructure failures may be retryable under application policy.
 
 ## Requirements
 

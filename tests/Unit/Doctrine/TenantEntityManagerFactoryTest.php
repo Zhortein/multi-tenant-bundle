@@ -4,64 +4,53 @@ declare(strict_types=1);
 
 namespace Zhortein\MultiTenantBundle\Tests\Unit\Doctrine;
 
-use Doctrine\ORM\Configuration;
+use Doctrine\ORM\ORMSetup;
 use PHPUnit\Framework\TestCase;
-use Zhortein\MultiTenantBundle\Doctrine\TenantConnectionResolverInterface;
+use Zhortein\MultiTenantBundle\Doctrine\TenantConnectionParametersProviderInterface;
+use Zhortein\MultiTenantBundle\Doctrine\TenantConnectionState;
 use Zhortein\MultiTenantBundle\Doctrine\TenantEntityManagerFactory;
-use Zhortein\MultiTenantBundle\Entity\TenantInterface;
+use Zhortein\MultiTenantBundle\Tests\Fixtures\Entity\TestTenant;
 
 /**
  * @covers \Zhortein\MultiTenantBundle\Doctrine\TenantEntityManagerFactory
  */
 final class TenantEntityManagerFactoryTest extends TestCase
 {
-    private TenantConnectionResolverInterface $connectionResolver;
-    private Configuration $ormConfiguration;
     private TenantEntityManagerFactory $factory;
 
     protected function setUp(): void
     {
-        $this->connectionResolver = $this->createMock(TenantConnectionResolverInterface::class);
-        $this->ormConfiguration = $this->createMock(Configuration::class);
-
-        // Mock the metadata driver to avoid the missing driver exception
-        $metadataDriver = $this->createMock(\Doctrine\Persistence\Mapping\Driver\MappingDriver::class);
-        $this->ormConfiguration->method('getMetadataDriverImpl')->willReturn($metadataDriver);
-        $this->ormConfiguration->method('getProxyDir')->willReturn('/tmp');
-        $this->ormConfiguration->method('getProxyNamespace')->willReturn('Proxies');
-        $this->ormConfiguration->method('getAutoGenerateProxyClasses')->willReturn(1);
-
+        $provider = new class implements TenantConnectionParametersProviderInterface {
+            public function parametersFor(TenantConnectionState $state): array
+            {
+                return ['driver' => 'pdo_sqlite', 'memory' => true];
+            }
+        };
         $this->factory = new TenantEntityManagerFactory(
-            $this->connectionResolver,
-            $this->ormConfiguration
+            $provider,
+            ORMSetup::createAttributeMetadataConfiguration([], true),
         );
     }
 
     public function testCreateForTenant(): void
     {
-        $tenant = $this->createMock(TenantInterface::class);
-        $connectionParams = [
-            'driver' => 'pdo_pgsql',
-            'host' => 'localhost',
-            'dbname' => 'tenant_db',
-            'user' => 'user',
-            'password' => 'password',
-        ];
+        $entityManager = $this->factory->createForTenant((new TestTenant())->setId(1)->setSlug('a'));
 
-        $this->connectionResolver
-            ->expects($this->once())
-            ->method('resolveParameters')
-            ->with($tenant)
-            ->willReturn($connectionParams);
-
-        // Skip actual EntityManager creation due to complex mocking requirements
-        $this->markTestSkipped('EntityManager creation requires complex database setup');
+        self::assertSame('pdo_sqlite', $entityManager->getConnection()->getParams()['driver']);
+        $entityManager->close();
     }
 
     public function testCreateForTenants(): void
     {
-        // Skip actual EntityManager creation due to complex mocking requirements
-        $this->markTestSkipped('EntityManager creation requires complex database setup');
+        $managers = $this->factory->createForTenants([
+            (new TestTenant())->setId(1)->setSlug('a'),
+            (new TestTenant())->setId(2)->setSlug('b'),
+        ]);
+
+        self::assertSame(['a', 'b'], array_keys($managers));
+        foreach ($managers as $manager) {
+            $manager->close();
+        }
     }
 
     public function testCreateForTenantsWithEmptyArray(): void

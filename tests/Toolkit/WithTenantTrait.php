@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Zhortein\MultiTenantBundle\Tests\Toolkit;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\Platforms\PostgreSQLPlatform;
 use Doctrine\ORM\EntityManagerInterface;
 use Zhortein\MultiTenantBundle\Context\TenantContextInterface;
 use Zhortein\MultiTenantBundle\Doctrine\TenantDoctrineFilter;
@@ -169,6 +170,9 @@ trait WithTenantTrait
      */
     private function setPostgreSQLTenantId(Connection $connection, string $tenantId): void
     {
+        if (!$connection->getDatabasePlatform() instanceof PostgreSQLPlatform) {
+            return;
+        }
         $connection->executeStatement(
             'SELECT set_config(?, ?, false)',
             ['app.tenant_id', $tenantId]
@@ -182,6 +186,9 @@ trait WithTenantTrait
      */
     private function clearPostgreSQLTenantId(Connection $connection): void
     {
+        if (!$connection->getDatabasePlatform() instanceof PostgreSQLPlatform) {
+            return;
+        }
         $connection->executeStatement(
             'SELECT set_config(?, ?, false)',
             ['app.tenant_id', '']
@@ -196,6 +203,6 @@ trait WithTenantTrait
     private function getTenantFilterName(): string
     {
         // The filter name is typically the class name without namespace
-        return 'tenant_doctrine_filter';
+        return 'tenant_filter';
     }
 }

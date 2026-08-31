@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Zhortein\MultiTenantBundle\Tests\Toolkit;
 
 use Doctrine\ORM\EntityManagerInterface;
+use Zhortein\MultiTenantBundle\Context\TenantContextInterface;
+use Zhortein\MultiTenantBundle\Doctrine\GlobalDoctrineScopeInterface;
 use Zhortein\MultiTenantBundle\Entity\TenantInterface;
 use Zhortein\MultiTenantBundle\Registry\TenantRegistryInterface;
 use Zhortein\MultiTenantBundle\Tests\Fixtures\Entity\TestProduct;
@@ -21,6 +23,8 @@ class TestData
     public function __construct(
         private EntityManagerInterface $entityManager,
         private TenantRegistryInterface $tenantRegistry,
+        private ?TenantContextInterface $tenantContext = null,
+        private ?GlobalDoctrineScopeInterface $globalScope = null,
     ) {
     }
 
@@ -39,17 +43,23 @@ class TestData
         $tenant = $this->resolveTenant($tenantId);
         $products = [];
 
-        for ($i = 1; $i <= $count; ++$i) {
-            $product = new TestProduct();
-            $product->setName(sprintf('Product %d for %s', $i, $tenant->getSlug()));
-            $product->setPrice(sprintf('%.2f', 10.00 + $i * 5.50));
-            $product->setTenant($tenant);
+        $this->tenantContext?->setTenant($tenant);
 
-            $this->entityManager->persist($product);
-            $products[] = $product;
+        try {
+            for ($i = 1; $i <= $count; ++$i) {
+                $product = new TestProduct();
+                $product->setName(sprintf('Product %d for %s', $i, $tenant->getSlug()));
+                $product->setPrice(sprintf('%.2f', 10.00 + $i * 5.50));
+                $product->setTenant($tenant);
+
+                $this->entityManager->persist($product);
+                $products[] = $product;
+            }
+
+            $this->entityManager->flush();
+        } finally {
+            $this->tenantContext?->clear();
         }
-
-        $this->entityManager->flush();
 
         return $products;
     }
@@ -136,9 +146,16 @@ class TestData
      */
     public function clearAll(): void
     {
-        // Clear products first due to potential foreign key constraints
-        $this->entityManager->createQuery('DELETE FROM '.TestProduct::class)->execute();
-        $this->entityManager->createQuery('DELETE FROM '.TestTenant::class)->execute();
+        $clear = function (): void {
+            $this->entityManager->createQuery('DELETE FROM '.TestProduct::class)->execute();
+            $this->entityManager->createQuery('DELETE FROM '.TestTenant::class)->execute();
+            $this->entityManager->clear();
+        };
+        if (null !== $this->globalScope) {
+            $this->globalScope->run($clear);
+        } else {
+            $clear();
+        }
     }
 
     /**

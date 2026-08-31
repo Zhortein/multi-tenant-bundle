@@ -17,7 +17,7 @@ final class AddDoctrineFilterCompilerPass implements CompilerPassInterface
         $filters = $container->getParameter('doctrine.orm.entity_manager.filters');
         $filters['tenant_filter'] = [
             'class' => TenantDoctrineFilter::class,
-            'enabled' => false,
+            'enabled' => true,
         ];
 
         $container->setParameter('doctrine.orm.entity_manager.filters', $filters);

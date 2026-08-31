@@ -51,6 +51,7 @@ final class TenantDoctrineFilterIntegrationTest extends KernelTestCase
             $this->dropTestSchema();
         }
         parent::tearDown();
+        restore_exception_handler();
     }
 
     /**
@@ -189,6 +190,8 @@ final class TenantDoctrineFilterIntegrationTest extends KernelTestCase
         // Create UUID tenant
         $uuidTenant = new TestUuidTenant('550e8400-e29b-41d4-a716-446655440000', 'uuid-tenant');
         $this->entityManager->persist($uuidTenant);
+        $this->entityManager->flush();
+        $this->tenantContext->setTenant($uuidTenant);
 
         // Create product with UUID tenant
         $uuidProduct = new TestUuidProduct();
@@ -197,9 +200,6 @@ final class TenantDoctrineFilterIntegrationTest extends KernelTestCase
         $uuidProduct->setTenant($uuidTenant);
         $this->entityManager->persist($uuidProduct);
         $this->entityManager->flush();
-
-        // Set tenant context
-        $this->tenantContext->setTenant($uuidTenant);
 
         // Enable and configure filter
         $this->enableTenantFilter($uuidTenant);
@@ -217,6 +217,8 @@ final class TenantDoctrineFilterIntegrationTest extends KernelTestCase
         // Create organization
         $organization = new TestTenant(99, 'organization');
         $this->entityManager->persist($organization);
+        $this->entityManager->flush();
+        $this->tenantContext->setTenant($organization);
 
         // Create employee with custom tenant field
         $employee = new TestEmployee();
@@ -224,9 +226,6 @@ final class TenantDoctrineFilterIntegrationTest extends KernelTestCase
         $employee->setOrganization($organization);
         $this->entityManager->persist($employee);
         $this->entityManager->flush();
-
-        // Set tenant context
-        $this->tenantContext->setTenant($organization);
 
         // Enable and configure filter
         $this->enableTenantFilter($organization);
@@ -250,12 +249,7 @@ final class TenantDoctrineFilterIntegrationTest extends KernelTestCase
 
         // Enable filter and inject mock logger
         $filters = $this->entityManager->getFilters();
-        if (!$filters->isEnabled('tenant')) {
-            $filters->enable('tenant');
-        }
-
-        $tenantFilter = $filters->getFilter('tenant');
-        $tenantFilter->setParameter('tenant_id', $tenant1->getId());
+        $tenantFilter = $filters->getFilter('tenant_filter');
 
         if ($tenantFilter instanceof TenantDoctrineFilter) {
             $tenantFilter->setLogger($mockLogger);
@@ -264,7 +258,7 @@ final class TenantDoctrineFilterIntegrationTest extends KernelTestCase
         // Expect debug log when filter is applied
         $mockLogger->expects($this->atLeastOnce())
             ->method('debug')
-            ->with('Applied tenant filter constraint', $this->isType('array'));
+            ->with('Applied tenant filter constraint', $this->isArray());
 
         // Execute query to trigger filter
         $this->entityManager->getRepository(TestProduct::class)->findAll();
@@ -274,6 +268,7 @@ final class TenantDoctrineFilterIntegrationTest extends KernelTestCase
     {
         $schemaTool = new SchemaTool($this->entityManager);
         $metadata = $this->entityManager->getMetadataFactory()->getAllMetadata();
+        $schemaTool->dropSchema($metadata);
         $schemaTool->createSchema($metadata);
     }
 
@@ -291,6 +286,8 @@ final class TenantDoctrineFilterIntegrationTest extends KernelTestCase
         $tenant2 = new TestTenant(2, 'tenant-2');
         $this->entityManager->persist($tenant1);
         $this->entityManager->persist($tenant2);
+        $this->entityManager->flush();
+        $this->tenantContext->setTenant($tenant1);
 
         // Create products for tenant 1
         $product1 = new TestProduct();
@@ -307,6 +304,16 @@ final class TenantDoctrineFilterIntegrationTest extends KernelTestCase
         $product2->setTenant($tenant1);
         $this->entityManager->persist($product2);
 
+        $order1 = new TestOrder();
+        $order1->setOrderNumber('ORD-001');
+        $order1->setTotal(125.99);
+        $order1->setProduct($product1);
+        $order1->setTenant($tenant1);
+        $this->entityManager->persist($order1);
+        $this->entityManager->flush();
+
+        $this->tenantContext->setTenant($tenant2);
+
         // Create products for tenant 2
         $product3 = new TestProduct();
         $product3->setName('Product 3');
@@ -315,20 +322,14 @@ final class TenantDoctrineFilterIntegrationTest extends KernelTestCase
         $product3->setTenant($tenant2);
         $this->entityManager->persist($product3);
 
-        // Create orders
-        $order1 = new TestOrder();
-        $order1->setOrderNumber('ORD-001');
-        $order1->setTotal(125.99);
-        $order1->setProduct($product1);
-        $order1->setTenant($tenant1);
-        $this->entityManager->persist($order1);
-
         $order2 = new TestOrder();
         $order2->setOrderNumber('ORD-002');
         $order2->setTotal(45.00);
         $order2->setProduct($product3);
         $order2->setTenant($tenant2);
         $this->entityManager->persist($order2);
+        $this->entityManager->flush();
+        $this->tenantContext->clear();
 
         // Create non-tenant entities
         for ($i = 1; $i <= 3; ++$i) {
@@ -344,12 +345,7 @@ final class TenantDoctrineFilterIntegrationTest extends KernelTestCase
     {
         $filters = $this->entityManager->getFilters();
 
-        if (!$filters->isEnabled('tenant')) {
-            $filters->enable('tenant');
-        }
-
-        $tenantFilter = $filters->getFilter('tenant');
-        $tenantFilter->setParameter('tenant_id', $tenant->getId());
+        $tenantFilter = $filters->getFilter('tenant_filter');
 
         if ($tenantFilter instanceof TenantDoctrineFilter) {
             $tenantFilter->setLogger($this->logger);
@@ -359,7 +355,7 @@ final class TenantDoctrineFilterIntegrationTest extends KernelTestCase
 
 // Test entities
 #[ORM\Entity]
-#[ORM\Table(name: 'test_tenants')]
+#[ORM\Table(name: 'integration_test_tenants')]
 class TestTenant implements TenantInterface
 {
     #[ORM\Id]
@@ -435,7 +431,7 @@ class TestUuidTenant implements TenantInterface
 }
 
 #[ORM\Entity]
-#[ORM\Table(name: 'test_products')]
+#[ORM\Table(name: 'integration_test_products')]
 class TestProduct implements TenantOwnedEntityInterface
 {
     #[ORM\Id]

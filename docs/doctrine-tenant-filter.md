@@ -540,87 +540,40 @@ public function findProductsWithRecentOrders(): array
 }
 ```
 
-## Disabling the Filter
-
-### Temporarily Disable
+## Explicit global ORM scope
 
 ```php
 <?php
 
 namespace App\Service;
 
+use Zhortein\MultiTenantBundle\Doctrine\GlobalDoctrineScopeInterface;
 use Doctrine\ORM\EntityManagerInterface;
 
 class AdminService
 {
     public function __construct(
+        private GlobalDoctrineScopeInterface $globalScope,
         private EntityManagerInterface $entityManager,
     ) {}
 
     public function getAllProductsAcrossAllTenants(): array
     {
-        // Disable tenant filter temporarily
-        $this->entityManager->getFilters()->disable('tenant_filter');
-        
-        try {
-            $products = $this->entityManager
+        // Application authorization must be checked before entering this scope.
+        return $this->globalScope->run(fn (): array =>
+            $this->entityManager
                 ->getRepository(Product::class)
-                ->findAll();
-        } finally {
-            // Re-enable the filter
-            $this->entityManager->getFilters()->enable('tenant_filter');
-        }
-        
-        return $products;
+                ->findAll()
+        );
     }
 }
 ```
 
-### Disable for Specific Query
+`run()` is synchronous, non-nestable, propagates the callback result or exception, suspends tenant-aware ORM write guards, and restores the exact previous filter activation and parameters for every registered EntityManager. Restoration or suspension failures throw `GlobalDoctrineScopeException`. This scope is an explicit execution mechanism, not an authorization grant.
 
-```php
-<?php
+Calling Doctrine's filter `disable()` directly remains technically possible, but is a bypass outside the bundle contract and carries no restoration or isolation guarantee.
 
-namespace App\Service;
-
-use Doctrine\ORM\EntityManagerInterface;
-
-class CrossTenantService
-{
-    public function __construct(
-        private EntityManagerInterface $entityManager,
-    ) {}
-
-    public function getGlobalStatistics(): array
-    {
-        $filters = $this->entityManager->getFilters();
-        $wasEnabled = $filters->isEnabled('tenant_filter');
-        
-        if ($wasEnabled) {
-            $filters->disable('tenant_filter');
-        }
-        
-        try {
-            $dql = '
-                SELECT 
-                    t.slug as tenant_slug,
-                    COUNT(p.id) as product_count
-                FROM App\Entity\Product p
-                JOIN p.tenant t
-                GROUP BY t.id
-            ';
-            
-            return $this->entityManager
-                ->createQuery($dql)
-                ->getResult();
-        } finally {
-            if ($wasEnabled) {
-                $filters->enable('tenant_filter');
-            }
-        }
-    }
-}
-```
+The ORM filter covers ORM reads only. It does not intercept DQL bulk update/delete, direct DBAL, native SQL, migrations, or code that disables listeners or filters. Tenant-aware repositories and write listeners remain required; administrative commands must enter an explicitly authorized global path.
 
 ## Advanced Configuration
 
