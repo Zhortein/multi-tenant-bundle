@@ -40,4 +40,4 @@ if ([] !== $errors) {
     exit(1);
 }
 
-printf("Exact Services Locaux dependency graph confirmed on PHP %s.%s", PHP_VERSION, PHP_EOL);
+printf('Exact Services Locaux dependency graph confirmed on PHP %s.%s', PHP_VERSION, PHP_EOL);
