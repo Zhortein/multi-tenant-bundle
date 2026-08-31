@@ -337,13 +337,7 @@ jobs:
         run: composer update --prefer-dist --no-progress --no-interaction --with-all-dependencies
 
       - name: Assert exact installed versions
-        run: |
-          php -r 'exit(PHP_VERSION === "8.5.9" ? 0 : 1);'
-          composer show symfony/framework-bundle | grep 'versions' | grep '8.1.5'
-          composer show doctrine/orm | grep 'versions' | grep '3.6.8'
-          composer show doctrine/dbal | grep 'versions' | grep '4.4.4'
-          composer show doctrine/doctrine-bundle | grep 'versions' | grep '3.3.1'
-          composer show doctrine/doctrine-migrations-bundle | grep 'versions' | grep '4.0.1'
+        run: php bin/assert-exact-versions.php
 
       - name: Validate container and Doctrine metadata
         run: |
