@@ -20,6 +20,11 @@
         <testsuite name="Functional">
             <directory>tests/Functional</directory>
         </testsuite>
+        <testsuite name="Component">
+            <file>tests/Messenger/TenantSendingMiddlewareTest.php</file>
+            <file>tests/Messenger/TenantStampTest.php</file>
+            <file>tests/Messenger/TenantWorkerMiddlewareTest.php</file>
+        </testsuite>
     </testsuites>
 
     <source>
@@ -43,5 +48,6 @@
         <ini name="error_reporting" value="-1"/>
         <ini name="memory_limit" value="-1"/>
         <server name="SHELL_VERBOSITY" value="-1"/>
+        <server name="KERNEL_CLASS" value="Zhortein\MultiTenantBundle\Tests\Fixtures\TestKernel"/>
     </php>
 </phpunit>

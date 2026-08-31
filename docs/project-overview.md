@@ -32,9 +32,9 @@ The bundle is under active pre-1.0 verification. Supported combinations and demo
 
 #### 3. Database Integration
 - `TenantDoctrineFilter` - Automatic query filtering
-- `TenantDoctrineFilterSubscriber` - Filter lifecycle management
-- `TenantConnectionResolverInterface` - Multi-database support
-- `DefaultConnectionResolver` - Shared database implementation
+- `DoctrineTenantContextSynchronizer` - Atomic context, filter, identity-map, and connection lifecycle coordination
+- `TenantConnectionLifecycleInterface` - Reversible shared- and multi-database transitions
+- `DoctrineTenantConnectionLifecycle` - Reversible multi-database routing implementation
 - `AsTenantAware` attribute for automatic entity tagging
 
 #### 4. Tenant Registry System
@@ -233,4 +233,4 @@ The bundle is not yet a published stable release. Current preparation covers:
 - ✅ Documentation hosting
 - No published tag exists yet
 
-The bundle provides a pre-1.0 multi-tenant implementation for multi-tenant Symfony applications with PostgreSQL 16 support, following all modern PHP and Symfony best practices.
+The bundle provides a pre-1.0 fail-closed multi-tenant implementation for Symfony applications, with PostgreSQL 16+ RLS available as defense in depth.

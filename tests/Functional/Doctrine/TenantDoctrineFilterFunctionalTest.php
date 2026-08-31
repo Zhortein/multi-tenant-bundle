@@ -18,15 +18,10 @@ use Zhortein\MultiTenantBundle\Entity\TenantInterface;
  */
 final class TenantDoctrineFilterFunctionalTest extends TestCase
 {
-    protected function setUp(): void
+    public function testFunctionalFixturesExposeTheTenantContractUsedByTheKernelSuite(): void
     {
-        // Skip functional tests that require full Symfony setup
-        $this->markTestSkipped('Functional tests require full Symfony kernel setup. Enhanced filter is covered by integration tests.');
-    }
-
-    public function testSkipped(): void
-    {
-        $this->assertTrue(true);
+        self::assertTrue(is_subclass_of(FunctionalTestProduct::class, TenantOwnedEntityInterface::class));
+        self::assertNotEmpty((new \ReflectionClass(FunctionalTestEmployee::class))->getAttributes(AsTenantAware::class));
     }
 }
 

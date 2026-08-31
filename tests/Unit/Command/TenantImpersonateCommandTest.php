@@ -184,7 +184,6 @@ final class TenantImpersonateCommandTest extends TestCase
     {
         $reflection = new \ReflectionClass($this->command);
         $method = $reflection->getMethod('maskSensitiveData');
-        $method->setAccessible(true);
 
         // Test various DSN formats
         $testCases = [

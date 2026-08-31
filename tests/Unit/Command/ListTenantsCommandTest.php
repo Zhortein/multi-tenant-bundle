@@ -225,7 +225,6 @@ final class ListTenantsCommandTest extends TestCase
     {
         $reflection = new \ReflectionClass($this->command);
         $method = $reflection->getMethod('maskSensitiveData');
-        $method->setAccessible(true);
 
         $testCases = [
             'N/A' => 'N/A',

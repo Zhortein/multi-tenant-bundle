@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Zhortein\MultiTenantBundle\Messenger;
 
 use Symfony\Component\Messenger\Stamp\StampInterface;
+use Zhortein\MultiTenantBundle\Exception\InvalidTenantIdentifierException;
 
 /**
  * Stamp that carries tenant information with a message.
@@ -17,6 +18,9 @@ final readonly class TenantStamp implements StampInterface
     public function __construct(
         private string $tenantId,
     ) {
+        if ('' === trim($tenantId)) {
+            throw new InvalidTenantIdentifierException('A TenantStamp requires a non-empty tenant identifier.');
+        }
     }
 
     /**

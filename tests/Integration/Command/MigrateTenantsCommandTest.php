@@ -10,7 +10,7 @@ use Symfony\Component\Console\Application;
 use Symfony\Component\Console\Tester\CommandTester;
 use Zhortein\MultiTenantBundle\Command\MigrateTenantsCommand;
 use Zhortein\MultiTenantBundle\Context\TenantContextInterface;
-use Zhortein\MultiTenantBundle\Doctrine\TenantConnectionResolverInterface;
+use Zhortein\MultiTenantBundle\Doctrine\TenantConnectionParametersProviderInterface;
 use Zhortein\MultiTenantBundle\Entity\TenantInterface;
 use Zhortein\MultiTenantBundle\Registry\TenantRegistryInterface;
 
@@ -21,7 +21,7 @@ final class MigrateTenantsCommandTest extends TestCase
 {
     private TenantRegistryInterface $tenantRegistry;
     private TenantContextInterface $tenantContext;
-    private TenantConnectionResolverInterface $connectionResolver;
+    private TenantConnectionParametersProviderInterface $connectionParametersProvider;
     private Configuration $migrationConfiguration;
     private MigrateTenantsCommand $command;
     private CommandTester $commandTester;
@@ -38,13 +38,13 @@ final class MigrateTenantsCommandTest extends TestCase
 
         $this->tenantRegistry = $this->createMock(TenantRegistryInterface::class);
         $this->tenantContext = $this->createMock(TenantContextInterface::class);
-        $this->connectionResolver = $this->createMock(TenantConnectionResolverInterface::class);
+        $this->connectionParametersProvider = $this->createMock(TenantConnectionParametersProviderInterface::class);
         $this->migrationConfiguration = $this->createMock(Configuration::class);
 
         $this->command = new MigrateTenantsCommand(
             $this->tenantRegistry,
             $this->tenantContext,
-            $this->connectionResolver,
+            $this->connectionParametersProvider,
             $this->migrationConfiguration
         );
 
@@ -92,15 +92,9 @@ final class MigrateTenantsCommandTest extends TestCase
             ->method('setTenant')
             ->withConsecutive([$tenant], [null]);
 
-        $this->connectionResolver
+        $this->connectionParametersProvider
             ->expects($this->once())
-            ->method('switchToTenantConnection')
-            ->with($tenant);
-
-        $this->connectionResolver
-            ->expects($this->once())
-            ->method('resolveParameters')
-            ->with($tenant)
+            ->method('parametersFor')
             ->willReturn([
                 'driver' => 'pdo_pgsql',
                 'host' => 'localhost',

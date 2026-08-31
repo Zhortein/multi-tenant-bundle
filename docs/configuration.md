@@ -34,6 +34,8 @@ The bundle will automatically:
 * Expose a TenantContext injectable via autowiring
 * Enable Doctrine tenant filtering (for shared_db strategy)
 
+For tenant-aware ORM entities, missing context, invalid identifiers, invalid mappings, and filter activation failures throw dedicated exceptions instead of producing an unfiltered query. `require_tenant` still controls request resolution policy; it does not weaken these per-operation fail-closed boundaries. Global ORM work uses `GlobalDoctrineScopeInterface::run()` and remains subject to application authorization.
+
 ## Complete Configuration Reference
 
 ```yaml

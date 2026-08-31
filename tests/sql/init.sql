@@ -1,5 +1,9 @@
 -- Initialize PostgreSQL database for multi-tenant testing
 
+\ir provision-databases.sql
+
+\connect multi_tenant_test
+
 -- Enable Row-Level Security
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 

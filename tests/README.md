@@ -33,7 +33,8 @@ make test
 make test-with-postgres
 ```
 
-`make test-with-postgres` starts PostgreSQL 16, creates the restricted
+`make test-with-postgres-16` and `make test-with-postgres-18` start the two
+mandatory PostgreSQL versions, create the restricted
 application role, executes the real RLS group, and stops the environment. A
 green suite with skipped RLS tests is not effective RLS validation.
 

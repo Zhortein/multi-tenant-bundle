@@ -10,9 +10,9 @@ use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\ORMSetup;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\TestCase;
-use Zhortein\MultiTenantBundle\Doctrine\TenantConnectionResolverInterface;
+use Zhortein\MultiTenantBundle\Doctrine\TenantConnectionParametersProviderInterface;
+use Zhortein\MultiTenantBundle\Doctrine\TenantConnectionState;
 use Zhortein\MultiTenantBundle\Doctrine\TenantEntityManagerFactory;
-use Zhortein\MultiTenantBundle\Entity\TenantInterface;
 use Zhortein\MultiTenantBundle\Tests\Fixtures\Entity\TestTenant;
 
 #[Group('rls')]
@@ -121,14 +121,15 @@ final class MultiDatabaseIsolationTest extends TestCase
     private function factory(): TenantEntityManagerFactory
     {
         $parameters = $this->baseParameters;
-        $resolver = new class($parameters) implements TenantConnectionResolverInterface {
+        $provider = new class($parameters) implements TenantConnectionParametersProviderInterface {
             /** @param array<string, mixed> $parameters */
             public function __construct(private readonly array $parameters)
             {
             }
 
-            public function resolveParameters(TenantInterface $tenant): array
+            public function parametersFor(TenantConnectionState $state): array
             {
+                $tenant = $state->tenant ?? throw new \InvalidArgumentException('This test factory requires a tenant state.');
                 $database = match ($tenant->getSlug()) {
                     'tenant-a' => 'multi_tenant_a_test',
                     'tenant-b' => 'multi_tenant_b_test',
@@ -136,10 +137,6 @@ final class MultiDatabaseIsolationTest extends TestCase
                 };
 
                 return array_merge($this->parameters, ['dbname' => $database]);
-            }
-
-            public function switchToTenantConnection(TenantInterface $tenant): void
-            {
             }
         };
 
@@ -149,7 +146,7 @@ final class MultiDatabaseIsolationTest extends TestCase
             $ormConfiguration->enableNativeLazyObjects(true);
         }
 
-        return new TenantEntityManagerFactory($resolver, $ormConfiguration);
+        return new TenantEntityManagerFactory($provider, $ormConfiguration);
     }
 
     /** @return list<string> */

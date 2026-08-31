@@ -6,6 +6,8 @@ namespace Zhortein\MultiTenantBundle\Tests\Unit\Registry;
 
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\EntityRepository;
+use Doctrine\ORM\Mapping\ClassMetadata;
+use Doctrine\ORM\Mapping\FieldMapping;
 use PHPUnit\Framework\TestCase;
 use Zhortein\MultiTenantBundle\Entity\TenantInterface;
 use Zhortein\MultiTenantBundle\Registry\DoctrineTenantRegistry;
@@ -18,15 +20,22 @@ final class DoctrineTenantRegistryTest extends TestCase
     private DoctrineTenantRegistry $registry;
     private EntityManagerInterface $entityManager;
     private EntityRepository $repository;
+    private ClassMetadata $metadata;
 
     protected function setUp(): void
     {
         $this->entityManager = $this->createMock(EntityManagerInterface::class);
         $this->repository = $this->createMock(EntityRepository::class);
+        $this->metadata = $this->createMock(ClassMetadata::class);
 
         $this->entityManager->method('getRepository')
             ->with('App\\Entity\\Tenant')
             ->willReturn($this->repository);
+        $this->entityManager->method('getClassMetadata')
+            ->with('App\\Entity\\Tenant')
+            ->willReturn($this->metadata);
+        $this->metadata->method('getSingleIdentifierFieldName')->willReturn('id');
+        $this->metadata->method('getFieldMapping')->with('id')->willReturn(new FieldMapping('string', 'id', 'id'));
 
         $this->registry = new DoctrineTenantRegistry($this->entityManager, 'App\\Entity\\Tenant');
     }
@@ -161,5 +170,19 @@ final class DoctrineTenantRegistryTest extends TestCase
         $result = $this->registry->findById(456);
 
         $this->assertSame($tenant, $result);
+    }
+
+    public function testFindByIdRejectsIdentifierIncompatibleWithNumericMapping(): void
+    {
+        $entityManager = $this->createMock(EntityManagerInterface::class);
+        $metadata = $this->createMock(ClassMetadata::class);
+        $metadata->method('getSingleIdentifierFieldName')->willReturn('id');
+        $metadata->method('getFieldMapping')->with('id')->willReturn(new FieldMapping('integer', 'id', 'id'));
+        $entityManager->method('getClassMetadata')->with('App\\Entity\\Tenant')->willReturn($metadata);
+        $registry = new DoctrineTenantRegistry($entityManager, 'App\\Entity\\Tenant');
+
+        $this->expectException(\Zhortein\MultiTenantBundle\Exception\InvalidTenantIdentifierException::class);
+
+        $registry->findById('not-an-integer');
     }
 }

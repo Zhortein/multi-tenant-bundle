@@ -352,6 +352,26 @@ final class TenantContext implements TenantContextInterface
 - **Breaking Changes**: Clearly mark any breaking changes
 - **Issue References**: Reference related issues
 
+### Dependabot Branch Synchronization
+
+Dependabot version-update pull requests target `develop`. If a Dependabot pull
+request is exceptionally merged directly into `main`, synchronize `main` back
+into `develop` immediately through a pull request:
+
+```bash
+git fetch origin
+git switch develop
+git pull --ff-only origin develop
+git switch -c chore/synchronize-main-after-dependabot
+git merge --no-ff origin/main
+git push --set-upstream origin chore/synchronize-main-after-dependabot
+```
+
+Open the resulting pull request against `develop`, allow the complete CI suite
+to pass, and merge it without rebasing or squashing away the synchronization
+merge. Resolve any conflict in favor of preserving both the published `main`
+history and subsequent `develop` work.
+
 ### Pull Request Template
 
 ```markdown

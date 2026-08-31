@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Zhortein\MultiTenantBundle\Storage;
 
-final class TenantStorageException extends \RuntimeException
+use Zhortein\MultiTenantBundle\Exception\MultiTenantException;
+
+final class TenantStorageException extends \RuntimeException implements MultiTenantException
 {
 }

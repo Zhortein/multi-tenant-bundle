@@ -5,11 +5,13 @@ declare(strict_types=1);
 namespace Zhortein\MultiTenantBundle\Doctrine;
 
 use Doctrine\DBAL\Types\Types;
-use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Mapping\ClassMetadata;
 use Doctrine\ORM\Query\Filter\SQLFilter;
 use Psr\Log\LoggerInterface;
 use Zhortein\MultiTenantBundle\Attribute\AsTenantAware;
+use Zhortein\MultiTenantBundle\Exception\InvalidTenantIdentifierException;
+use Zhortein\MultiTenantBundle\Exception\InvalidTenantMappingException;
+use Zhortein\MultiTenantBundle\Exception\MissingTenantContextException;
 
 /**
  * Doctrine SQL filter that automatically adds tenant constraints to queries.
@@ -63,53 +65,46 @@ class TenantDoctrineFilter extends SQLFilter
 
         // Ensure the entity has a tenant association or field
         if (!$this->hasTenantColumn($targetEntity, $tenantField)) {
-            $this->logger?->debug('Entity has no tenant column, skipping filter', [
-                'entity' => $entityClass,
-                'tenant_field' => $tenantField,
-                'reason' => 'no_tenant_column',
-            ]);
-
-            return '';
+            throw new InvalidTenantMappingException(sprintf('Tenant-aware entity "%s" has no mapped tenant field "%s".', $entityClass, $tenantField));
         }
 
         // Get the tenant ID parameter
         try {
-            $tenantIdParameter = $this->getParameter('tenant_id');
-        } catch (\InvalidArgumentException) {
-            $this->logger?->debug('No tenant_id parameter set, skipping filter', [
-                'entity' => $entityClass,
-                'reason' => 'no_tenant_parameter',
-            ]);
-
-            return '';
+            $mode = trim($this->getParameter('tenant_context_mode'), "'\"");
+        } catch (\InvalidArgumentException $exception) {
+            throw new MissingTenantContextException(sprintf('Tenant protection for "%s" has no initialized context state.', $entityClass), 0, $exception);
+        }
+        if (TenantConnectionMode::TENANT->value !== $mode) {
+            throw new MissingTenantContextException(sprintf('Tenant-aware entity "%s" cannot be queried without a tenant context.', $entityClass));
         }
 
-        if (empty($tenantIdParameter)) {
-            $this->logger?->debug('Empty tenant_id parameter, skipping filter', [
-                'entity' => $entityClass,
-                'reason' => 'empty_tenant_parameter',
-            ]);
+        try {
+            $tenantIdParameter = $this->getParameter('tenant_id');
+        } catch (\InvalidArgumentException $exception) {
+            throw new MissingTenantContextException(sprintf('Tenant protection for "%s" has no tenant identifier.', $entityClass), 0, $exception);
+        }
 
-            return '';
+        if ("''" === $tenantIdParameter || '' === trim($tenantIdParameter, "'\" ")) {
+            throw new InvalidTenantIdentifierException(sprintf('Tenant protection for "%s" received an empty tenant identifier.', $entityClass));
         }
 
         // Get the column name and type for the tenant field
         $columnInfo = $this->getTenantColumnInfo($targetEntity, $tenantField);
         if (null === $columnInfo) {
-            $this->logger?->debug('Could not determine tenant column info, skipping filter', [
-                'entity' => $entityClass,
-                'tenant_field' => $tenantField,
-                'reason' => 'no_column_info',
-            ]);
-
-            return '';
+            throw new InvalidTenantMappingException(sprintf('Unable to determine the tenant column for "%s".', $entityClass));
         }
 
-        // Create properly typed parameter
-        $typedParameter = $this->createTypedParameter($tenantIdParameter, $columnInfo['type']);
+        $unquotedTenantId = trim($tenantIdParameter, "'");
+        if (in_array($columnInfo['type'], [Types::INTEGER, Types::BIGINT, Types::SMALLINT], true) && !ctype_digit($unquotedTenantId)) {
+            throw new InvalidTenantIdentifierException(sprintf('Tenant identifier "%s" is invalid for numeric mapping on "%s".', $unquotedTenantId, $entityClass));
+        }
+        if (in_array($columnInfo['type'], [Types::GUID, 'uuid'], true)
+            && 1 !== preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i', $unquotedTenantId)) {
+            throw new InvalidTenantIdentifierException(sprintf('Tenant identifier "%s" is not a valid UUID for "%s".', $unquotedTenantId, $entityClass));
+        }
 
         // Handle multiple aliases by checking if the alias contains the table name
-        $constraint = sprintf('%s.%s = %s', $targetTableAlias, $columnInfo['name'], $typedParameter);
+        $constraint = sprintf('%s.%s = %s', $targetTableAlias, $columnInfo['name'], $tenantIdParameter);
 
         $this->logger?->debug('Applied tenant filter constraint', [
             'entity' => $entityClass,
@@ -203,25 +198,16 @@ class TenantDoctrineFilter extends SQLFilter
         // Handle association
         if ($metadata->hasAssociation($tenantField)) {
             $associationMapping = $metadata->getAssociationMapping($tenantField);
-            $joinColumnName = $associationMapping['joinColumns'][0]['name'] ?? $tenantField.'_id';
-
-            // Determine type based on target entity's ID field
-            $targetEntity = $associationMapping['targetEntity'];
-            if (is_string($targetEntity) && class_exists($targetEntity)) {
-                try {
-                    $targetMetadata = $this->getEntityManager()->getClassMetadata($targetEntity);
-                    $idFieldMapping = $targetMetadata->getFieldMapping($targetMetadata->getSingleIdentifierFieldName());
-                    $idType = $idFieldMapping['type'] ?? Types::INTEGER;
-                } catch (\Exception) {
-                    $idType = Types::INTEGER; // Default fallback
-                }
-            } else {
-                $idType = Types::INTEGER; // Default fallback
+            $joinColumnName = $associationMapping['joinColumns'][0]['name'] ?? null;
+            if (!is_string($joinColumnName) || '' === $joinColumnName) {
+                throw new InvalidTenantMappingException(sprintf('Tenant association "%s::%s" requires one named join column.', $metadata->getName(), $tenantField));
             }
 
             return [
-                'name' => is_string($joinColumnName) ? $joinColumnName : $tenantField.'_id',
-                'type' => is_string($idType) ? $idType : Types::INTEGER,
+                'name' => $joinColumnName,
+                // SQLFilter already quotes through the active DBAL connection. Association
+                // identifier metadata is not exposed through SQLFilter's public API.
+                'type' => Types::STRING,
             ];
         }
 
@@ -229,47 +215,19 @@ class TenantDoctrineFilter extends SQLFilter
         if ($metadata->hasField($tenantField)) {
             $fieldMapping = $metadata->getFieldMapping($tenantField);
 
-            $columnName = $fieldMapping['columnName'] ?? $tenantField;
-            $fieldType = $fieldMapping['type'] ?? Types::INTEGER;
+            $columnName = $fieldMapping['columnName'] ?? null;
+            $fieldType = $fieldMapping['type'] ?? null;
+
+            if (!is_string($columnName) || '' === $columnName || !is_string($fieldType) || '' === $fieldType) {
+                throw new InvalidTenantMappingException(sprintf('Tenant field "%s::%s" has incomplete column metadata.', $metadata->getName(), $tenantField));
+            }
 
             return [
-                'name' => is_string($columnName) ? $columnName : $tenantField,
-                'type' => is_string($fieldType) ? $fieldType : Types::INTEGER,
+                'name' => $columnName,
+                'type' => $fieldType,
             ];
         }
 
         return null;
-    }
-
-    /**
-     * Creates a properly typed parameter for the SQL query.
-     */
-    private function createTypedParameter(string $value, string $type): string
-    {
-        return match ($type) {
-            Types::GUID, 'uuid' => "'{$value}'", // Quote UUIDs
-            Types::STRING, Types::TEXT => "'{$value}'", // Quote strings
-            default => $value, // Numeric types don't need quotes
-        };
-    }
-
-    /**
-     * Gets the entity manager from the filter.
-     *
-     * This method uses reflection to access the protected entityManager property
-     * since it's not exposed by the parent SQLFilter class.
-     */
-    private function getEntityManager(): EntityManagerInterface
-    {
-        $reflection = new \ReflectionClass(SQLFilter::class);
-        $property = $reflection->getProperty('em');
-
-        $entityManager = $property->getValue($this);
-
-        if (!$entityManager instanceof EntityManagerInterface) {
-            throw new \RuntimeException('Unable to retrieve EntityManager from SQLFilter');
-        }
-
-        return $entityManager;
     }
 }

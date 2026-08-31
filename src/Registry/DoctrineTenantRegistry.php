@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace Zhortein\MultiTenantBundle\Registry;
 
+use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\EntityManagerInterface;
 use Zhortein\MultiTenantBundle\Entity\TenantInterface;
+use Zhortein\MultiTenantBundle\Exception\InvalidTenantIdentifierException;
 
 /**
  * Doctrine-based tenant registry.
@@ -54,6 +56,16 @@ final readonly class DoctrineTenantRegistry implements TenantRegistryInterface
 
     public function findById(string|int $id): ?TenantInterface
     {
+        $metadata = $this->em->getClassMetadata($this->tenantEntityClass);
+        $mapping = $metadata->getFieldMapping($metadata->getSingleIdentifierFieldName());
+        $type = $mapping['type'] ?? null;
+        $value = (string) $id;
+        if ('' === trim($value)
+            || (in_array($type, [Types::INTEGER, Types::BIGINT, Types::SMALLINT], true) && !ctype_digit($value))
+            || (in_array($type, [Types::GUID, 'uuid'], true) && 1 !== preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i', $value))) {
+            throw new InvalidTenantIdentifierException(sprintf('Tenant identifier "%s" is incompatible with the configured tenant mapping.', $value));
+        }
+
         $repository = $this->em->getRepository($this->tenantEntityClass);
         $tenant = $repository->find($id);
 

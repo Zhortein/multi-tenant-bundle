@@ -10,7 +10,7 @@ Row-Level Security provides database-level tenant isolation by creating policies
 
 ## Threat model and query boundaries
 
-RLS protects tenant-owned rows when application code reaches PostgreSQL through Doctrine ORM, DQL, QueryBuilder, DBAL, or native SQL. The Doctrine tenant filter protects ORM-generated reads only: it does not cover DBAL or native SQL and must never be described as sufficient for those paths. RLS is the database-enforced boundary for bypass scenarios.
+RLS can protect tenant-owned rows when application code reaches PostgreSQL through Doctrine ORM, DQL, QueryBuilder, DBAL, or native SQL. It is optional defense in depth, not a prerequisite for safe bundle behavior and not a replacement for application authorization. The bundle's Doctrine filter protects ORM-generated reads only; tenant-aware repositories and write guards provide additional application boundaries. DBAL, native SQL, DQL bulk operations, migrations, and disabled listeners remain outside those ORM guarantees.
 
 The supported policy is fail-closed. With no active tenant, `app.tenant_id` is cleared to an empty value and tenant-owned SELECT, INSERT, UPDATE, and DELETE operations expose or affect no rows. Same-tenant operations are allowed. Cross-tenant SELECT rows are hidden, cross-tenant UPDATE and DELETE affect zero rows, and cross-tenant INSERT is rejected by `WITH CHECK`.
 
@@ -150,19 +150,7 @@ The mandatory PostgreSQL suite exercises tenant A/B switching, rollback cleanup,
 
 ## Testing RLS Protection
 
-You can verify that RLS is working by temporarily disabling Doctrine filters:
-
-```php
-// Disable Doctrine tenant filter
-$filters = $entityManager->getFilters();
-if ($filters->has('tenant_filter')) {
-    $filters->disable('tenant_filter');
-}
-
-// This query should still be filtered by RLS
-$products = $entityManager->getRepository(Product::class)->findAll();
-// Will only return products for the current tenant due to RLS
-```
+RLS tests deliberately bypass the Doctrine filter inside test infrastructure to prove the independent database layer. Application code must not copy this bypass; use `GlobalDoctrineScopeInterface` for explicitly authorized global ORM work.
 
 ## Limitations
 

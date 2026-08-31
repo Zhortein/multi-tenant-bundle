@@ -11,7 +11,7 @@ The core runtime requires:
 - Symfony Messenger because the public PostgreSQL RLS session configurator also provides tenant propagation middleware for workers;
 - PSR-6 cache, PSR event dispatcher, and PSR logger contracts.
 
-Local tenant-aware storage is included and requires no storage adapter package. PostgreSQL 16 remains the supported reference environment for RLS.
+Local tenant-aware storage is included and requires no storage adapter package. PostgreSQL >= 16 is supported and PostgreSQL 16 and PostgreSQL 18 are mandatory RLS validation targets.
 
 ## Optional integrations
 

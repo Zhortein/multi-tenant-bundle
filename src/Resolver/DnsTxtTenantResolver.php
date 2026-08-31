@@ -127,7 +127,7 @@ class DnsTxtTenantResolver implements TenantResolverInterface
     private function performDnsQuery(string $dnsQuery): array
     {
         // Set error handler to catch DNS resolution errors
-        $previousErrorHandler = set_error_handler(static function (int $severity, string $message): bool {
+        set_error_handler(static function (int $severity, string $message): bool {
             throw new \RuntimeException(sprintf('DNS query failed: %s', $message), $severity);
         });
 
@@ -141,11 +141,7 @@ class DnsTxtTenantResolver implements TenantResolverInterface
             return $records;
         } finally {
             // Restore previous error handler
-            if (null !== $previousErrorHandler) {
-                set_error_handler($previousErrorHandler);
-            } else {
-                restore_error_handler();
-            }
+            restore_error_handler();
         }
     }
 

@@ -7,6 +7,17 @@ and releases will follow [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+### Security
+
+- Doctrine tenant-aware reads and writes now fail closed on missing context, invalid identifiers or mappings, protection setup failures, tenant changes, and cross-tenant mutations.
+- Messenger messages must implement exactly one of `TenantAwareMessageInterface` or `GlobalMessageInterface`; missing, invalid, unknown, or contradictory tenant metadata is rejected before handlers run.
+- Added the non-nestable `GlobalDoctrineScopeInterface::run()` mechanism for explicitly authorized global ORM callbacks with exact filter-state restoration.
+
+### Changed
+
+- These security contracts intentionally break RC1 fail-open behavior. See `docs/migration-rc1-to-rc2.md`.
+- The reference graph is PHP 8.5.9, Symfony 8.1, Doctrine ORM 3.6, DBAL 4.4, DoctrineBundle 3.3, and PostgreSQL 18.
+
 ## [1.0.0-rc.1] - 2026-08-01
 
 This is the first published release candidate. It is intended for integration

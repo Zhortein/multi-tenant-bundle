@@ -433,7 +433,6 @@ use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 use Zhortein\MultiTenantBundle\Registry\TenantRegistryInterface;
 use Zhortein\MultiTenantBundle\Context\TenantContextInterface;
-use Zhortein\MultiTenantBundle\Doctrine\TenantConnectionResolverInterface;
 
 #[AsCommand(name: 'app:migrate-multi-db')]
 class MigrateMultiDbCommand extends Command
@@ -441,7 +440,6 @@ class MigrateMultiDbCommand extends Command
     public function __construct(
         private TenantRegistryInterface $tenantRegistry,
         private TenantContextInterface $tenantContext,
-        private TenantConnectionResolverInterface $connectionResolver,
     ) {
         parent::__construct();
     }

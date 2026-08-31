@@ -4,183 +4,108 @@ declare(strict_types=1);
 
 namespace Zhortein\MultiTenantBundle\Tests\Messenger;
 
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Messenger\Envelope;
+use Symfony\Component\Messenger\Middleware\MiddlewareInterface;
 use Symfony\Component\Messenger\Middleware\StackInterface;
 use Zhortein\MultiTenantBundle\Context\TenantContextInterface;
 use Zhortein\MultiTenantBundle\Entity\TenantInterface;
+use Zhortein\MultiTenantBundle\Exception\MissingTenantContextException;
+use Zhortein\MultiTenantBundle\Exception\TenantMismatchException;
+use Zhortein\MultiTenantBundle\Exception\UnclassifiedMessageException;
+use Zhortein\MultiTenantBundle\Messenger\GlobalMessageInterface;
+use Zhortein\MultiTenantBundle\Messenger\TenantAwareMessageInterface;
 use Zhortein\MultiTenantBundle\Messenger\TenantSendingMiddleware;
 use Zhortein\MultiTenantBundle\Messenger\TenantStamp;
 
-/**
- * @covers \Zhortein\MultiTenantBundle\Messenger\TenantSendingMiddleware
- */
-class TenantSendingMiddlewareTest extends TestCase
+final class TenantSendingMiddlewareTest extends TestCase
 {
-    private TenantContextInterface $tenantContext;
-    private TenantSendingMiddleware $middleware;
+    private TenantContextInterface $context;
     private StackInterface $stack;
+    private MiddlewareInterface $next;
+    private TenantSendingMiddleware $middleware;
 
     protected function setUp(): void
     {
-        $this->tenantContext = $this->createMock(TenantContextInterface::class);
-        $this->middleware = new TenantSendingMiddleware($this->tenantContext);
+        $this->context = $this->createMock(TenantContextInterface::class);
         $this->stack = $this->createMock(StackInterface::class);
+        $this->next = $this->createMock(MiddlewareInterface::class);
+        $this->middleware = new TenantSendingMiddleware($this->context);
+        $this->stack->method('next')->willReturn($this->next);
     }
 
-    public function testHandleWithTenantContextAttachesTenantStamp(): void
+    public function testTenantAwareMessageGetsCurrentTenantStampBeforeNextMiddleware(): void
     {
-        // Arrange
+        $this->context->method('getTenant')->willReturn($this->tenant('a'));
+        $envelope = new Envelope(new TenantMessage());
+        $this->next->expects(self::once())->method('handle')->with(
+            self::callback(static fn (Envelope $value): bool => 'a' === $value->last(TenantStamp::class)?->getTenantId()),
+            $this->stack,
+        )->willReturn($envelope);
+        self::assertSame($envelope, $this->middleware->handle($envelope, $this->stack));
+    }
+
+    public function testIdenticalExistingStampIsKept(): void
+    {
+        $this->context->method('getTenant')->willReturn($this->tenant('a'));
+        $envelope = new Envelope(new TenantMessage(), [new TenantStamp('a')]);
+        $this->next->expects(self::once())->method('handle')->with($envelope, $this->stack)->willReturn($envelope);
+        self::assertSame($envelope, $this->middleware->handle($envelope, $this->stack));
+    }
+
+    public function testTenantAwareMessageWithoutContextIsRejectedBeforeNextMiddleware(): void
+    {
+        $this->next->expects(self::never())->method('handle');
+        $this->expectException(MissingTenantContextException::class);
+        $this->middleware->handle(new Envelope(new TenantMessage()), $this->stack);
+    }
+
+    public function testContradictoryStampIsRejected(): void
+    {
+        $this->context->method('getTenant')->willReturn($this->tenant('a'));
+        $this->next->expects(self::never())->method('handle');
+        $this->expectException(TenantMismatchException::class);
+        $this->middleware->handle(new Envelope(new TenantMessage(), [new TenantStamp('b')]), $this->stack);
+    }
+
+    public function testExplicitGlobalMessageWithoutStampIsAccepted(): void
+    {
+        $envelope = new Envelope(new GlobalMessage());
+        $this->next->expects(self::once())->method('handle')->with($envelope, $this->stack)->willReturn($envelope);
+        self::assertSame($envelope, $this->middleware->handle($envelope, $this->stack));
+    }
+
+    #[DataProvider('invalidClassificationProvider')]
+    public function testInvalidClassificationIsRejected(object $message, array $stamps, string $exception): void
+    {
+        $this->next->expects(self::never())->method('handle');
+        $this->expectException($exception);
+        $this->middleware->handle(new Envelope($message, $stamps), $this->stack);
+    }
+
+    public static function invalidClassificationProvider(): iterable
+    {
+        yield 'unclassified' => [new \stdClass(), [], UnclassifiedMessageException::class];
+        yield 'both classifications' => [new DoublyClassifiedMessage(), [], UnclassifiedMessageException::class];
+        yield 'global with stamp' => [new GlobalMessage(), [new TenantStamp('a')], TenantMismatchException::class];
+    }
+
+    private function tenant(string $id): TenantInterface
+    {
         $tenant = $this->createMock(TenantInterface::class);
-        $tenant->method('getId')->willReturn('123');
+        $tenant->method('getId')->willReturn($id);
 
-        $this->tenantContext->method('hasTenant')->willReturn(true);
-        $this->tenantContext->method('getTenant')->willReturn($tenant);
-
-        $message = new \stdClass();
-        $envelope = new Envelope($message);
-
-        $expectedEnvelope = $envelope->with(new TenantStamp('123'));
-
-        $nextMiddleware = $this->createMock(\Symfony\Component\Messenger\Middleware\MiddlewareInterface::class);
-        $this->stack->expects($this->once())
-            ->method('next')
-            ->willReturn($nextMiddleware);
-
-        $nextMiddleware->expects($this->once())
-            ->method('handle')
-            ->with($this->callback(function (Envelope $env) {
-                $stamp = $env->last(TenantStamp::class);
-
-                return $stamp instanceof TenantStamp && '123' === $stamp->getTenantId();
-            }), $this->stack)
-            ->willReturn($expectedEnvelope);
-
-        // Act
-        $result = $this->middleware->handle($envelope, $this->stack);
-
-        // Assert
-        $this->assertSame($expectedEnvelope, $result);
+        return $tenant;
     }
+}
 
-    public function testHandleWithoutTenantContextDoesNotAttachStamp(): void
-    {
-        // Arrange
-        $this->tenantContext->method('hasTenant')->willReturn(false);
-
-        $message = new \stdClass();
-        $envelope = new Envelope($message);
-
-        $nextMiddleware = $this->createMock(\Symfony\Component\Messenger\Middleware\MiddlewareInterface::class);
-        $this->stack->expects($this->once())
-            ->method('next')
-            ->willReturn($nextMiddleware);
-
-        $nextMiddleware->expects($this->once())
-            ->method('handle')
-            ->with($envelope, $this->stack)
-            ->willReturn($envelope);
-
-        // Act
-        $result = $this->middleware->handle($envelope, $this->stack);
-
-        // Assert
-        $this->assertSame($envelope, $result);
-        $this->assertNull($envelope->last(TenantStamp::class));
-    }
-
-    public function testHandleWithExistingTenantStampDoesNotAddAnother(): void
-    {
-        // Arrange
-        $tenant = $this->createMock(TenantInterface::class);
-        $tenant->method('getId')->willReturn('123');
-
-        $this->tenantContext->method('hasTenant')->willReturn(true);
-        $this->tenantContext->method('getTenant')->willReturn($tenant);
-
-        $message = new \stdClass();
-        $existingStamp = new TenantStamp('456');
-        $envelope = new Envelope($message, [$existingStamp]);
-
-        $nextMiddleware = $this->createMock(\Symfony\Component\Messenger\Middleware\MiddlewareInterface::class);
-        $this->stack->expects($this->once())
-            ->method('next')
-            ->willReturn($nextMiddleware);
-
-        $nextMiddleware->expects($this->once())
-            ->method('handle')
-            ->with($envelope, $this->stack)
-            ->willReturn($envelope);
-
-        // Act
-        $result = $this->middleware->handle($envelope, $this->stack);
-
-        // Assert
-        $this->assertSame($envelope, $result);
-        $stamp = $envelope->last(TenantStamp::class);
-        $this->assertInstanceOf(TenantStamp::class, $stamp);
-        $this->assertSame('456', $stamp->getTenantId()); // Original stamp preserved
-    }
-
-    public function testHandleWithNullTenantDoesNotAttachStamp(): void
-    {
-        // Arrange
-        $this->tenantContext->method('hasTenant')->willReturn(true);
-        $this->tenantContext->method('getTenant')->willReturn(null);
-
-        $message = new \stdClass();
-        $envelope = new Envelope($message);
-
-        $nextMiddleware = $this->createMock(\Symfony\Component\Messenger\Middleware\MiddlewareInterface::class);
-        $this->stack->expects($this->once())
-            ->method('next')
-            ->willReturn($nextMiddleware);
-
-        $nextMiddleware->expects($this->once())
-            ->method('handle')
-            ->with($envelope, $this->stack)
-            ->willReturn($envelope);
-
-        // Act
-        $result = $this->middleware->handle($envelope, $this->stack);
-
-        // Assert
-        $this->assertSame($envelope, $result);
-        $this->assertNull($envelope->last(TenantStamp::class));
-    }
-
-    public function testHandleWithIntegerTenantId(): void
-    {
-        // Arrange
-        $tenant = $this->createMock(TenantInterface::class);
-        $tenant->method('getId')->willReturn(456);
-
-        $this->tenantContext->method('hasTenant')->willReturn(true);
-        $this->tenantContext->method('getTenant')->willReturn($tenant);
-
-        $message = new \stdClass();
-        $envelope = new Envelope($message);
-
-        $expectedEnvelope = $envelope->with(new TenantStamp('456'));
-
-        $nextMiddleware = $this->createMock(\Symfony\Component\Messenger\Middleware\MiddlewareInterface::class);
-        $this->stack->expects($this->once())
-            ->method('next')
-            ->willReturn($nextMiddleware);
-
-        $nextMiddleware->expects($this->once())
-            ->method('handle')
-            ->with($this->callback(function (Envelope $env) {
-                $stamp = $env->last(TenantStamp::class);
-
-                return $stamp instanceof TenantStamp && '456' === $stamp->getTenantId();
-            }), $this->stack)
-            ->willReturn($expectedEnvelope);
-
-        // Act
-        $result = $this->middleware->handle($envelope, $this->stack);
-
-        // Assert
-        $this->assertSame($expectedEnvelope, $result);
-    }
+final class TenantMessage implements TenantAwareMessageInterface
+{
+}
+final class GlobalMessage implements GlobalMessageInterface
+{
+}
+final class DoublyClassifiedMessage implements TenantAwareMessageInterface, GlobalMessageInterface
+{
 }

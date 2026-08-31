@@ -7,7 +7,7 @@ namespace Zhortein\MultiTenantBundle\Exception;
 /**
  * Exception thrown when tenant resolution fails in strict mode.
  */
-class TenantResolutionException extends \RuntimeException
+class TenantResolutionException extends \RuntimeException implements MultiTenantException
 {
     /**
      * @param array<string, mixed> $diagnostics

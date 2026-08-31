@@ -9,6 +9,8 @@ use Symfony\Component\HttpKernel\Bundle\Bundle;
 use Zhortein\MultiTenantBundle\DependencyInjection\Compiler\AddDoctrineFilterCompilerPass;
 use Zhortein\MultiTenantBundle\DependencyInjection\Compiler\AutoTagTenantAwareEntitiesPass;
 use Zhortein\MultiTenantBundle\DependencyInjection\Compiler\ConditionalCacheDecoratorsPass;
+use Zhortein\MultiTenantBundle\DependencyInjection\Compiler\ConfigureTenantEntityManagersPass;
+use Zhortein\MultiTenantBundle\DependencyInjection\Compiler\ValidateMultiDatabaseConfigurationPass;
 
 /**
  * Multi-tenant bundle for Symfony applications.
@@ -29,8 +31,10 @@ final class ZhorteinMultiTenantBundle extends Bundle
 
         // Add compiler passes for automatic configuration
         $container->addCompilerPass(new AddDoctrineFilterCompilerPass());
+        $container->addCompilerPass(new ConfigureTenantEntityManagersPass());
         $container->addCompilerPass(new AutoTagTenantAwareEntitiesPass());
         $container->addCompilerPass(new ConditionalCacheDecoratorsPass());
+        $container->addCompilerPass(new ValidateMultiDatabaseConfigurationPass());
     }
 
     public function getPath(): string
