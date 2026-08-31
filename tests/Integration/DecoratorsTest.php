@@ -6,6 +6,8 @@ namespace Zhortein\MultiTenantBundle\Tests\Integration;
 
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
+use Symfony\Contracts\Cache\CacheInterface;
+use Zhortein\MultiTenantBundle\Decorator\TenantCacheException;
 use Zhortein\MultiTenantBundle\Tests\Toolkit\TenantWebTestCase;
 
 /**
@@ -48,27 +50,27 @@ class DecoratorsTest extends TenantWebTestCase
 
         // Test caching in tenant A context
         $this->withTenant(self::TENANT_A_SLUG, function () use ($cache) {
-            $cache->set('test_key', 'tenant_a_value');
-            $value = $cache->get('test_key');
+            $this->cacheSet($cache, 'test_key', 'tenant_a_value');
+            $value = $this->cacheGet($cache, 'test_key');
             $this->assertSame('tenant_a_value', $value);
         });
 
         // Test caching in tenant B context
         $this->withTenant(self::TENANT_B_SLUG, function () use ($cache) {
-            $cache->set('test_key', 'tenant_b_value');
-            $value = $cache->get('test_key');
+            $this->cacheSet($cache, 'test_key', 'tenant_b_value');
+            $value = $this->cacheGet($cache, 'test_key');
             $this->assertSame('tenant_b_value', $value);
         });
 
         // Verify isolation - tenant A should still have its value
         $this->withTenant(self::TENANT_A_SLUG, function () use ($cache) {
-            $value = $cache->get('test_key');
+            $value = $this->cacheGet($cache, 'test_key');
             $this->assertSame('tenant_a_value', $value, 'Tenant A cache should be isolated');
         });
 
         // Verify isolation - tenant B should still have its value
         $this->withTenant(self::TENANT_B_SLUG, function () use ($cache) {
-            $value = $cache->get('test_key');
+            $value = $this->cacheGet($cache, 'test_key');
             $this->assertSame('tenant_b_value', $value, 'Tenant B cache should be isolated');
         });
     }
@@ -90,11 +92,11 @@ class DecoratorsTest extends TenantWebTestCase
         $this->assertNotNull($tenantB);
 
         // Simulate tenant-prefixed cache keys
-        $keyA = sprintf('tenant:%s:test_key', $tenantA->getId());
-        $keyB = sprintf('tenant:%s:test_key', $tenantB->getId());
+        $keyA = sprintf('tenant_%s_test_key', $tenantA->getId());
+        $keyB = sprintf('tenant_%s_test_key', $tenantB->getId());
 
-        $adapter->set($keyA, 'value_a');
-        $adapter->set($keyB, 'value_b');
+        $this->cacheSet($adapter, $keyA, 'value_a');
+        $this->cacheSet($adapter, $keyB, 'value_b');
 
         $this->assertTrue($adapter->hasItem($keyA));
         $this->assertTrue($adapter->hasItem($keyB));
@@ -260,9 +262,8 @@ class DecoratorsTest extends TenantWebTestCase
         // Test cache without tenant context
         if ($container->has('cache.app')) {
             $cache = $container->get('cache.app');
-            $cache->set('global_key', 'global_value');
-            $value = $cache->get('global_key');
-            $this->assertSame('global_value', $value);
+            $this->expectException(TenantCacheException::class);
+            $this->cacheGet($cache, 'global_key');
         }
 
         // Test logging without tenant context
@@ -304,13 +305,13 @@ class DecoratorsTest extends TenantWebTestCase
         // Perform multiple operations with tenant switching
         for ($i = 0; $i < 10; ++$i) {
             $this->withTenant(self::TENANT_A_SLUG, function () use ($cache, $i) {
-                $cache->set("key_a_{$i}", "value_a_{$i}");
-                $cache->get("key_a_{$i}");
+                $this->cacheSet($cache, "key_a_{$i}", "value_a_{$i}");
+                $this->cacheGet($cache, "key_a_{$i}");
             });
 
             $this->withTenant(self::TENANT_B_SLUG, function () use ($cache, $i) {
-                $cache->set("key_b_{$i}", "value_b_{$i}");
-                $cache->get("key_b_{$i}");
+                $this->cacheSet($cache, "key_b_{$i}", "value_b_{$i}");
+                $this->cacheGet($cache, "key_b_{$i}");
             });
         }
 
@@ -319,5 +320,16 @@ class DecoratorsTest extends TenantWebTestCase
 
         // Verify that operations complete in reasonable time
         $this->assertLessThan(1.0, $executionTime, 'Decorator operations should be performant');
+    }
+
+    private function cacheSet(CacheInterface $cache, string $key, mixed $value): void
+    {
+        $cache->delete($key);
+        $cache->get($key, static fn (): mixed => $value);
+    }
+
+    private function cacheGet(CacheInterface $cache, string $key): mixed
+    {
+        return $cache->get($key, static fn (): null => null);
     }
 }

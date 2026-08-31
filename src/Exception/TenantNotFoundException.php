@@ -10,7 +10,7 @@ namespace Zhortein\MultiTenantBundle\Exception;
  * This exception is typically thrown by tenant registries when attempting
  * to retrieve a tenant that doesn't exist in the system.
  */
-final class TenantNotFoundException extends \RuntimeException
+final class TenantNotFoundException extends \RuntimeException implements MultiTenantException
 {
     public function __construct(string $message = 'Tenant not found', int $code = 0, ?\Throwable $previous = null)
     {

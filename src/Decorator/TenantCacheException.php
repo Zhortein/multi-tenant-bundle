@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Zhortein\MultiTenantBundle\Decorator;
 
-final class TenantCacheException extends \RuntimeException
+use Zhortein\MultiTenantBundle\Exception\MultiTenantException;
+
+final class TenantCacheException extends \RuntimeException implements MultiTenantException
 {
 }

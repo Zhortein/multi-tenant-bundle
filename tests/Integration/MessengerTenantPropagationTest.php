@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Zhortein\MultiTenantBundle\Tests\Integration;
 
+use Zhortein\MultiTenantBundle\Exception\MissingTenantContextException;
 use Zhortein\MultiTenantBundle\Tests\Fixtures\Message\TestTenantAwareMessage;
 use Zhortein\MultiTenantBundle\Tests\Toolkit\TenantMessengerTestCase;
 
@@ -58,18 +59,15 @@ class MessengerTenantPropagationTest extends TenantMessengerTestCase
     /**
      * Test that messages dispatched without tenant context don't carry TenantStamp.
      */
-    public function testMessageDispatchWithoutTenantContext(): void
+    public function testMessageDispatchWithoutTenantContextIsRejected(): void
     {
         $message = new TestTenantAwareMessage('test-data');
 
         // Clear any existing tenant context
         $this->getTenantContext()->clear();
 
-        // Dispatch message without tenant context
-        $envelope = $this->getMessageBus()->dispatch($message);
-
-        // Verify no tenant stamp is present
-        $this->assertEnvelopeHasNoTenantStamp($envelope);
+        $this->expectException(MissingTenantContextException::class);
+        $this->getMessageBus()->dispatch($message);
     }
 
     /**

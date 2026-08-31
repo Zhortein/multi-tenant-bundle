@@ -1,7 +1,7 @@
 {
   "name": "zhortein/multi-tenant-bundle",
   "type": "symfony-bundle",
-  "description": "A comprehensive Symfony 7.4 LTS and Symfony 8.x bundle for building multi-tenant applications with PostgreSQL 16 support, featuring multiple resolution strategies, tenant-aware services, and automatic database filtering.",
+  "description": "A fail-closed Symfony 7.4 LTS and Symfony 8.x multi-tenant bundle with PostgreSQL 18 defense-in-depth support.",
   "keywords": ["symfony", "symfony-bundle", "multi-tenant", "multitenant", "tenant", "multi-tenancy", "subdomain", "domain", "dns", "postgresql", "doctrine", "orm", "mailer", "messenger", "storage", "saas", "hosting"],
   "homepage": "https://github.com/zhortein/multi-tenant-bundle",
   "license": "MIT",
@@ -21,7 +21,7 @@
   "require": {
     "php": ">=8.3",
     "doctrine/dbal": "^3.8 || ^4.4",
-    "doctrine/doctrine-bundle": "^2.7 || ^3.3",
+    "doctrine/doctrine-bundle": "^2.19 || ^3.3",
     "doctrine/doctrine-migrations-bundle": "^3.0",
     "doctrine/migrations": "^3.0",
     "doctrine/orm": "^3.5",

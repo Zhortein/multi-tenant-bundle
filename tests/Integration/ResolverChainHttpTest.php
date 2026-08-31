@@ -193,7 +193,9 @@ class ResolverChainHttpTest extends TenantWebTestCase
      */
     public function testRequestWithoutTenantContext(): void
     {
-        $client = static::createClient();
+        $client = $this->client;
+        self::assertNotNull($client);
+        $client->setServerParameters([]);
 
         // Request without any tenant information should fail or use default tenant
         $crawler = $client->request('GET', '/test/products');
@@ -216,7 +218,9 @@ class ResolverChainHttpTest extends TenantWebTestCase
     {
         // Create a client with both subdomain and header set to different tenants
         // The resolver with higher precedence should win
-        $client = static::createClient([], [
+        $client = $this->client;
+        self::assertNotNull($client);
+        $client->setServerParameters([
             'HTTP_HOST' => self::TENANT_A_SLUG.'.lvh.me',
             'HTTP_X_TENANT_ID' => self::TENANT_B_SLUG,
         ]);
@@ -250,7 +254,9 @@ class ResolverChainHttpTest extends TenantWebTestCase
      */
     public function testTenantContextIsolationBetweenRequests(): void
     {
-        $client = static::createClient();
+        $client = $this->client;
+        self::assertNotNull($client);
+        $client->setServerParameters([]);
 
         // First request for tenant A
         $client->request('GET', '/test/products', ['tenant' => self::TENANT_A_SLUG]);

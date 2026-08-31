@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Zhortein\MultiTenantBundle\Messenger;
 
 use Psr\Cache\InvalidArgumentException;
-use Zhortein\MultiTenantBundle\Manager\TenantSettingsManager;
+use Zhortein\MultiTenantBundle\Manager\TenantSettingsManagerInterface;
 
 /**
  * Configures messenger settings based on tenant context.
@@ -17,7 +17,7 @@ use Zhortein\MultiTenantBundle\Manager\TenantSettingsManager;
 readonly class TenantMessengerConfigurator
 {
     public function __construct(
-        private TenantSettingsManager $settingsManager,
+        private TenantSettingsManagerInterface $settingsManager,
         private string $fallbackDsn = 'sync://',
         private string $fallbackBus = 'messenger.bus.default',
     ) {
@@ -70,7 +70,8 @@ readonly class TenantMessengerConfigurator
     public function getDelay(?string $transport = null, int $default = 0): int
     {
         $key = $transport ? sprintf('messenger_delay_%s', $transport) : 'messenger_delay';
+        $value = $this->settingsManager->get($key, $default);
 
-        return (int) $this->settingsManager->get($key, $default);
+        return is_int($value) || is_numeric($value) ? (int) $value : $default;
     }
 }

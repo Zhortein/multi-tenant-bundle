@@ -5,12 +5,14 @@ declare(strict_types=1);
 namespace Zhortein\MultiTenantBundle\Tests\Toolkit;
 
 use Doctrine\ORM\EntityManagerInterface;
+use Doctrine\ORM\Tools\SchemaTool;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use Symfony\Component\Messenger\Envelope;
 use Symfony\Component\Messenger\MessageBusInterface;
-use Symfony\Component\Messenger\Transport\InMemoryTransport;
+use Symfony\Component\Messenger\Transport\InMemory\InMemoryTransport;
 use Symfony\Component\Messenger\Transport\TransportInterface;
 use Zhortein\MultiTenantBundle\Context\TenantContextInterface;
+use Zhortein\MultiTenantBundle\Doctrine\GlobalDoctrineScopeInterface;
 use Zhortein\MultiTenantBundle\Messenger\TenantStamp;
 use Zhortein\MultiTenantBundle\Registry\TenantRegistryInterface;
 
@@ -44,8 +46,7 @@ abstract class TenantMessengerTestCase extends KernelTestCase
 
         parent::setUp();
 
-        $kernel = static::createKernel();
-        $kernel->boot();
+        $kernel = static::bootKernel(['debug' => false]);
 
         $container = static::getContainer();
 
@@ -53,7 +54,16 @@ abstract class TenantMessengerTestCase extends KernelTestCase
         $this->entityManager = $container->get('doctrine.orm.entity_manager');
         $this->tenantContext = $container->get(TenantContextInterface::class);
         $this->tenantRegistry = $container->get(TenantRegistryInterface::class);
-        $this->testData = new TestData($this->entityManager, $this->tenantRegistry);
+        $this->testData = new TestData(
+            $this->entityManager,
+            $this->tenantRegistry,
+            $this->tenantContext,
+            $container->get(GlobalDoctrineScopeInterface::class),
+        );
+        $schemaTool = new SchemaTool($this->entityManager);
+        $metadata = $this->entityManager->getMetadataFactory()->getAllMetadata();
+        $schemaTool->dropSchema($metadata);
+        $schemaTool->createSchema($metadata);
 
         $this->setupTestTransports($container);
     }
@@ -65,6 +75,7 @@ abstract class TenantMessengerTestCase extends KernelTestCase
         $this->clearTransports();
 
         parent::tearDown();
+        restore_exception_handler();
     }
 
     /**
@@ -129,7 +140,9 @@ abstract class TenantMessengerTestCase extends KernelTestCase
         $transport = $this->getTransport($transportName);
 
         if ($transport instanceof InMemoryTransport) {
-            return $transport->getSent();
+            // Symfony 8.1 introduced a best-effort fetch size while retaining a
+            // variadic-compatible zero-parameter signature for older versions.
+            return array_values(iterator_to_array($transport->get(PHP_INT_MAX)));
         }
 
         throw new \RuntimeException(sprintf('Transport "%s" is not an InMemoryTransport', $transportName));

@@ -19,7 +19,7 @@ use Zhortein\MultiTenantBundle\Entity\TenantInterface;
 final readonly class TenantEntityManagerFactory
 {
     public function __construct(
-        private TenantConnectionResolverInterface $connectionResolver,
+        private TenantConnectionParametersProviderInterface $connectionParametersProvider,
         private Configuration $ormConfiguration,
     ) {
     }
@@ -35,7 +35,11 @@ final readonly class TenantEntityManagerFactory
      */
     public function createForTenant(TenantInterface $tenant): EntityManagerInterface
     {
-        $connectionParams = $this->connectionResolver->resolveParameters($tenant);
+        if (PHP_VERSION_ID >= 80400) {
+            $this->ormConfiguration->enableNativeLazyObjects(true);
+        }
+
+        $connectionParams = $this->connectionParametersProvider->parametersFor(TenantConnectionState::tenant($tenant));
         // @phpstan-ignore-next-line
         $connection = DriverManager::getConnection($connectionParams);
 

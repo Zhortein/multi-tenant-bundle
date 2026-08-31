@@ -5,8 +5,6 @@ declare(strict_types=1);
 namespace Zhortein\MultiTenantBundle\Tests\Messenger;
 
 use PHPUnit\Framework\TestCase;
-use Zhortein\MultiTenantBundle\Context\TenantContextInterface;
-use Zhortein\MultiTenantBundle\Entity\TenantInterface;
 use Zhortein\MultiTenantBundle\Manager\TenantSettingsManagerInterface;
 use Zhortein\MultiTenantBundle\Messenger\TenantMessengerConfigurator;
 
@@ -15,17 +13,14 @@ use Zhortein\MultiTenantBundle\Messenger\TenantMessengerConfigurator;
  */
 class TenantMessengerConfiguratorTest extends TestCase
 {
-    private TenantContextInterface $tenantContext;
     private TenantSettingsManagerInterface $settingsManager;
     private TenantMessengerConfigurator $configurator;
 
     protected function setUp(): void
     {
-        $this->tenantContext = $this->createMock(TenantContextInterface::class);
         $this->settingsManager = $this->createMock(TenantSettingsManagerInterface::class);
 
         $this->configurator = new TenantMessengerConfigurator(
-            $this->tenantContext,
             $this->settingsManager,
             'sync://',
             'messenger.bus.default'
@@ -35,8 +30,6 @@ class TenantMessengerConfiguratorTest extends TestCase
     public function testGetTransportDsnWithTenantSetting(): void
     {
         // Arrange
-        $tenant = $this->createMock(TenantInterface::class);
-        $this->tenantContext->method('getTenant')->willReturn($tenant);
         $this->settingsManager->method('get')
             ->with('messenger_transport_dsn', 'sync://')
             ->willReturn('redis://localhost:6379/tenant_messages');
@@ -51,7 +44,7 @@ class TenantMessengerConfiguratorTest extends TestCase
     public function testGetTransportDsnWithFallback(): void
     {
         // Arrange
-        $this->tenantContext->method('getTenant')->willReturn(null);
+        $this->settingsManager->method('get')->with('messenger_transport_dsn', 'sync://')->willReturn('sync://');
 
         // Act
         $result = $this->configurator->getTransportDsn();
@@ -63,8 +56,6 @@ class TenantMessengerConfiguratorTest extends TestCase
     public function testGetBusNameWithTenantSetting(): void
     {
         // Arrange
-        $tenant = $this->createMock(TenantInterface::class);
-        $this->tenantContext->method('getTenant')->willReturn($tenant);
         $this->settingsManager->method('get')
             ->with('messenger_bus', 'messenger.bus.default')
             ->willReturn('command.bus');
@@ -79,10 +70,8 @@ class TenantMessengerConfiguratorTest extends TestCase
     public function testGetDelayWithDefaultTransport(): void
     {
         // Arrange
-        $tenant = $this->createMock(TenantInterface::class);
-        $this->tenantContext->method('getTenant')->willReturn($tenant);
         $this->settingsManager->method('get')
-            ->with('messenger_delay', 5000)
+            ->with('messenger_delay', 0)
             ->willReturn(10000);
 
         // Act
@@ -95,13 +84,9 @@ class TenantMessengerConfiguratorTest extends TestCase
     public function testGetDelayWithSpecificTransport(): void
     {
         // Arrange
-        $tenant = $this->createMock(TenantInterface::class);
-        $this->tenantContext->method('getTenant')->willReturn($tenant);
-
-        // First call for specific transport setting
-        $this->settingsManager->expects($this->at(0))
+        $this->settingsManager->expects($this->once())
             ->method('get')
-            ->with('messenger_delay_email', null)
+            ->with('messenger_delay_email', 0)
             ->willReturn(15000);
 
         // Act
@@ -114,45 +99,33 @@ class TenantMessengerConfiguratorTest extends TestCase
     public function testGetDelayWithSpecificTransportFallbackToDefault(): void
     {
         // Arrange
-        $tenant = $this->createMock(TenantInterface::class);
-        $this->tenantContext->method('getTenant')->willReturn($tenant);
-
-        // First call for specific transport setting (returns null)
-        $this->settingsManager->expects($this->at(0))
+        $this->settingsManager->expects($this->once())
             ->method('get')
-            ->with('messenger_delay_email', null)
+            ->with('messenger_delay_email', 0)
             ->willReturn(null);
-
-        // Second call for default delay setting
-        $this->settingsManager->expects($this->at(1))
-            ->method('get')
-            ->with('messenger_delay', 5000)
-            ->willReturn(8000);
 
         // Act
         $result = $this->configurator->getDelay('email');
 
         // Assert
-        $this->assertSame(8000, $result);
+        $this->assertSame(0, $result);
     }
 
     public function testGetDelayWithoutTenant(): void
     {
         // Arrange
-        $this->tenantContext->method('getTenant')->willReturn(null);
+        $this->settingsManager->method('get')->with('messenger_delay', 0)->willReturn(0);
 
         // Act
         $result = $this->configurator->getDelay();
 
         // Assert
-        $this->assertSame(5000, $result); // Default fallback
+        $this->assertSame(0, $result);
     }
 
     public function testGetDelayWithCustomDefault(): void
     {
         // Arrange
-        $tenant = $this->createMock(TenantInterface::class);
-        $this->tenantContext->method('getTenant')->willReturn($tenant);
         $this->settingsManager->method('get')
             ->with('messenger_delay', 12000)
             ->willReturn(null); // No tenant setting
@@ -167,11 +140,11 @@ class TenantMessengerConfiguratorTest extends TestCase
     public function testGetAllSettingsWithoutTenant(): void
     {
         // Arrange
-        $this->tenantContext->method('getTenant')->willReturn(null);
+        $this->settingsManager->method('get')->willReturnCallback(static fn (string $key, mixed $default): mixed => $default);
 
         // Act & Assert
         $this->assertSame('sync://', $this->configurator->getTransportDsn());
         $this->assertSame('messenger.bus.default', $this->configurator->getBusName());
-        $this->assertSame(5000, $this->configurator->getDelay());
+        $this->assertSame(0, $this->configurator->getDelay());
     }
 }

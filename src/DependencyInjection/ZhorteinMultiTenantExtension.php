@@ -28,12 +28,22 @@ use Zhortein\MultiTenantBundle\Decorator\TenantAwareCacheAdapterDecorator;
 use Zhortein\MultiTenantBundle\Decorator\TenantAwareCacheDecorator;
 use Zhortein\MultiTenantBundle\Decorator\TenantLoggerProcessor;
 use Zhortein\MultiTenantBundle\Decorator\TenantStoragePathHelper;
-use Zhortein\MultiTenantBundle\Doctrine\DefaultConnectionResolver;
-use Zhortein\MultiTenantBundle\Doctrine\EventAwareConnectionResolver;
-use Zhortein\MultiTenantBundle\Doctrine\TenantConnectionResolverInterface;
+use Zhortein\MultiTenantBundle\Doctrine\DoctrineTenantConnectionLifecycle;
+use Zhortein\MultiTenantBundle\Doctrine\DoctrineTenantConnectionRouter;
+use Zhortein\MultiTenantBundle\Doctrine\DoctrineTenantContextSynchronizer;
+use Zhortein\MultiTenantBundle\Doctrine\DoctrineTenantRlsStateSynchronizer;
+use Zhortein\MultiTenantBundle\Doctrine\GlobalDoctrineScope;
+use Zhortein\MultiTenantBundle\Doctrine\GlobalDoctrineScopeInterface;
+use Zhortein\MultiTenantBundle\Doctrine\NoOpTenantConnectionLifecycle;
+use Zhortein\MultiTenantBundle\Doctrine\SharedDatabaseConnectionParametersProvider;
+use Zhortein\MultiTenantBundle\Doctrine\TenantConnectionLifecycleInterface;
+use Zhortein\MultiTenantBundle\Doctrine\TenantConnectionParametersProviderInterface;
+use Zhortein\MultiTenantBundle\Doctrine\TenantContextSynchronizerInterface;
+use Zhortein\MultiTenantBundle\Doctrine\TenantDoctrineFilter;
 use Zhortein\MultiTenantBundle\Doctrine\TenantEntityManagerFactory;
+use Zhortein\MultiTenantBundle\Doctrine\TenantRlsStateSynchronizerInterface;
+use Zhortein\MultiTenantBundle\Doctrine\TenantRoutingDriverMiddleware;
 use Zhortein\MultiTenantBundle\Entity\TenantInterface;
-use Zhortein\MultiTenantBundle\EventListener\TenantDoctrineFilterListener;
 use Zhortein\MultiTenantBundle\EventListener\TenantEntityListener;
 use Zhortein\MultiTenantBundle\EventListener\TenantRequestListener;
 use Zhortein\MultiTenantBundle\EventListener\TenantResolutionExceptionListener;
@@ -86,6 +96,12 @@ final class ZhorteinMultiTenantExtension extends Extension implements PrependExt
         if ($container->hasExtension('doctrine')) {
             $container->prependExtensionConfig('doctrine', [
                 'orm' => [
+                    'filters' => [
+                        'tenant_filter' => [
+                            'class' => TenantDoctrineFilter::class,
+                            'enabled' => true,
+                        ],
+                    ],
                     'resolve_target_entities' => [
                         TenantInterface::class => $config['tenant_entity'],
                     ],
@@ -93,22 +109,26 @@ final class ZhorteinMultiTenantExtension extends Extension implements PrependExt
             ]);
         }
 
+        /** @var array<string, mixed> $messengerConfig */
         $messengerConfig = $config['messenger'] ?? [];
-        $messengerEnabled = is_array($messengerConfig) && true === ($messengerConfig['enabled'] ?? false);
-        $fallbackBus = is_array($messengerConfig) ? ($messengerConfig['fallback_bus'] ?? null) : null;
-
-        if ($messengerEnabled && is_string($fallbackBus) && $container->hasExtension('framework')) {
+        $messengerEnabled = true === ($messengerConfig['enabled'] ?? false);
+        if ($messengerEnabled && $container->hasExtension('framework')) {
+            $buses = [];
+            $fallbackBus = is_string($messengerConfig['fallback_bus'] ?? null)
+                ? $messengerConfig['fallback_bus']
+                : 'messenger.bus.default';
+            foreach ($this->messengerBusNames($container, $fallbackBus) as $busName) {
+                $buses[$busName] = [
+                    'middleware' => [
+                        TenantWorkerMiddleware::class,
+                        TenantSendingMiddleware::class,
+                        TenantMessengerTransportResolver::class,
+                    ],
+                ];
+            }
             $container->prependExtensionConfig('framework', [
                 'messenger' => [
-                    'buses' => [
-                        $fallbackBus => [
-                            'middleware' => [
-                                TenantWorkerMiddleware::class,
-                                TenantSendingMiddleware::class,
-                                TenantMessengerTransportResolver::class,
-                            ],
-                        ],
-                    ],
+                    'buses' => $buses,
                 ],
             ]);
         }
@@ -221,6 +241,35 @@ final class ZhorteinMultiTenantExtension extends Extension implements PrependExt
 
         $container->setAlias(TenantContextInterface::class, TenantContext::class);
 
+        $container->register(DoctrineTenantContextSynchronizer::class)
+            ->setAutowired(true)
+            ->setAutoconfigured(true)
+            ->setLazy(true);
+        $container->setAlias(TenantContextSynchronizerInterface::class, DoctrineTenantContextSynchronizer::class);
+
+        $container->register(DoctrineTenantRlsStateSynchronizer::class)
+            ->setAutowired(true)
+            ->setArgument('$enabled', '%zhortein_multi_tenant.database.rls.enabled%')
+            ->setArgument('$sessionVariable', '%zhortein_multi_tenant.database.rls.session_variable%');
+        $container->setAlias(TenantRlsStateSynchronizerInterface::class, DoctrineTenantRlsStateSynchronizer::class);
+
+        if ('shared_db' === $config['database']['strategy']) {
+            $container->register(NoOpTenantConnectionLifecycle::class);
+            $container->setAlias(TenantConnectionLifecycleInterface::class, NoOpTenantConnectionLifecycle::class);
+            $container->register(SharedDatabaseConnectionParametersProvider::class)
+                ->setAutowired(true);
+            $container->setAlias(TenantConnectionParametersProviderInterface::class, SharedDatabaseConnectionParametersProvider::class);
+        } else {
+            $container->register(DoctrineTenantConnectionRouter::class)
+                ->setAutowired(true);
+            $container->register(TenantRoutingDriverMiddleware::class)
+                ->setAutowired(true)
+                ->addTag('doctrine.middleware', ['priority' => 1024]);
+            $container->register(DoctrineTenantConnectionLifecycle::class)
+                ->setAutowired(true);
+            $container->setAlias(TenantConnectionLifecycleInterface::class, DoctrineTenantConnectionLifecycle::class);
+        }
+
         // Register tenant registry
         $container->register(DoctrineTenantRegistry::class)
             ->setAutowired(true)
@@ -240,23 +289,6 @@ final class ZhorteinMultiTenantExtension extends Extension implements PrependExt
             ->setArgument('$cache', new Reference($config['cache']['pool']));
 
         $container->setAlias(TenantSettingsManagerInterface::class, TenantSettingsManager::class);
-
-        // Register connection resolver
-        $container->register(DefaultConnectionResolver::class)
-            ->setAutowired(true)
-            ->setAutoconfigured(true);
-
-        // Register event-aware connection resolver if events are enabled
-        if ($config['events']['dispatch_database_switch']) {
-            $container->register(EventAwareConnectionResolver::class)
-                ->setAutowired(true)
-                ->setAutoconfigured(true)
-                ->setArgument('$innerResolver', new Reference(DefaultConnectionResolver::class));
-
-            $container->setAlias(TenantConnectionResolverInterface::class, EventAwareConnectionResolver::class);
-        } else {
-            $container->setAlias(TenantConnectionResolverInterface::class, DefaultConnectionResolver::class);
-        }
 
         // Register tenant entity manager factory
         $container->register(TenantEntityManagerFactory::class)
@@ -372,6 +404,7 @@ final class ZhorteinMultiTenantExtension extends Extension implements PrependExt
 
         // Path resolver
         $container->register('zhortein_multi_tenant.resolver.path', PathTenantResolver::class)
+            ->setPublic(true)
             ->setAutowired(true)
             ->setAutoconfigured(true)
             ->setArgument('$tenantEntityClass', '%zhortein_multi_tenant.tenant_entity%');
@@ -379,14 +412,17 @@ final class ZhorteinMultiTenantExtension extends Extension implements PrependExt
 
         // Subdomain resolver
         $container->register('zhortein_multi_tenant.resolver.subdomain', SubdomainTenantResolver::class)
+            ->setPublic(true)
             ->setAutowired(true)
             ->setAutoconfigured(true)
+            ->setArgument('$tenantEntityClass', '%zhortein_multi_tenant.tenant_entity%')
             ->setArgument('$baseDomain', $config['subdomain']['base_domain'])
             ->setArgument('$excludedSubdomains', $config['subdomain']['excluded_subdomains']);
         $resolverServices['subdomain'] = new Reference('zhortein_multi_tenant.resolver.subdomain');
 
         // Header resolver
         $container->register('zhortein_multi_tenant.resolver.header', HeaderTenantResolver::class)
+            ->setPublic(true)
             ->setAutowired(true)
             ->setAutoconfigured(true)
             ->setArgument('$headerName', $config['header']['name']);
@@ -394,6 +430,7 @@ final class ZhorteinMultiTenantExtension extends Extension implements PrependExt
 
         // Query resolver
         $container->register('zhortein_multi_tenant.resolver.query', QueryTenantResolver::class)
+            ->setPublic(true)
             ->setAutowired(true)
             ->setAutoconfigured(true)
             ->setArgument('$parameterName', $config['query']['parameter']);
@@ -401,6 +438,7 @@ final class ZhorteinMultiTenantExtension extends Extension implements PrependExt
 
         // Domain resolver
         $container->register('zhortein_multi_tenant.resolver.domain', DomainBasedTenantResolver::class)
+            ->setPublic(true)
             ->setAutowired(true)
             ->setAutoconfigured(true)
             ->setArgument('$domainMapping', $config['domain']['domain_mapping']);
@@ -408,6 +446,7 @@ final class ZhorteinMultiTenantExtension extends Extension implements PrependExt
 
         // Hybrid resolver
         $container->register('zhortein_multi_tenant.resolver.hybrid', HybridDomainSubdomainResolver::class)
+            ->setPublic(true)
             ->setAutowired(true)
             ->setAutoconfigured(true)
             ->setArgument('$domainMapping', $config['hybrid']['domain_mapping'])
@@ -417,6 +456,7 @@ final class ZhorteinMultiTenantExtension extends Extension implements PrependExt
 
         // DNS TXT resolver
         $container->register('zhortein_multi_tenant.resolver.dns_txt', DnsTxtTenantResolver::class)
+            ->setPublic(true)
             ->setAutowired(true)
             ->setAutoconfigured(true)
             ->setArgument('$dnsTimeout', $config['dns_txt']['timeout'])
@@ -425,6 +465,7 @@ final class ZhorteinMultiTenantExtension extends Extension implements PrependExt
 
         // Register the chain resolver
         $container->register(ChainTenantResolver::class)
+            ->setPublic(true)
             ->setArgument('$resolvers', $resolverServices)
             ->setArgument('$order', $config['resolver_chain']['order'])
             ->setArgument('$strict', $config['resolver_chain']['strict'])
@@ -432,6 +473,7 @@ final class ZhorteinMultiTenantExtension extends Extension implements PrependExt
             ->setArgument('$logger', new Reference('logger', ContainerBuilder::NULL_ON_INVALID_REFERENCE));
 
         $container->setAlias(TenantResolverInterface::class, ChainTenantResolver::class);
+        $container->setAlias('zhortein_multi_tenant.resolver.chain', ChainTenantResolver::class)->setPublic(true);
     }
 
     /**
@@ -448,11 +490,8 @@ final class ZhorteinMultiTenantExtension extends Extension implements PrependExt
                 ->setAutoconfigured(true);
         }
 
-        if ($config['listeners']['doctrine_filter_listener'] && $config['database']['enable_filter']) {
-            $container->register(TenantDoctrineFilterListener::class)
-                ->setAutowired(true)
-                ->setAutoconfigured(true);
-        }
+        // Doctrine protection is initialized by ORM configuration and synchronized
+        // by TenantContext. The legacy HTTP listener is intentionally not registered.
 
         // Register tenant resolution exception listener
         $container->register(TenantResolutionExceptionListener::class)
@@ -689,8 +728,12 @@ final class ZhorteinMultiTenantExtension extends Extension implements PrependExt
      */
     private function registerRlsServices(ContainerBuilder $container, array $config): void
     {
+        $databaseConfig = $config['database'] ?? null;
+        if (!is_array($databaseConfig)) {
+            throw new \LogicException('The processed database configuration must be an array.');
+        }
         // Only register RLS services for shared_db strategy
-        if ('shared_db' !== $config['database']['strategy']) {
+        if ('shared_db' !== $databaseConfig['strategy']) {
             return;
         }
 
@@ -713,6 +756,11 @@ final class ZhorteinMultiTenantExtension extends Extension implements PrependExt
         $container->register('zhortein_multi_tenant.entity_listener', TenantEntityListener::class)
             ->setAutowired(true)
             ->setAutoconfigured(true);
+
+        $container->register(GlobalDoctrineScope::class)
+            ->setAutowired(true)
+            ->setAutoconfigured(true);
+        $container->setAlias(GlobalDoctrineScopeInterface::class, GlobalDoctrineScope::class);
     }
 
     /**
@@ -723,6 +771,10 @@ final class ZhorteinMultiTenantExtension extends Extension implements PrependExt
      */
     private function registerDecorators(ContainerBuilder $container, array $config): void
     {
+        /** @var array<string, mixed> $decoratorConfig */
+        $decoratorConfig = $config['decorators'];
+        /** @var array<string, mixed> $cacheDecoratorConfig */
+        $cacheDecoratorConfig = $decoratorConfig['cache'];
         // Register storage path helper
         if ($config['decorators']['storage']['enabled']) {
             $container->register(TenantStoragePathHelper::class)
@@ -740,8 +792,8 @@ final class ZhorteinMultiTenantExtension extends Extension implements PrependExt
         }
 
         // Register cache decorators
-        if ($config['decorators']['cache']['enabled']) {
-            foreach ($config['decorators']['cache']['services'] as $serviceId) {
+        if ($cacheDecoratorConfig['enabled']) {
+            foreach ($cacheDecoratorConfig['services'] as $serviceId) {
                 $serviceIdString = (string) $serviceId;
                 // Symfony cache pools must retain AdapterInterface for debug and traceable wrappers.
                 $decoratorClass = interface_exists(AdapterInterface::class)
@@ -805,5 +857,28 @@ final class ZhorteinMultiTenantExtension extends Extension implements PrependExt
         } catch (\Exception) {
             // Services file is optional, continue without it
         }
+    }
+
+    /** @return list<string> */
+    private function messengerBusNames(ContainerBuilder $container, string $fallbackBus): array
+    {
+        $names = [$fallbackBus => true];
+        foreach ($container->getExtensionConfig('framework') as $frameworkConfig) {
+            $frameworkMessenger = $frameworkConfig['messenger'] ?? null;
+            if (!is_array($frameworkMessenger)) {
+                continue;
+            }
+            $configuredBuses = $frameworkMessenger['buses'] ?? null;
+            if (!is_array($configuredBuses)) {
+                continue;
+            }
+            foreach (array_keys($configuredBuses) as $name) {
+                if (is_string($name) && '' !== $name) {
+                    $names[$name] = true;
+                }
+            }
+        }
+
+        return array_keys($names);
     }
 }

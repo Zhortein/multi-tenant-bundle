@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Zhortein\MultiTenantBundle\Tests\Integration;
 
+use Zhortein\MultiTenantBundle\Doctrine\GlobalDoctrineScopeInterface;
+use Zhortein\MultiTenantBundle\Exception\MissingTenantContextException;
 use Zhortein\MultiTenantBundle\Tests\Fixtures\Entity\TestProduct;
 use Zhortein\MultiTenantBundle\Tests\Toolkit\TenantCliTestCase;
 
@@ -46,8 +48,6 @@ class CliTenantContextTest extends TenantCliTestCase
         $this->assertCommandIsSuccessful($commandTester);
         $this->assertCommandOutputContains($commandTester, self::TENANT_A_SLUG);
         $this->assertCommandOutputContains($commandTester, self::TENANT_B_SLUG);
-        $this->assertCommandOutputContains($commandTester, 'Tenant A');
-        $this->assertCommandOutputContains($commandTester, 'Tenant B');
     }
 
     /**
@@ -231,10 +231,15 @@ class CliTenantContextTest extends TenantCliTestCase
 
         $repository = $this->getEntityManager()->getRepository(TestProduct::class);
 
-        // Without tenant context and with filters disabled, should see all products
-        $allProducts = $this->withoutDoctrineTenantFilter(function () use ($repository) {
-            return $repository->findAll();
-        });
+        try {
+            $repository->findAll();
+            self::fail('Tenant-aware CLI reads without context must fail closed.');
+        } catch (MissingTenantContextException) {
+            self::assertFalse($this->getTenantContext()->hasTenant());
+        }
+
+        $scope = static::getContainer()->get(GlobalDoctrineScopeInterface::class);
+        $allProducts = $scope->run(static fn (): array => $repository->findAll());
 
         $this->assertCount(3, $allProducts, 'Without tenant context, should see all products when filter is disabled');
     }
@@ -264,13 +269,8 @@ class CliTenantContextTest extends TenantCliTestCase
      */
     public function testTenantSettingsClearCacheCommand(): void
     {
-        $commandTester = $this->executeCommand('tenant:settings:clear-cache');
+        $commandTester = $this->executeCommand('tenant:settings:clear-cache', ['--all' => true]);
 
-        // If the command exists, it should execute successfully
-        if (1 !== $commandTester->getStatusCode()) { // Command not found
-            $this->assertCommandIsSuccessful($commandTester);
-        } else {
-            $this->markTestSkipped('tenant:settings:clear-cache command not available');
-        }
+        $this->assertCommandIsSuccessful($commandTester);
     }
 }

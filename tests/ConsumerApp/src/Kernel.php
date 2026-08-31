@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App;
 
 use App\Controller\TenantContextController;
+use App\Doctrine\ConsumerConnectionParametersProvider;
 use Doctrine\Bundle\DoctrineBundle\DoctrineBundle;
 use Doctrine\Bundle\MigrationsBundle\DoctrineMigrationsBundle;
 use Symfony\Bundle\FrameworkBundle\FrameworkBundle;
@@ -13,6 +14,7 @@ use Symfony\Component\Config\Loader\LoaderInterface;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\HttpKernel\Kernel as BaseKernel;
 use Symfony\Component\Routing\Loader\Configurator\RoutingConfigurator;
+use Zhortein\MultiTenantBundle\Doctrine\TenantConnectionParametersProviderInterface;
 use Zhortein\MultiTenantBundle\ZhorteinMultiTenantBundle;
 
 final class Kernel extends BaseKernel
@@ -64,7 +66,7 @@ final class Kernel extends BaseKernel
             'tenant_entity' => "App\Entity\Tenant",
             'database' => [
                 'strategy' => $strategy,
-                'enable_filter' => false,
+                'enable_filter' => true,
                 'rls' => ['enabled' => false],
             ],
             'listeners' => [
@@ -88,6 +90,12 @@ final class Kernel extends BaseKernel
             ->setAutowired(true)
             ->setAutoconfigured(true)
             ->setPublic(true);
+
+        if ('multi_db' === $strategy) {
+            $container->register(ConsumerConnectionParametersProvider::class)
+                ->setArgument('$databasePath', '%kernel.cache_dir%/consumer.db');
+            $container->setAlias(TenantConnectionParametersProviderInterface::class, ConsumerConnectionParametersProvider::class);
+        }
     }
 
     protected function configureRoutes(RoutingConfigurator $routes): void

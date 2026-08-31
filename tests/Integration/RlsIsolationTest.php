@@ -17,7 +17,7 @@ use Zhortein\MultiTenantBundle\Tests\Fixtures\Entity\TestTenant;
 /**
  * Proves PostgreSQL RLS isolation through raw DBAL queries.
  *
- * The dedicated Compose target runs this class against PostgreSQL 16 with a
+ * The dedicated Compose target runs this class against PostgreSQL 18 with a
  * real pdo_pgsql connection. FORCE ROW LEVEL SECURITY ensures the table owner
  * cannot bypass the policy, and raw SQL keeps the proof independent from the
  * Doctrine tenant filter.

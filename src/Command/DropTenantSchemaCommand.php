@@ -14,7 +14,6 @@ use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Question\ConfirmationQuestion;
 use Symfony\Component\Console\Style\SymfonyStyle;
 use Zhortein\MultiTenantBundle\Context\TenantContextInterface;
-use Zhortein\MultiTenantBundle\Doctrine\TenantConnectionResolverInterface;
 use Zhortein\MultiTenantBundle\Doctrine\TenantEntityManagerFactory;
 use Zhortein\MultiTenantBundle\Registry\TenantRegistryInterface;
 
@@ -33,7 +32,6 @@ class DropTenantSchemaCommand extends Command
     public function __construct(
         private readonly TenantRegistryInterface $tenantRegistry,
         private readonly TenantContextInterface $tenantContext,
-        private readonly TenantConnectionResolverInterface $connectionResolver,
         private readonly TenantEntityManagerFactory $entityManagerFactory,
         private readonly EntityManagerInterface $entityManager,
     ) {
@@ -112,8 +110,6 @@ EOT
             foreach ($tenants as $tenant) {
                 $io->section(sprintf('Dropping schema for tenant: %s', $tenant->getSlug()));
 
-                // Switch first so a failed resolution cannot publish a stale context.
-                $this->connectionResolver->switchToTenantConnection($tenant);
                 $this->tenantContext->setTenant($tenant);
 
                 $this->entityManagerFactory->runForTenant(

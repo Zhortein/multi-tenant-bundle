@@ -210,6 +210,40 @@ final class ConfigurationTest extends TestCase
         );
     }
 
+    public function testMessengerMiddlewareIsPrependedToEveryDeclaredBus(): void
+    {
+        $container = new ContainerBuilder();
+        $container->registerExtension(new \Symfony\Bundle\FrameworkBundle\DependencyInjection\FrameworkExtension());
+        $extension = new ZhorteinMultiTenantExtension();
+        $container->registerExtension($extension);
+        $container->loadFromExtension('framework', [
+            'messenger' => [
+                'buses' => [
+                    'command.bus' => [],
+                    'event.bus' => [],
+                ],
+            ],
+        ]);
+        $container->loadFromExtension($extension->getAlias(), [
+            'messenger' => ['enabled' => true, 'fallback_bus' => 'query.bus'],
+        ]);
+
+        $extension->prepend($container);
+
+        $frameworkConfig = $container->getExtensionConfig('framework')[0];
+        self::assertSame(
+            ['query.bus', 'command.bus', 'event.bus'],
+            array_keys($frameworkConfig['messenger']['buses']),
+        );
+        foreach ($frameworkConfig['messenger']['buses'] as $bus) {
+            self::assertSame([
+                TenantWorkerMiddleware::class,
+                TenantSendingMiddleware::class,
+                TenantMessengerTransportResolver::class,
+            ], $bus['middleware']);
+        }
+    }
+
     public function testReferenceUsesCanonicalResolverSyntax(): void
     {
         $reference = (new YamlReferenceDumper())->dump(new Configuration());

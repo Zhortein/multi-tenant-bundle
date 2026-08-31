@@ -1,10 +1,10 @@
 # Zhortein Multi-Tenant Bundle
 
-A comprehensive Symfony 7.4 LTS and Symfony 8.x bundle for building multi-tenant applications with PostgreSQL 16 support.
+A fail-closed Symfony 7.4 LTS and Symfony 8.x bundle for building multi-tenant applications, with PostgreSQL RLS as an optional defense in depth.
 
 [![PHP Version](https://img.shields.io/badge/php-%3E%3D8.3-blue.svg)](https://php.net/)
 [![Symfony Version](https://img.shields.io/badge/symfony-%3E%3D7.4%20%7C%208.0-green.svg)](https://symfony.com/)
-[![PostgreSQL Version](https://img.shields.io/badge/postgresql-16-blue.svg)](https://www.postgresql.org/)
+[![PostgreSQL Version](https://img.shields.io/badge/postgresql-%3E%3D16-blue.svg)](https://www.postgresql.org/)
 
 ## Features
 
@@ -19,12 +19,18 @@ A comprehensive Symfony 7.4 LTS and Symfony 8.x bundle for building multi-tenant
 - 🔒 **RLS Integration**: PostgreSQL Row-Level Security for defense-in-depth
 - 📊 **PHPStan Level Max**: Static analysis at maximum level
 
+## Fail-closed security contract
+
+Tenant-aware Doctrine reads and writes require a valid current tenant and reject invalid mappings, stale filter state, tenant changes, and cross-tenant mutations. Global ORM operations are explicit callbacks through `GlobalDoctrineScopeInterface`; direct filter disabling is outside the supported contract.
+
+Messenger messages implement exactly one of `TenantAwareMessageInterface` or `GlobalMessageInterface`. Tenant-aware messages require consistent tenant metadata at send and receive time, while global messages must never carry a tenant stamp. See the [RC1 to RC2 migration guide](docs/migration-rc1-to-rc2.md).
+
 ## Installation
 
 Install the bundle via Composer:
 
 ```bash
-composer require "zhortein/multi-tenant-bundle:1.0.0-rc.1"
+composer require "zhortein/multi-tenant-bundle:1.0.0-rc.2"
 ```
 
 The core dependency set and optional Mailer, Twig, Monolog, and PSR-16 integrations are listed in the [dependency classification](docs/dependencies.md).

@@ -10,7 +10,12 @@ use Symfony\Component\Messenger\Middleware\StackInterface;
 use Symfony\Component\Messenger\Stamp\ReceivedStamp;
 use Zhortein\MultiTenantBundle\Context\TenantContextInterface;
 use Zhortein\MultiTenantBundle\Database\TenantSessionConfigurator;
-use Zhortein\MultiTenantBundle\Doctrine\TenantConnectionResolverInterface;
+use Zhortein\MultiTenantBundle\Doctrine\GlobalDoctrineScopeInterface;
+use Zhortein\MultiTenantBundle\Exception\MissingTenantStampException;
+use Zhortein\MultiTenantBundle\Exception\TenantContextTransitionException;
+use Zhortein\MultiTenantBundle\Exception\TenantMismatchException;
+use Zhortein\MultiTenantBundle\Exception\UnclassifiedMessageException;
+use Zhortein\MultiTenantBundle\Exception\UnknownTenantException;
 use Zhortein\MultiTenantBundle\Registry\TenantRegistryInterface;
 
 /**
@@ -26,7 +31,7 @@ final readonly class TenantWorkerMiddleware implements MiddlewareInterface
         private TenantContextInterface $tenantContext,
         private TenantRegistryInterface $tenantRegistry,
         private ?TenantSessionConfigurator $sessionConfigurator = null,
-        private ?TenantConnectionResolverInterface $connectionResolver = null,
+        private ?GlobalDoctrineScopeInterface $globalDoctrineScope = null,
     ) {
     }
 
@@ -36,39 +41,72 @@ final readonly class TenantWorkerMiddleware implements MiddlewareInterface
             return $stack->next()->handle($envelope, $stack);
         }
 
-        // A reused worker must start without state from the previous message.
-        $this->tenantContext->clear();
-        $this->sessionConfigurator?->clearConfig();
+        $previousTenant = $this->tenantContext->getTenant();
 
-        $tenantStamp = $envelope->last(TenantStamp::class);
-
-        if (!$tenantStamp instanceof TenantStamp) {
-            // No tenant stamp found, proceed without tenant context
-            return $stack->next()->handle($envelope, $stack);
-        }
-
-        // Find tenant by ID
-        $tenant = $this->tenantRegistry->findById($tenantStamp->getTenantId());
-
-        if (null === $tenant) {
-            // Tenant not found, proceed without tenant context
-            return $stack->next()->handle($envelope, $stack);
-        }
-
-        // Switch before publishing the context so resolution failures fail closed.
-        $this->connectionResolver?->switchToTenantConnection($tenant);
-        $this->tenantContext->setTenant($tenant);
-
+        $result = null;
+        $operationFailure = null;
         try {
-            // Configure database session using TenantSessionConfigurator
-            $this->sessionConfigurator?->setConfig();
-
-            // Process the message with tenant context
-            return $stack->next()->handle($envelope, $stack);
-        } finally {
-            // Always clear both PHP and database session state after processing.
+            // A reused worker must start without state from the previous message.
             $this->tenantContext->clear();
             $this->sessionConfigurator?->clearConfig();
+
+            $message = $envelope->getMessage();
+            $tenantAware = $message instanceof TenantAwareMessageInterface;
+            $global = $message instanceof GlobalMessageInterface;
+            if ($tenantAware === $global) {
+                throw new UnclassifiedMessageException($tenantAware ? 'A message cannot be both tenant-aware and global.' : 'A received message must implement TenantAwareMessageInterface or GlobalMessageInterface.');
+            }
+
+            $stamps = $envelope->all(TenantStamp::class);
+            if ($global) {
+                if ([] !== $stamps) {
+                    throw new TenantMismatchException('A global message cannot carry a TenantStamp.');
+                }
+
+                $result = null !== $this->globalDoctrineScope
+                    ? $this->globalDoctrineScope->run(fn (): Envelope => $stack->next()->handle($envelope, $stack))
+                    : $stack->next()->handle($envelope, $stack);
+            } else {
+                if ([] === $stamps) {
+                    throw new MissingTenantStampException('A received tenant-aware message requires a TenantStamp.');
+                }
+
+                $tenantId = $stamps[0]->getTenantId();
+                foreach ($stamps as $stamp) {
+                    if ($stamp->getTenantId() !== $tenantId) {
+                        throw new TenantMismatchException('A received message carries contradictory TenantStamps.');
+                    }
+                }
+
+                $tenant = $this->tenantRegistry->findById($tenantId);
+                if (null === $tenant) {
+                    throw new UnknownTenantException(sprintf('Tenant "%s" carried by the message is unavailable.', $tenantId));
+                }
+
+                $this->tenantContext->setTenant($tenant);
+                $this->sessionConfigurator?->setConfig();
+
+                $result = $stack->next()->handle($envelope, $stack);
+            }
+        } catch (\Throwable $exception) {
+            $operationFailure = $exception;
         }
+
+        try {
+            $this->tenantContext->clear();
+            $this->sessionConfigurator?->clearConfig();
+            if (null !== $previousTenant) {
+                $this->tenantContext->setTenant($previousTenant);
+                $this->sessionConfigurator?->setConfig();
+            }
+        } catch (\Throwable $cleanupFailure) {
+            throw new TenantContextTransitionException('Messenger tenant state could not be restored after handling.', 0, $operationFailure ?? $cleanupFailure, null, $operationFailure ? $cleanupFailure : null);
+        }
+
+        if (null !== $operationFailure) {
+            throw $operationFailure;
+        }
+
+        return $result;
     }
 }
