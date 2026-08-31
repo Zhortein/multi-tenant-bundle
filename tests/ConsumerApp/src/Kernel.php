@@ -45,10 +45,11 @@ final class Kernel extends BaseKernel
             'messenger' => [
                 'default_bus' => 'messenger.bus.default',
                 'transports' => ['async' => 'in-memory://'],
+                'routing' => ["App\Message\TenantMessage" => 'async'],
             ],
         ]);
         $container->loadFromExtension('doctrine', [
-            'dbal' => ['url' => 'sqlite:///%kernel.cache_dir%/consumer.db'],
+            'dbal' => ['url' => $_SERVER['DATABASE_URL'] ?? 'sqlite:///%kernel.cache_dir%/consumer.db'],
             'orm' => [
                 'mappings' => [
                     'App' => [
@@ -84,6 +85,7 @@ final class Kernel extends BaseKernel
                 'add_tenant_name_header' => false,
             ],
             'storage' => ['enabled' => false],
+            'messenger' => ['enabled' => true],
         ]);
 
         $container->register(TenantContextController::class)
