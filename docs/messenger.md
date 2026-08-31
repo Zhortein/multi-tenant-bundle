@@ -295,10 +295,12 @@ Automatically restores tenant context when processing messages:
 
 #### Safety Features
 
-- **No-tenant safety**: Messages without tenant context process normally
-- **Missing tenant handling**: If tenant ID in stamp doesn't exist, message processes without tenant context
+- **Exact classification**: Every application message implements exactly one of `TenantAwareMessageInterface` or `GlobalMessageInterface`; unclassified and doubly classified messages are rejected
+- **Fail-closed sending**: A tenant-aware message without an active tenant context is rejected before downstream middleware
+- **Fail-closed consumption**: A tenant-aware message without a `TenantStamp`, or whose tenant is unknown, is rejected before its handler
+- **Explicit global messages**: A global message is accepted only without a `TenantStamp`; stamped global messages are rejected
 - **Exception safety**: Tenant context is always cleared, even if message processing fails
-- **Existing stamp respect**: Won't override manually set TenantStamps
+- **Existing stamp validation**: Identical stamps are retained; contradictory stamps are rejected
 
 ### Manual Transport Resolution
 

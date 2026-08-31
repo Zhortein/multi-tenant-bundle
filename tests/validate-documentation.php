@@ -6,6 +6,29 @@ $root = dirname(__DIR__);
 require $root.'/vendor/autoload.php';
 $documents = array_merge([$root.'/README.md', $root.'/CONTRIBUTING.md', $root.'/CHANGELOG.md'], glob($root.'/docs/*.md') ?: [], glob($root.'/docs/examples/*.md') ?: []);
 $failures = [];
+$messengerContract = file_get_contents($root.'/docs/messenger.md');
+if (false === $messengerContract) {
+    $failures[] = 'Cannot read docs/messenger.md.';
+} else {
+    foreach ([
+        'Every application message must implement exactly one public marker interface',
+        'tenant-aware message without an active tenant context is rejected',
+        'tenant-aware message without a `TenantStamp`, or whose tenant is unknown, is rejected before its handler',
+        'global message is accepted only without a `TenantStamp`',
+    ] as $requiredContract) {
+        if (!str_contains($messengerContract, $requiredContract)) {
+            $failures[] = sprintf('docs/messenger.md is missing the fail-closed contract: %s.', $requiredContract);
+        }
+    }
+    foreach ([
+        'Messages without tenant context process normally',
+        'message processes without tenant context',
+    ] as $legacyClaim) {
+        if (str_contains($messengerContract, $legacyClaim)) {
+            $failures[] = sprintf('docs/messenger.md contains the legacy fail-open claim: %s.', $legacyClaim);
+        }
+    }
+}
 foreach ($documents as $document) {
     $contents = file_get_contents($document);
     if (false === $contents) {

@@ -7,6 +7,25 @@ and releases will follow [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [1.0.0-rc.3] - 2026-08-31
+
+### Fixed
+
+- Added compatibility with DoctrineMigrationsBundle 4 while retaining the tested DoctrineMigrationsBundle 3.4 through 3.7 range.
+- Corrected inherited Messenger documentation that incorrectly described missing tenant context and unknown stamped tenants as fail-open cases.
+
+### Added
+
+- Added a required external Consumer App check reproducing PHP 8.5.9, Symfony FrameworkBundle 8.1.5, Doctrine ORM 3.6.8, DBAL 4.4.4, DoctrineBundle 3.3.1, DoctrineMigrationsBundle 4.0.1, and PostgreSQL 18.
+- Added consumer migration up/down/up and fail-closed Doctrine and Messenger proofs.
+
+### Security
+
+- No intentional functional change was made to the RC2 tenant-isolation guarantees.
+- PostgreSQL support remains >= 16 and is tested with PostgreSQL 16 and 18.
+
+## [1.0.0-rc.2] - 2026-08-31
+
 ### Security
 
 - Doctrine tenant-aware reads and writes now fail closed on missing context, invalid identifiers or mappings, protection setup failures, tenant changes, and cross-tenant mutations.
