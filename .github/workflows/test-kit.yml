@@ -156,6 +156,7 @@ jobs:
       - name: Select the Symfony branch
         run: >-
           composer require --no-update
+          "symfony/cache:${{ matrix.symfony }}"
           "symfony/config:${{ matrix.symfony }}"
           "symfony/console:${{ matrix.symfony }}"
           "symfony/dependency-injection:${{ matrix.symfony }}"
@@ -179,9 +180,17 @@ jobs:
         run: composer update --prefer-dist --no-progress --no-interaction
 
       - name: Validate shared database container
-        run: php bin/validate.php
+        run: |
+          php bin/console lint:container
+          php bin/validate.php
         env:
           DATABASE_STRATEGY: shared_db
+
+      - name: Validate container with optional cache decorator disabled
+        run: php bin/console lint:container
+        env:
+          APP_ENV: test_cache_disabled
+          CACHE_DECORATOR_ENABLED: 0
 
       - name: Validate public test kit with shared database strategy
         run: vendor/bin/phpunit --no-coverage
@@ -189,7 +198,9 @@ jobs:
           DATABASE_STRATEGY: shared_db
 
       - name: Validate multi-database container
-        run: php bin/validate.php
+        run: |
+          php bin/console lint:container
+          php bin/validate.php
         env:
           DATABASE_STRATEGY: multi_db
 
@@ -314,6 +325,7 @@ jobs:
         run: >-
           docker run --rm --volume /tmp/consumer:/consumer services-locaux-consumer
           composer require --no-update
+          "symfony/cache:8.1.5"
           "php:8.5.9"
           "symfony/config:8.1.5"
           "symfony/console:8.1.5"
@@ -343,6 +355,7 @@ jobs:
 
       - name: Validate container and Doctrine metadata
         run: |
+          docker run --rm --network host --volume /tmp/consumer:/consumer --env DATABASE_URL --env DATABASE_STRATEGY --env EXACT_CONSUMER services-locaux-consumer php bin/console lint:container
           docker run --rm --network host --volume /tmp/consumer:/consumer --env DATABASE_URL --env DATABASE_STRATEGY --env EXACT_CONSUMER services-locaux-consumer php bin/validate.php
           docker run --rm --network host --volume /tmp/consumer:/consumer --env DATABASE_URL --env DATABASE_STRATEGY --env EXACT_CONSUMER services-locaux-consumer php bin/console doctrine:schema:validate --skip-sync
 
@@ -356,7 +369,8 @@ jobs:
         run: >-
           docker run --rm --network host --volume /tmp/consumer:/consumer
           --env DATABASE_URL --env DATABASE_STRATEGY --env EXACT_CONSUMER services-locaux-consumer
-          php vendor/bin/phpunit --no-coverage --filter ServicesLocauxCompatibilityTest
+          php vendor/bin/phpunit --no-coverage
+          --filter '/(ServicesLocauxCompatibilityTest|TenantAwareCacheCompatibilityTest)/'
 
   compatibility:
     name: ${{ matrix.name }}
@@ -457,6 +471,7 @@ jobs:
             "doctrine/doctrine-bundle:${{ matrix.doctrine_bundle }}" \
             "doctrine/orm:${{ matrix.orm }}" \
             "doctrine/dbal:${{ matrix.dbal }}" \
+            "symfony/cache:${{ matrix.symfony }}" \
             "symfony/config:${{ matrix.symfony }}" \
             "symfony/console:${{ matrix.symfony }}" \
             "symfony/dependency-injection:${{ matrix.symfony }}" \
