@@ -7,6 +7,8 @@ and releases will follow [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [1.0.0-rc.4] - 2026-09-01
+
 ### Fixed
 
 - Preserved Symfony's public `NamespacedPoolInterface` contract when the tenant-aware decorator wraps `cache.app`, fixing container lint failures on Symfony 8.1 without changing RC3 tenant isolation.
