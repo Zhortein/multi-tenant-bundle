@@ -8,6 +8,7 @@ require dirname(__DIR__).'/vendor/autoload.php';
 
 $expectedPhpVersionId = 80509;
 $expectedPackages = [
+    'symfony/cache' => '8.1.5',
     'symfony/framework-bundle' => '8.1.5',
     'doctrine/orm' => '3.6.8',
     'doctrine/dbal' => '4.4.4',
