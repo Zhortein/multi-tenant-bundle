@@ -37,10 +37,17 @@ final class Kernel extends BaseKernel
     protected function configureContainer(ContainerBuilder $container, LoaderInterface $loader): void
     {
         $strategy = $_SERVER['DATABASE_STRATEGY'] ?? 'shared_db';
+        $cacheDecoratorEnabled = '0' !== ($_SERVER['CACHE_DECORATOR_ENABLED'] ?? '1');
 
         $container->loadFromExtension('framework', [
             'secret' => 'consumer-fixture-secret',
             'test' => true,
+            'cache' => [
+                'app' => 'cache.adapter.array',
+                'pools' => [
+                    'cache.global' => ['adapter' => 'cache.adapter.array'],
+                ],
+            ],
             'mailer' => ['dsn' => 'null://null'],
             'messenger' => [
                 'default_bus' => 'messenger.bus.default',
@@ -75,7 +82,7 @@ final class Kernel extends BaseKernel
                 'doctrine_filter_listener' => false,
             ],
             'decorators' => [
-                'cache' => ['enabled' => false],
+                'cache' => ['enabled' => $cacheDecoratorEnabled],
                 'logger' => ['enabled' => false],
             ],
             'fixtures' => ['enabled' => false],

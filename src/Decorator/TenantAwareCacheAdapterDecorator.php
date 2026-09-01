@@ -10,6 +10,7 @@ use Symfony\Component\Cache\Adapter\AdapterInterface;
 use Symfony\Component\Cache\Adapter\ProxyAdapter;
 use Symfony\Component\Cache\CacheItem;
 use Symfony\Contracts\Cache\CacheInterface;
+use Symfony\Contracts\Cache\NamespacedPoolInterface;
 use Zhortein\MultiTenantBundle\Context\TenantContextInterface;
 
 /**
@@ -17,7 +18,7 @@ use Zhortein\MultiTenantBundle\Context\TenantContextInterface;
  *
  * @internal
  */
-final readonly class TenantAwareCacheAdapterDecorator implements AdapterInterface, CacheInterface
+final readonly class TenantAwareCacheAdapterDecorator implements AdapterInterface, CacheInterface, NamespacedPoolInterface
 {
     private TenantCacheKeyPrefixer $keyPrefixer;
 
@@ -25,6 +26,7 @@ final readonly class TenantAwareCacheAdapterDecorator implements AdapterInterfac
         private CacheItemPoolInterface $decorated,
         private TenantContextInterface $tenantContext,
         private bool $enabled = true,
+        private string $subNamespace = '',
     ) {
         $this->keyPrefixer = new TenantCacheKeyPrefixer($tenantContext);
     }
@@ -87,9 +89,21 @@ final readonly class TenantAwareCacheAdapterDecorator implements AdapterInterfac
         return $this->adapter()->commit();
     }
 
+    public function withSubNamespace(string $namespace): static
+    {
+        CacheItem::validateKey($namespace);
+
+        return new self(
+            $this->decorated,
+            $this->tenantContext,
+            $this->enabled,
+            $this->subNamespace.$namespace,
+        );
+    }
+
     private function adapter(): ProxyAdapter
     {
-        $namespace = $this->enabled ? $this->keyPrefixer->prefix() : '';
+        $namespace = ($this->enabled ? $this->keyPrefixer->prefix() : '').$this->subNamespace;
 
         return new ProxyAdapter($this->decorated, $namespace);
     }

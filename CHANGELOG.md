@@ -7,6 +7,14 @@ and releases will follow [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+### Fixed
+
+- Preserved Symfony's public `NamespacedPoolInterface` contract when the tenant-aware decorator wraps `cache.app`, fixing container lint failures on Symfony 8.1 without changing RC3 tenant isolation.
+
+### Added
+
+- Added real Consumer App cache compilation and A/B/A isolation coverage on Symfony 7.4, 8.0, and 8.1, including missing tenant context, explicit global cache, and consumer sub-namespaces.
+
 ## [1.0.0-rc.3] - 2026-08-31
 
 ### Fixed
