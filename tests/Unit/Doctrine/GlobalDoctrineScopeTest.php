@@ -9,6 +9,9 @@ use Doctrine\ORM\Query\FilterCollection;
 use Doctrine\Persistence\ManagerRegistry;
 use PHPUnit\Framework\TestCase;
 use Zhortein\MultiTenantBundle\Doctrine\GlobalDoctrineScope;
+use Zhortein\MultiTenantBundle\Doctrine\TenantConnectionMode;
+use Zhortein\MultiTenantBundle\Doctrine\TenantConnectionState;
+use Zhortein\MultiTenantBundle\Doctrine\TenantContextSynchronizerInterface;
 use Zhortein\MultiTenantBundle\Doctrine\TenantDoctrineFilter;
 use Zhortein\MultiTenantBundle\Exception\GlobalDoctrineScopeException;
 
@@ -34,7 +37,7 @@ final class GlobalDoctrineScopeTest extends TestCase
     public function testSuspendAndRestorePreserveTheSameDoctrineFilterIncludingParameters(): void
     {
         [$scope, $filters] = $this->scope(true);
-        $filter = $this->getMockBuilder(TenantDoctrineFilter::class)->disableOriginalConstructor()->getMock();
+        $filter = $this->createStub(TenantDoctrineFilter::class);
         $filters->expects(self::once())->method('suspend')->willReturn($filter);
         $filters->expects(self::once())->method('restore')->willReturn($filter);
         $scope->run(static fn (): null => null);
@@ -117,6 +120,15 @@ final class GlobalDoctrineScopeTest extends TestCase
         $scope->run(static fn (): null => null);
     }
 
+    public function testScopeAndResetAreSafeWithoutAnInstalledManagerRegistry(): void
+    {
+        $scope = new GlobalDoctrineScope(null);
+
+        self::assertSame('result', $scope->run(static fn (): string => 'result'));
+        $scope->reset();
+        self::assertFalse($scope->isActive());
+    }
+
     public function testAllEntityManagersAreScopedAndRestored(): void
     {
         $first = $this->filters(true);
@@ -131,6 +143,72 @@ final class GlobalDoctrineScopeTest extends TestCase
             'second' => $this->manager($second),
         ]);
         (new GlobalDoctrineScope($registry))->run(static fn (): null => null);
+    }
+
+    public function testResetDuringActiveScopeClosesGlobalAuthorizationAndCannotRestorePreviousState(): void
+    {
+        $suspended = false;
+        $filters = $this->getMockBuilder(FilterCollection::class)
+            ->disableOriginalConstructor()
+            ->onlyMethods(['isEnabled', 'isSuspended', 'suspend', 'restore'])
+            ->getMock();
+        $filter = $this->createStub(TenantDoctrineFilter::class);
+        $filters->method('isEnabled')->willReturn(true);
+        $filters->method('isSuspended')->willReturnCallback(static function () use (&$suspended): bool {
+            return $suspended;
+        });
+        $filters->expects(self::once())->method('suspend')->willReturnCallback(static function () use (&$suspended, $filter): TenantDoctrineFilter {
+            $suspended = true;
+
+            return $filter;
+        });
+        $filters->expects(self::once())->method('restore')->willReturnCallback(static function () use (&$suspended, $filter): TenantDoctrineFilter {
+            $suspended = false;
+
+            return $filter;
+        });
+        $registry = $this->createStub(ManagerRegistry::class);
+        $registry->method('getManagers')->willReturn(['default' => $this->manager($filters)]);
+        $synchronizer = new class implements TenantContextSynchronizerInterface {
+            private TenantConnectionState $state;
+
+            public function __construct()
+            {
+                $this->state = TenantConnectionState::none();
+            }
+
+            public function currentState(): TenantConnectionState
+            {
+                return $this->state;
+            }
+
+            public function transition(TenantConnectionState $current, TenantConnectionState $target): void
+            {
+                $this->state = $target;
+            }
+
+            public function reset(): void
+            {
+                $this->state = TenantConnectionState::none();
+            }
+        };
+        $scope = new GlobalDoctrineScope($registry, synchronizer: $synchronizer);
+
+        try {
+            $scope->run(function () use ($scope, &$suspended): void {
+                self::assertTrue($scope->isActive());
+                self::assertTrue($suspended);
+                $scope->reset();
+                self::assertFalse($scope->isActive());
+                self::assertFalse($suspended);
+            });
+            self::fail('An invalidated global scope must not return normally.');
+        } catch (GlobalDoctrineScopeException $exception) {
+            self::assertStringContainsString('invalidated', $exception->getMessage());
+        }
+
+        self::assertFalse($scope->isActive());
+        self::assertSame(TenantConnectionMode::NONE, $synchronizer->currentState()->mode);
     }
 
     /** @return array{GlobalDoctrineScope, FilterCollection&\PHPUnit\Framework\MockObject\MockObject} */

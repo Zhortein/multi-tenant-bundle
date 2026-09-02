@@ -14,7 +14,9 @@ use Symfony\Component\Config\Loader\LoaderInterface;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\HttpKernel\Kernel;
 use Symfony\Component\Routing\Loader\Configurator\RoutingConfigurator;
+use Zhortein\MultiTenantBundle\Tests\Fixtures\Command\TenantContextFailCommand;
 use Zhortein\MultiTenantBundle\Tests\Fixtures\Command\TenantContextShowCommand;
+use Zhortein\MultiTenantBundle\Tests\Fixtures\Controller\LifecycleController;
 use Zhortein\MultiTenantBundle\Tests\Fixtures\Controller\TestProductsController;
 use Zhortein\MultiTenantBundle\ZhorteinMultiTenantBundle;
 
@@ -93,7 +95,12 @@ final class TestKernel extends Kernel
                 'strict' => false,
                 'header_allow_list' => ['X-Tenant-ID'],
             ],
-            'database' => ['strategy' => 'shared_db', 'enable_filter' => true, 'rls' => ['enabled' => false]],
+            'database' => [
+                'strategy' => 'shared_db',
+                'enable_filter' => true,
+                'rls' => ['enabled' => '1' === ($_SERVER['TEST_KERNEL_RLS_ENABLED'] ?? '0')],
+            ],
+            'container' => ['enable_tenant_scope' => '1' === ($_SERVER['TEST_KERNEL_TENANT_SCOPE'] ?? '0')],
             'listeners' => ['request_listener' => true, 'doctrine_filter_listener' => false],
             'domain' => ['domain_mapping' => [
                 'mairie-a.example.com' => 'mairie-a',
@@ -113,12 +120,20 @@ final class TestKernel extends Kernel
         $container->register(NullLogger::class);
         $container->setAlias(LoggerInterface::class, NullLogger::class)->setPublic(true);
         $container->register(TenantContextShowCommand::class)->setAutowired(true)->setAutoconfigured(true);
+        $container->register(TenantContextFailCommand::class)->setAutowired(true)->setAutoconfigured(true);
         $container->register(TestProductsController::class)->setAutowired(true)->setPublic(true);
+        $container->register(LifecycleController::class)->setAutowired(true)->setPublic(true);
     }
 
     protected function configureRoutes(RoutingConfigurator $routes): void
     {
         $routes->add('bundle_test_products', '/test/products')->controller(TestProductsController::class);
         $routes->add('bundle_test_products_path', '/{tenant}/test/products')->controller(TestProductsController::class);
+        $routes->add('bundle_test_lifecycle_exception', '/test/lifecycle/exception')->controller([LifecycleController::class, 'exception']);
+        $routes->add('bundle_test_lifecycle_redirect', '/test/lifecycle/redirect')->controller([LifecycleController::class, 'redirect']);
+        $routes->add('bundle_test_lifecycle_stream', '/test/lifecycle/stream')->controller([LifecycleController::class, 'stream']);
+        $routes->add('bundle_test_lifecycle_context', '/test/lifecycle/context')->controller([LifecycleController::class, 'context']);
+        $routes->add('bundle_test_lifecycle_sub_request', '/test/lifecycle/sub-request')->controller([LifecycleController::class, 'subRequest']);
+        $routes->add('bundle_test_lifecycle_global', '/test/lifecycle/global')->controller([LifecycleController::class, 'global']);
     }
 }

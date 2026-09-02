@@ -4,6 +4,12 @@ This fixture is a standalone Symfony application used only for compatibility val
 
 GitHub Actions selects Symfony 7.4, 8.0, or 8.1, installs the fixture dependencies, and boots separate `shared_db` and `multi_db` kernels. Both configurations must compile with the optional Mailer and Messenger integrations enabled and without Twig, Monolog, or PSR-16. PHPUnit then exercises the public Test Kit through production package autoload for both strategies.
 
+The fixture also exercises an initialized tenant-aware cache through the real
+Symfony `services_resetter`, repeated requests with `KernelBrowser::disableReboot()`,
+automatic infrastructure resolution, disabled automatic resolution, explicit
+late loading, resolver exceptions, and a dedicated lazy-firewall SecurityBundle
+configuration. The main bundle remains installable without SecurityBundle.
+
 From the repository root, reproduce the locked consumer fixture with PHP 8.5.9 in a fresh directory outside the repository:
 
 ```bash

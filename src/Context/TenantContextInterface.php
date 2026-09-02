@@ -2,9 +2,10 @@
 
 namespace Zhortein\MultiTenantBundle\Context;
 
+use Symfony\Contracts\Service\ResetInterface;
 use Zhortein\MultiTenantBundle\Entity\TenantInterface;
 
-interface TenantContextInterface
+interface TenantContextInterface extends ResetInterface
 {
     public function getTenant(): ?TenantInterface;
 
@@ -13,4 +14,10 @@ interface TenantContextInterface
     public function setTenant(TenantInterface $tenant): void;
 
     public function clear(): void;
+
+    /**
+     * Invalidates the logical context first, then resets every synchronized
+     * tenant resource to its fail-closed NONE state.
+     */
+    public function reset(): void;
 }

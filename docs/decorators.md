@@ -29,6 +29,13 @@ For legitimate global cache data, inject a separate undecorated cache pool expli
 
 The RC4 correction is not a consumer API break: it restores a Symfony contract already advertised by `cache.app`. Cache keys, tenant hashing, missing-context failures, and explicit global-pool behavior remain compatible with RC3.
 
+RC5 additionally implements Symfony's `ResetInterface` on the adapter
+decorator. Its `reset()` is intentionally idempotent and does not delegate to
+the decorated pool because Symfony resets that pool independently. No tenant
+namespace is cached: it is recomputed from the current context for every
+operation, including immutable `withSubNamespace()` derivatives. The real
+`services_resetter` is tested after `cache.app` initialization.
+
 ## Storage path helper
 
 `TenantStoragePathHelper` produces `tenants/{identifier}/...` paths and uses the same strict validation as tenant storage. Every enabled operation requires an active tenant. Only `/` is supported as a separator; ambiguous custom separators are rejected. Disabled helpers are an explicit application configuration and do not infer global behavior from missing context.

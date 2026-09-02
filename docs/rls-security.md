@@ -1,5 +1,12 @@
 # PostgreSQL Row-Level Security (RLS)
 
+At every RC5 execution boundary the PostgreSQL session variable is reset to
+the fail-closed empty value before a connection can be reused. Sequences such
+as A → `NONE`, A → exception → `NONE`, A → global → `NONE`, and A → B →
+`NONE` are tested on PostgreSQL 16 and 18. If clearing the variable fails, the
+connection is closed and the reset failure remains observable; the former
+tenant is never restored.
+
 The multi-tenant bundle supports PostgreSQL Row-Level Security (RLS) as an additional layer of defense-in-depth protection when using the `shared_db` database strategy.
 
 > 📖 **Navigation**: [← Migrations](migrations.md) | [Back to Documentation Index](index.md) | [Decorators →](decorators.md)

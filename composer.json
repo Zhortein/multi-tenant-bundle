@@ -38,7 +38,8 @@
     "symfony/finder": "^7.4 || ^8.0",
     "symfony/http-foundation": "^7.4 || ^8.0",
     "symfony/http-kernel": "^7.4 || ^8.0",
-    "symfony/messenger": "^7.4 || ^8.0"
+    "symfony/messenger": "^7.4 || ^8.0",
+    "symfony/service-contracts": "^3.4"
   },
   "require-dev": {
     "friendsofphp/php-cs-fixer": "^v3.75.0",

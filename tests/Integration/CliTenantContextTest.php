@@ -4,8 +4,11 @@ declare(strict_types=1);
 
 namespace Zhortein\MultiTenantBundle\Tests\Integration;
 
+use Symfony\Component\Console\Input\ArrayInput;
+use Symfony\Component\Console\Output\BufferedOutput;
 use Zhortein\MultiTenantBundle\Doctrine\GlobalDoctrineScopeInterface;
 use Zhortein\MultiTenantBundle\Exception\MissingTenantContextException;
+use Zhortein\MultiTenantBundle\Tests\Fixtures\Command\TenantContextShowCommand;
 use Zhortein\MultiTenantBundle\Tests\Fixtures\Entity\TestProduct;
 use Zhortein\MultiTenantBundle\Tests\Toolkit\TenantCliTestCase;
 
@@ -272,5 +275,39 @@ class CliTenantContextTest extends TenantCliTestCase
         $commandTester = $this->executeCommand('tenant:settings:clear-cache', ['--all' => true]);
 
         $this->assertCommandIsSuccessful($commandTester);
+    }
+
+    public function testReusedConsoleApplicationAlwaysStartsAndEndsAtNone(): void
+    {
+        $this->expectOutputRegex('/controlled command failure/');
+        self::assertNotNull($this->application);
+        $this->application->setAutoExit(false);
+
+        self::assertSame(0, $this->runApplication(['command' => 'tenant:context:show', '--tenant' => self::TENANT_A_SLUG]));
+        self::assertNull($this->getTenantContext()->getTenant());
+
+        // Simulate stale process-local state before the next command.
+        $this->getTenantContext()->setTenant($this->getTenantRegistry()->getBySlug(self::TENANT_A_SLUG));
+        self::assertSame(0, $this->application->run(new ArrayInput(['command' => 'tenant:context:show']), new BufferedOutput()));
+        $probe = static::getContainer()->get(TenantContextShowCommand::class);
+        self::assertInstanceOf(TenantContextShowCommand::class, $probe);
+        self::assertSame(['tenant-a', null], $probe->observedTenants());
+        self::assertNull($this->getTenantContext()->getTenant());
+
+        self::assertSame(1, $this->runApplication(['command' => 'tenant:context:fail', '--tenant' => self::TENANT_A_SLUG]));
+        self::assertNull($this->getTenantContext()->getTenant());
+
+        self::assertSame(0, $this->runApplication(['command' => 'tenant:context:show', '--tenant' => self::TENANT_B_SLUG]));
+        self::assertNull($this->getTenantContext()->getTenant());
+        self::assertSame(0, $this->runApplication(['command' => 'tenant:list']));
+        self::assertNull($this->getTenantContext()->getTenant());
+    }
+
+    /** @param array<string, mixed> $input */
+    private function runApplication(array $input): int
+    {
+        self::assertNotNull($this->application);
+
+        return $this->application->run(new ArrayInput($input), new BufferedOutput());
     }
 }

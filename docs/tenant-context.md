@@ -1,5 +1,11 @@
 # Tenant Context
 
+> **RC5 lifecycle contract:** this is a shared mutable service, not a new
+> instance per request. It implements Symfony's `ResetInterface`; `reset()`
+> invalidates the logical tenant first and synchronizes scopes, Doctrine
+> filters and UnitOfWork state, PostgreSQL RLS, multi-db routing, and
+> connections to `NONE`. See [Persistent Process Lifecycle](persistent-lifecycle.md).
+
 The tenant context is the core mechanism that manages the current tenant state throughout your application. It provides a centralized way to access the current tenant and ensures that all tenant-aware services operate within the correct tenant scope.
 
 > 📖 **Navigation**: [← DNS TXT Resolver](dns-txt-resolver.md) | [Back to Documentation Index](index.md) | [Tenant Settings →](tenant-settings.md)
@@ -23,7 +29,7 @@ namespace Zhortein\MultiTenantBundle\Context;
 
 use Zhortein\MultiTenantBundle\Entity\TenantInterface;
 
-interface TenantContextInterface
+interface TenantContextInterface extends \Symfony\Contracts\Service\ResetInterface
 {
     /**
      * Gets the current tenant.
@@ -33,7 +39,7 @@ interface TenantContextInterface
     /**
      * Sets the current tenant.
      */
-    public function setTenant(?TenantInterface $tenant): void;
+    public function setTenant(TenantInterface $tenant): void;
 
     /**
      * Checks if a tenant is currently set.
@@ -44,6 +50,9 @@ interface TenantContextInterface
      * Clears the current tenant context.
      */
     public function clear(): void;
+
+    /** Resets the complete process-local tenant state to NONE. */
+    public function reset(): void;
 }
 ```
 
@@ -218,15 +227,17 @@ HTTP Request → Tenant Resolver → Tenant Context → Application Logic
 
 ### 2. Context Scoping
 
-The tenant context is scoped to the current request and is automatically:
+The shared tenant context is bounded to the current execution and is automatically:
 
 - **Set** during request processing by the `TenantRequestListener`
 - **Available** throughout the request lifecycle
-- **Cleared** after response is sent (in some configurations)
+- **Cleared** at `kernel.terminate`, by `kernel.reset`, and before the next main request
 
 ### 3. Thread Safety
 
-The tenant context is designed to be thread-safe within the context of a single HTTP request. Each request gets its own tenant context instance.
+The bundle does not claim that each request receives a new service instance.
+Persistent workers reuse it, so the entry barrier and reset contract are
+mandatory. Do not store the context or a resolved tenant in static state.
 
 ## Advanced Usage
 

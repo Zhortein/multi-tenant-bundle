@@ -8,6 +8,7 @@ use App\Entity\Tenant;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use Symfony\Contracts\Cache\CacheInterface;
 use Symfony\Contracts\Cache\NamespacedPoolInterface;
+use Symfony\Contracts\Service\ResetInterface;
 use Zhortein\MultiTenantBundle\Context\TenantContextInterface;
 use Zhortein\MultiTenantBundle\Decorator\TenantCacheException;
 
@@ -42,6 +43,24 @@ final class TenantAwareCacheCompatibilityTest extends KernelTestCase
 
         $global = $container->get('cache.global');
         self::assertSame('global-value', $global->get('shared-key', static fn (): string => 'global-value'));
+    }
+
+    public function testRealServicesResetterClearsInitializedCacheAndTenantStateIdempotently(): void
+    {
+        self::bootKernel();
+        $container = static::getContainer();
+        $context = $container->get(TenantContextInterface::class);
+        $cache = $container->get(CacheInterface::class);
+        $context->setTenant(new Tenant('a', 'a'));
+        self::assertSame('value-a', $cache->get('initialized', static fn (): string => 'value-a'));
+
+        $resetter = $container->get('services_resetter');
+        self::assertInstanceOf(ResetInterface::class, $resetter);
+        $resetter->reset();
+        $resetter->reset();
+
+        self::assertNull($context->getTenant());
+        $this->assertMissingContextFailsClosed($cache);
     }
 
     private function assertMissingContextFailsClosed(CacheInterface $cache): void

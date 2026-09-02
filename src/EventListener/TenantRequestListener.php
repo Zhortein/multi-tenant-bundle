@@ -9,6 +9,8 @@ use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 use Symfony\Component\HttpKernel\Event\RequestEvent;
 use Symfony\Component\HttpKernel\KernelEvents;
 use Zhortein\MultiTenantBundle\Context\TenantContextInterface;
+use Zhortein\MultiTenantBundle\Http\TenantRequestContextLoader;
+use Zhortein\MultiTenantBundle\Http\TenantRequestContextLoaderInterface;
 use Zhortein\MultiTenantBundle\Resolver\TenantResolverInterface;
 
 /**
@@ -25,6 +27,7 @@ final readonly class TenantRequestListener
         private TenantContextInterface $tenantContext,
         private TenantResolverInterface $tenantResolver,
         private ?LoggerInterface $logger = null,
+        private ?TenantRequestContextLoaderInterface $contextLoader = null,
     ) {
     }
 
@@ -42,12 +45,12 @@ final readonly class TenantRequestListener
 
         $request = $event->getRequest();
 
+        $loader = $this->contextLoader ?? new TenantRequestContextLoader($this->tenantContext, $this->tenantResolver);
+
         try {
-            $tenant = $this->tenantResolver->resolveTenant($request);
+            $tenant = $loader->load($request);
 
             if (null !== $tenant) {
-                $this->tenantContext->setTenant($tenant);
-
                 $this->logger?->info('Tenant resolved and set in context', [
                     'tenant_id' => $tenant->getId(),
                     'tenant_slug' => $tenant->getSlug(),
@@ -61,13 +64,12 @@ final readonly class TenantRequestListener
             }
         } catch (\Throwable $exception) {
             $this->logger?->error('Failed to resolve tenant from request', [
-                'exception' => $exception->getMessage(),
+                'exception_type' => $exception::class,
                 'request_uri' => $request->getRequestUri(),
                 'host' => $request->getHost(),
             ]);
 
-            // Don't throw the exception to avoid breaking the request
-            // The application should handle missing tenant context gracefully
+            throw $exception;
         }
     }
 }

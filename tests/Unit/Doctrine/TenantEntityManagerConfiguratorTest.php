@@ -81,6 +81,10 @@ final class TenantEntityManagerConfiguratorTest extends TestCase
             public function transition(TenantConnectionState $current, TenantConnectionState $target): void
             {
             }
+
+            public function reset(): void
+            {
+            }
         };
         $inner = new class {
             public function configure(EntityManagerInterface $entityManager): void

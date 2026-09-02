@@ -9,6 +9,7 @@ use Symfony\Component\Cache\Adapter\AdapterInterface;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\Cache\Adapter\TraceableAdapter;
 use Symfony\Contracts\Cache\NamespacedPoolInterface;
+use Symfony\Contracts\Service\ResetInterface;
 use Zhortein\MultiTenantBundle\Context\TenantContext;
 use Zhortein\MultiTenantBundle\Decorator\TenantAwareCacheAdapterDecorator;
 use Zhortein\MultiTenantBundle\Decorator\TenantCacheException;
@@ -67,5 +68,17 @@ final class TenantAwareCacheAdapterDecoratorTest extends TestCase
 
         $this->expectException(TenantCacheException::class);
         $decorator->getItem('tenant_1_shared-key');
+    }
+
+    public function testItProvidesTheResetMethodRequiredByTheRealServicesResetter(): void
+    {
+        $context = new TenantContext();
+        $context->setTenant((new TestTenant())->setId(1));
+        $decorator = new TenantAwareCacheAdapterDecorator(new ArrayAdapter(), $context);
+        $decorator->getItem('initialized');
+
+        self::assertInstanceOf(ResetInterface::class, $decorator);
+        $decorator->reset();
+        $decorator->reset();
     }
 }
