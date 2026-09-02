@@ -44,9 +44,19 @@ use Zhortein\MultiTenantBundle\Doctrine\TenantEntityManagerFactory;
 use Zhortein\MultiTenantBundle\Doctrine\TenantRlsStateSynchronizerInterface;
 use Zhortein\MultiTenantBundle\Doctrine\TenantRoutingDriverMiddleware;
 use Zhortein\MultiTenantBundle\Entity\TenantInterface;
+use Zhortein\MultiTenantBundle\EventListener\TenantConsoleBoundarySubscriber;
 use Zhortein\MultiTenantBundle\EventListener\TenantEntityListener;
+use Zhortein\MultiTenantBundle\EventListener\TenantRequestBoundaryListener;
+use Zhortein\MultiTenantBundle\EventListener\TenantRequestExceptionTracker;
 use Zhortein\MultiTenantBundle\EventListener\TenantRequestListener;
+use Zhortein\MultiTenantBundle\EventListener\TenantRequestTerminationListener;
 use Zhortein\MultiTenantBundle\EventListener\TenantResolutionExceptionListener;
+use Zhortein\MultiTenantBundle\Http\TenantRequestContextLoader;
+use Zhortein\MultiTenantBundle\Http\TenantRequestContextLoaderInterface;
+use Zhortein\MultiTenantBundle\Lifecycle\TenantExecutionBoundary;
+use Zhortein\MultiTenantBundle\Lifecycle\TenantExecutionBoundaryInterface;
+use Zhortein\MultiTenantBundle\Lifecycle\TenantStateResetter;
+use Zhortein\MultiTenantBundle\Lifecycle\TenantStateResetterInterface;
 use Zhortein\MultiTenantBundle\Mailer\TenantAwareMailer;
 use Zhortein\MultiTenantBundle\Mailer\TenantMailerConfigurator;
 use Zhortein\MultiTenantBundle\Mailer\TenantMailerFallbackTransportFactory;
@@ -237,18 +247,39 @@ final class ZhorteinMultiTenantExtension extends Extension implements PrependExt
         // Register tenant context
         $container->register(TenantContext::class)
             ->setAutowired(true)
-            ->setAutoconfigured(true);
+            ->setAutoconfigured(false)
+            ->setArgument('$derivedStateResetters', new TaggedIteratorArgument('zhortein_multi_tenant.lifecycle_resetter'))
+            ->addTag('kernel.reset', ['method' => 'reset']);
 
         $container->setAlias(TenantContextInterface::class, TenantContext::class);
 
+        $container->register(TenantStateResetter::class)
+            ->setArgument('$tenantContext', new Reference(TenantContextInterface::class));
+        $container->setAlias(TenantStateResetterInterface::class, TenantStateResetter::class)
+            ->setPublic(true);
+
+        $container->register(TenantRequestContextLoader::class)
+            ->setAutowired(true)
+            ->setAutoconfigured(true);
+        $container->setAlias(TenantRequestContextLoaderInterface::class, TenantRequestContextLoader::class)
+            ->setPublic(true);
+
+        $container->register(TenantExecutionBoundary::class)
+            ->setAutowired(true)
+            ->setAutoconfigured(true);
+        $container->setAlias(TenantExecutionBoundaryInterface::class, TenantExecutionBoundary::class)
+            ->setPublic(true);
+
         $container->register(DoctrineTenantContextSynchronizer::class)
             ->setAutowired(true)
-            ->setAutoconfigured(true)
+            ->setAutoconfigured(false)
+            ->setArgument('$managerRegistry', new Reference('doctrine', ContainerBuilder::NULL_ON_INVALID_REFERENCE))
             ->setLazy(true);
         $container->setAlias(TenantContextSynchronizerInterface::class, DoctrineTenantContextSynchronizer::class);
 
         $container->register(DoctrineTenantRlsStateSynchronizer::class)
             ->setAutowired(true)
+            ->setArgument('$managerRegistry', new Reference('doctrine', ContainerBuilder::NULL_ON_INVALID_REFERENCE))
             ->setArgument('$enabled', '%zhortein_multi_tenant.database.rls.enabled%')
             ->setArgument('$sessionVariable', '%zhortein_multi_tenant.database.rls.session_variable%');
         $container->setAlias(TenantRlsStateSynchronizerInterface::class, DoctrineTenantRlsStateSynchronizer::class);
@@ -300,7 +331,8 @@ final class ZhorteinMultiTenantExtension extends Extension implements PrependExt
         if ($config['container']['enable_tenant_scope']) {
             $container->register(TenantScope::class)
                 ->setAutowired(true)
-                ->setAutoconfigured(true);
+                ->setAutoconfigured(false)
+                ->addTag('zhortein_multi_tenant.lifecycle_resetter', ['priority' => 200]);
         }
     }
 
@@ -484,6 +516,20 @@ final class ZhorteinMultiTenantExtension extends Extension implements PrependExt
      */
     private function registerEventListeners(ContainerBuilder $container, array $config): void
     {
+        // Boundary cleanup is unconditional. Disabling automatic resolution
+        // must never disable lifecycle isolation.
+        $container->register(TenantRequestBoundaryListener::class)
+            ->setAutowired(true)
+            ->setAutoconfigured(true);
+        $container->register(TenantRequestTerminationListener::class)
+            ->setAutowired(true)
+            ->setAutoconfigured(true);
+        $container->register(TenantRequestExceptionTracker::class)
+            ->setAutoconfigured(true);
+        $container->register(TenantConsoleBoundarySubscriber::class)
+            ->setAutowired(true)
+            ->setAutoconfigured(true);
+
         if ($config['listeners']['request_listener']) {
             $container->register(TenantRequestListener::class)
                 ->setAutowired(true)
@@ -739,11 +785,9 @@ final class ZhorteinMultiTenantExtension extends Extension implements PrependExt
 
         $container->register(TenantSessionConfigurator::class)
             ->setAutowired(true)
-            ->setAutoconfigured(true)
+            ->setAutoconfigured(false)
             ->setArgument('$rlsEnabled', '%zhortein_multi_tenant.database.rls.enabled%')
-            ->setArgument('$sessionVariable', '%zhortein_multi_tenant.database.rls.session_variable%')
-            ->addTag('kernel.event_listener')
-            ->addTag('messenger.middleware');
+            ->setArgument('$sessionVariable', '%zhortein_multi_tenant.database.rls.session_variable%');
     }
 
     /**
@@ -759,7 +803,9 @@ final class ZhorteinMultiTenantExtension extends Extension implements PrependExt
 
         $container->register(GlobalDoctrineScope::class)
             ->setAutowired(true)
-            ->setAutoconfigured(true);
+            ->setAutoconfigured(false)
+            ->setArgument('$managerRegistry', new Reference('doctrine', ContainerBuilder::NULL_ON_INVALID_REFERENCE))
+            ->addTag('zhortein_multi_tenant.lifecycle_resetter', ['priority' => 100]);
         $container->setAlias(GlobalDoctrineScopeInterface::class, GlobalDoctrineScope::class);
     }
 

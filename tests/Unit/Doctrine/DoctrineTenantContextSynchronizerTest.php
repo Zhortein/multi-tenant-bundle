@@ -11,12 +11,14 @@ use Doctrine\Persistence\ManagerRegistry;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Zhortein\MultiTenantBundle\Doctrine\DoctrineTenantContextSynchronizer;
+use Zhortein\MultiTenantBundle\Doctrine\NoOpTenantConnectionLifecycle;
 use Zhortein\MultiTenantBundle\Doctrine\TenantConnectionLifecycleInterface;
 use Zhortein\MultiTenantBundle\Doctrine\TenantConnectionState;
 use Zhortein\MultiTenantBundle\Doctrine\TenantConnectionTransitionInterface;
 use Zhortein\MultiTenantBundle\Doctrine\TenantDoctrineFilter;
 use Zhortein\MultiTenantBundle\Exception\DirtyEntityManagerException;
 use Zhortein\MultiTenantBundle\Exception\TenantContextTransitionException;
+use Zhortein\MultiTenantBundle\Exception\TenantStateResetException;
 use Zhortein\MultiTenantBundle\Tests\Fixtures\Entity\TestTenant;
 
 final class DoctrineTenantContextSynchronizerTest extends TestCase
@@ -81,9 +83,11 @@ final class DoctrineTenantContextSynchronizerTest extends TestCase
     public function testActivationFailureRestoresAndCleansPreparedTransition(): void
     {
         $transition = $this->failingTransition('activate');
+        $manager = $this->manager($this->unitOfWork());
+        $manager->expects(self::never())->method('clear');
 
         try {
-            $this->synchronizer(['default' => $this->manager($this->unitOfWork())], $this->lifecycle($transition))->transition(
+            $this->synchronizer(['default' => $manager], $this->lifecycle($transition))->transition(
                 TenantConnectionState::none(),
                 TenantConnectionState::tenant((new TestTenant())->setId(7)),
             );
@@ -98,9 +102,11 @@ final class DoctrineTenantContextSynchronizerTest extends TestCase
     public function testRestorationFailureIsExposedWithoutMaskingActivationFailure(): void
     {
         $transition = $this->failingTransition('activate', true);
+        $manager = $this->manager($this->unitOfWork());
+        $manager->expects(self::never())->method('clear');
 
         try {
-            $this->synchronizer(['default' => $this->manager($this->unitOfWork())], $this->lifecycle($transition))->transition(
+            $this->synchronizer(['default' => $manager], $this->lifecycle($transition))->transition(
                 TenantConnectionState::none(),
                 TenantConnectionState::tenant((new TestTenant())->setId(7)),
             );
@@ -115,9 +121,11 @@ final class DoctrineTenantContextSynchronizerTest extends TestCase
     public function testCleanupFailureRollsBackSuccessfulActivation(): void
     {
         $transition = $this->failingTransition('cleanup');
+        $manager = $this->manager($this->unitOfWork());
+        $manager->expects(self::once())->method('clear');
 
         try {
-            $this->synchronizer(['default' => $this->manager($this->unitOfWork())], $this->lifecycle($transition))->transition(
+            $this->synchronizer(['default' => $manager], $this->lifecycle($transition))->transition(
                 TenantConnectionState::none(),
                 TenantConnectionState::tenant((new TestTenant())->setId(7)),
             );
@@ -129,9 +137,111 @@ final class DoctrineTenantContextSynchronizerTest extends TestCase
         }
     }
 
+    public function testResetInvalidatesStateAndIsIdempotentForCleanManagers(): void
+    {
+        $unitOfWork = $this->unitOfWork();
+        $manager = $this->manager($unitOfWork);
+        $manager->method('isOpen')->willReturn(true);
+        $manager->method('getConnection')->willReturn(\Doctrine\DBAL\DriverManager::getConnection(['driver' => 'pdo_sqlite', 'memory' => true]));
+        $manager->expects(self::exactly(3))->method('clear');
+        $registry = $this->createMock(ManagerRegistry::class);
+        $registry->method('getManagers')->willReturn(['default' => $manager]);
+        $registry->expects(self::never())->method('resetManager');
+        $synchronizer = new DoctrineTenantContextSynchronizer($registry, new NoOpTenantConnectionLifecycle());
+
+        $synchronizer->transition(
+            TenantConnectionState::none(),
+            TenantConnectionState::tenant((new TestTenant())->setId(42)),
+        );
+        $synchronizer->reset();
+        $synchronizer->reset();
+
+        self::assertSame('none', $synchronizer->currentState()->mode->value);
+        $filter = $manager->getFilters()->getFilter('tenant_filter');
+        self::assertSame("'none'", $filter->getParameter('tenant_context_mode'));
+        self::assertSame("'__NO_TENANT__'", $filter->getParameter('tenant_id'));
+    }
+
+    public function testSynchronizerRemainsResettableWithoutAnInstalledManagerRegistry(): void
+    {
+        $synchronizer = new DoctrineTenantContextSynchronizer(null, new NoOpTenantConnectionLifecycle());
+
+        $synchronizer->transition(
+            TenantConnectionState::none(),
+            TenantConnectionState::tenant((new TestTenant())->setId(42)),
+        );
+        $synchronizer->reset();
+        $synchronizer->reset();
+
+        self::assertSame('none', $synchronizer->currentState()->mode->value);
+    }
+
+    public function testLegacyConnectionLifecycleReceivesThePreviousStateDuringReset(): void
+    {
+        $lifecycle = new class implements TenantConnectionLifecycleInterface {
+            /** @var list<string> */
+            public array $currentModes = [];
+
+            public function prepare(TenantConnectionState $current, TenantConnectionState $target): TenantConnectionTransitionInterface
+            {
+                $this->currentModes[] = $current->mode->value;
+
+                return new class implements TenantConnectionTransitionInterface {
+                    public function activate(): void
+                    {
+                    }
+
+                    public function restore(): void
+                    {
+                    }
+
+                    public function cleanup(): void
+                    {
+                    }
+                };
+            }
+        };
+        $synchronizer = $this->synchronizer([], $lifecycle);
+        $synchronizer->transition(
+            TenantConnectionState::none(),
+            TenantConnectionState::tenant((new TestTenant())->setId(42)),
+        );
+
+        $synchronizer->reset();
+
+        self::assertSame(['none', 'tenant'], $lifecycle->currentModes);
+        self::assertSame('none', $synchronizer->currentState()->mode->value);
+    }
+
+    /** @param non-empty-string $scheduledMethod */
+    #[DataProvider('dirtySchedules')]
+    public function testDirtyManagerIsNeverFlushedAndIsQuarantinedDuringReset(string $scheduledMethod): void
+    {
+        $manager = $this->manager($this->unitOfWork($scheduledMethod));
+        $manager->method('isOpen')->willReturn(true);
+        $manager->expects(self::never())->method('flush');
+        $manager->expects(self::once())->method('close');
+        $connection = $this->getMockBuilder(\Doctrine\DBAL\Connection::class)->disableOriginalConstructor()->getMock();
+        $connection->expects(self::once())->method('close');
+        $manager->method('getConnection')->willReturn($connection);
+        $registry = $this->createMock(ManagerRegistry::class);
+        $registry->method('getManagers')->willReturn(['dirty' => $manager]);
+        $registry->expects(self::once())->method('resetManager')->with('dirty')->willReturn($manager);
+        $synchronizer = new DoctrineTenantContextSynchronizer($registry, new NoOpTenantConnectionLifecycle());
+
+        try {
+            $synchronizer->reset();
+            self::fail('A dirty UnitOfWork must be reported after quarantine.');
+        } catch (TenantStateResetException $exception) {
+            self::assertContains(DirtyEntityManagerException::class, $exception->getFailureTypes());
+        }
+
+        self::assertSame('none', $synchronizer->currentState()->mode->value);
+    }
+
     private function unitOfWork(?string $dirtyMethod = null): UnitOfWork
     {
-        $unitOfWork = $this->getMockBuilder(UnitOfWork::class)->disableOriginalConstructor()->getMock();
+        $unitOfWork = $this->createStub(UnitOfWork::class);
         foreach ([
             'getScheduledEntityInsertions',
             'getScheduledEntityUpdates',

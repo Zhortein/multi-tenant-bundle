@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace Zhortein\MultiTenantBundle\Tests\Unit\Context;
 
 use PHPUnit\Framework\TestCase;
+use Symfony\Contracts\Service\ResetInterface;
 use Zhortein\MultiTenantBundle\Context\TenantContext;
 use Zhortein\MultiTenantBundle\Doctrine\TenantConnectionState;
 use Zhortein\MultiTenantBundle\Doctrine\TenantContextSynchronizerInterface;
 use Zhortein\MultiTenantBundle\Entity\TenantInterface;
+use Zhortein\MultiTenantBundle\Exception\TenantStateResetException;
 
 /**
  * @covers \Zhortein\MultiTenantBundle\Context\TenantContext
@@ -28,9 +30,20 @@ final class TenantContextTest extends TestCase
         $this->assertFalse($this->tenantContext->hasTenant());
     }
 
+    public function testContextIsAResettableServiceAndResetClearsTenantState(): void
+    {
+        $tenant = $this->createStub(TenantInterface::class);
+        $this->tenantContext->setTenant($tenant);
+
+        self::assertInstanceOf(ResetInterface::class, $this->tenantContext);
+        $this->tenantContext->reset();
+
+        self::assertNull($this->tenantContext->getTenant());
+    }
+
     public function testSetTenant(): void
     {
-        $tenant = $this->createMock(TenantInterface::class);
+        $tenant = $this->createStub(TenantInterface::class);
 
         $this->tenantContext->setTenant($tenant);
 
@@ -40,7 +53,7 @@ final class TenantContextTest extends TestCase
 
     public function testClearTenant(): void
     {
-        $tenant = $this->createMock(TenantInterface::class);
+        $tenant = $this->createStub(TenantInterface::class);
 
         $this->tenantContext->setTenant($tenant);
         $this->assertTrue($this->tenantContext->hasTenant());
@@ -53,8 +66,8 @@ final class TenantContextTest extends TestCase
 
     public function testSetTenantOverwritesPrevious(): void
     {
-        $tenant1 = $this->createMock(TenantInterface::class);
-        $tenant2 = $this->createMock(TenantInterface::class);
+        $tenant1 = $this->createStub(TenantInterface::class);
+        $tenant2 = $this->createStub(TenantInterface::class);
 
         $this->tenantContext->setTenant($tenant1);
         $this->assertSame($tenant1, $this->tenantContext->getTenant());
@@ -66,8 +79,8 @@ final class TenantContextTest extends TestCase
 
     public function testFailedSynchronizationLeavesPreviousContextUntouched(): void
     {
-        $tenantA = $this->createMock(TenantInterface::class);
-        $tenantB = $this->createMock(TenantInterface::class);
+        $tenantA = $this->createStub(TenantInterface::class);
+        $tenantB = $this->createStub(TenantInterface::class);
         $synchronizer = new class implements TenantContextSynchronizerInterface {
             public int $calls = 0;
 
@@ -82,6 +95,10 @@ final class TenantContextTest extends TestCase
                     throw new \RuntimeException('transition failed');
                 }
             }
+
+            public function reset(): void
+            {
+            }
         };
         $context = new TenantContext(null, $synchronizer);
         $context->setTenant($tenantA);
@@ -94,5 +111,37 @@ final class TenantContextTest extends TestCase
         }
 
         self::assertSame($tenantA, $context->getTenant());
+    }
+
+    public function testFailedResetStillInvalidatesLogicalTenantFirst(): void
+    {
+        $tenant = $this->createStub(TenantInterface::class);
+        $synchronizer = new class implements TenantContextSynchronizerInterface {
+            public function currentState(): TenantConnectionState
+            {
+                return TenantConnectionState::none();
+            }
+
+            public function transition(TenantConnectionState $current, TenantConnectionState $target): void
+            {
+            }
+
+            public function reset(): void
+            {
+                throw new \RuntimeException('reset failed');
+            }
+        };
+        $context = new TenantContext(null, $synchronizer);
+        $context->setTenant($tenant);
+
+        try {
+            $context->reset();
+            self::fail('The reset failure must remain observable.');
+        } catch (TenantStateResetException $exception) {
+            self::assertSame([\RuntimeException::class], $exception->getFailureTypes());
+            self::assertStringNotContainsString('reset failed', $exception->getMessage());
+        }
+
+        self::assertNull($context->getTenant());
     }
 }

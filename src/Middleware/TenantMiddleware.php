@@ -10,6 +10,8 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\HttpKernelInterface;
 use Zhortein\MultiTenantBundle\Context\TenantContextInterface;
 use Zhortein\MultiTenantBundle\Exception\TenantNotFoundException;
+use Zhortein\MultiTenantBundle\Http\TenantRequestContextLoader;
+use Zhortein\MultiTenantBundle\Http\TenantRequestContextLoaderInterface;
 use Zhortein\MultiTenantBundle\Resolver\TenantResolverInterface;
 
 /**
@@ -27,6 +29,7 @@ final readonly class TenantMiddleware implements HttpKernelInterface
         private TenantResolverInterface $tenantResolver,
         private bool $requireTenant = false,
         private ?LoggerInterface $logger = null,
+        private ?TenantRequestContextLoaderInterface $contextLoader = null,
     ) {
     }
 
@@ -50,11 +53,10 @@ final readonly class TenantMiddleware implements HttpKernelInterface
     private function resolveTenantContext(Request $request): void
     {
         try {
-            $tenant = $this->tenantResolver->resolveTenant($request);
+            $loader = $this->contextLoader ?? new TenantRequestContextLoader($this->tenantContext, $this->tenantResolver);
+            $tenant = $loader->load($request);
 
             if (null !== $tenant) {
-                $this->tenantContext->setTenant($tenant);
-
                 $this->logger?->info('Tenant resolved via middleware', [
                     'tenant_id' => $tenant->getId(),
                     'tenant_slug' => $tenant->getSlug(),
@@ -70,20 +72,18 @@ final readonly class TenantMiddleware implements HttpKernelInterface
             }
         } catch (TenantNotFoundException $exception) {
             $this->logger?->warning('Tenant resolution failed', [
-                'exception' => $exception->getMessage(),
+                'exception_type' => $exception::class,
                 'request_uri' => $request->getRequestUri(),
             ]);
 
             throw $exception;
         } catch (\Throwable $exception) {
             $this->logger?->error('Unexpected error during tenant resolution', [
-                'exception' => $exception->getMessage(),
+                'exception_type' => $exception::class,
                 'request_uri' => $request->getRequestUri(),
             ]);
 
-            if ($this->requireTenant) {
-                throw new TenantNotFoundException('Failed to resolve tenant due to unexpected error', previous: $exception);
-            }
+            throw $exception;
         }
     }
 }

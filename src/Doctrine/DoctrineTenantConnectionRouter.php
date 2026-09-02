@@ -5,10 +5,11 @@ declare(strict_types=1);
 namespace Zhortein\MultiTenantBundle\Doctrine;
 
 use Doctrine\DBAL\DriverManager;
+use Symfony\Contracts\Service\ResetInterface;
 
 /** @internal Process-local routing state used by the DBAL middleware. */
 /** @phpstan-import-type Params from DriverManager */
-final class DoctrineTenantConnectionRouter
+final class DoctrineTenantConnectionRouter implements ResetInterface
 {
     private TenantConnectionState $state;
 
@@ -25,6 +26,11 @@ final class DoctrineTenantConnectionRouter
     public function activate(TenantConnectionState $state): void
     {
         $this->state = $state;
+    }
+
+    public function reset(): void
+    {
+        $this->state = TenantConnectionState::none();
     }
 
     /** @phpstan-return Params */

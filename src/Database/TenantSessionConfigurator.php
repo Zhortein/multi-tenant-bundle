@@ -16,6 +16,7 @@ use Symfony\Component\Messenger\Middleware\MiddlewareInterface;
 use Symfony\Component\Messenger\Middleware\StackInterface;
 use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
 use Zhortein\MultiTenantBundle\Context\TenantContextInterface;
+use Zhortein\MultiTenantBundle\Exception\TenantContextTransitionException;
 use Zhortein\MultiTenantBundle\Messenger\TenantStamp;
 use Zhortein\MultiTenantBundle\Observability\Event\TenantRlsAppliedEvent;
 use Zhortein\MultiTenantBundle\Registry\TenantRegistryInterface;
@@ -160,15 +161,17 @@ final readonly class TenantSessionConfigurator implements MiddlewareInterface
             );
         } catch (Exception $exception) {
             $this->logger?->error('Failed to configure PostgreSQL session variable for RLS', [
-                'exception' => $exception->getMessage(),
+                'exception_type' => $exception::class,
                 'tenant_id' => $tenant->getId(),
                 'session_variable' => $this->sessionVariable,
             ]);
 
             // Dispatch RLS applied failure event
             $this->eventDispatcher?->dispatch(
-                new TenantRlsAppliedEvent((string) $tenant->getId(), false, $exception->getMessage())
+                new TenantRlsAppliedEvent((string) $tenant->getId(), false, 'rls_configuration_failed')
             );
+
+            throw new TenantContextTransitionException('PostgreSQL tenant session could not be configured safely.');
         }
     }
 
@@ -189,10 +192,14 @@ final readonly class TenantSessionConfigurator implements MiddlewareInterface
                 ]);
             }
         } catch (Exception $exception) {
-            $this->logger?->warning('Failed to clear PostgreSQL session variable for RLS', [
-                'exception' => $exception->getMessage(),
+            $this->logger?->error('Failed to clear PostgreSQL session variable for RLS', [
+                'exception_type' => $exception::class,
                 'session_variable' => $this->sessionVariable,
             ]);
+
+            $this->connection->close();
+
+            throw new TenantContextTransitionException('PostgreSQL tenant session could not be reset safely.');
         }
     }
 

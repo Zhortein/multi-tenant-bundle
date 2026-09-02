@@ -8,11 +8,12 @@ use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\DriverManager;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\Persistence\ManagerRegistry;
+use Symfony\Contracts\Service\ResetInterface;
 
 /**
  * Reversible multi-database lifecycle backed by a DBAL routing middleware.
  */
-final readonly class DoctrineTenantConnectionLifecycle implements TenantConnectionLifecycleInterface
+final readonly class DoctrineTenantConnectionLifecycle implements TenantConnectionLifecycleInterface, ResetInterface
 {
     public function __construct(
         private ManagerRegistry $managerRegistry,
@@ -84,5 +85,30 @@ final readonly class DoctrineTenantConnectionLifecycle implements TenantConnecti
                 }
             }
         };
+    }
+
+    public function reset(): void
+    {
+        // Publish NONE before closing connections so a later lazy reconnect
+        // cannot reuse tenant-specific routing parameters.
+        $this->router->reset();
+        $this->closeManagedConnections();
+    }
+
+    private function closeManagedConnections(): void
+    {
+        $closed = [];
+        foreach ($this->managerRegistry->getManagers() as $manager) {
+            if ($manager instanceof EntityManagerInterface) {
+                $connection = $manager->getConnection();
+                $connection->close();
+                $closed[spl_object_id($connection)] = true;
+            }
+        }
+        foreach ($this->managerRegistry->getConnections() as $connection) {
+            if ($connection instanceof Connection && !isset($closed[spl_object_id($connection)])) {
+                $connection->close();
+            }
+        }
     }
 }

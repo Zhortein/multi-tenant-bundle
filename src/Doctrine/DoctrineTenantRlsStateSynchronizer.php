@@ -12,7 +12,7 @@ use Doctrine\Persistence\ManagerRegistry;
 final readonly class DoctrineTenantRlsStateSynchronizer implements TenantRlsStateSynchronizerInterface
 {
     public function __construct(
-        private ManagerRegistry $managerRegistry,
+        private ?ManagerRegistry $managerRegistry,
         private bool $enabled,
         private string $sessionVariable = 'app.tenant_id',
     ) {
@@ -20,7 +20,7 @@ final readonly class DoctrineTenantRlsStateSynchronizer implements TenantRlsStat
 
     public function apply(TenantConnectionState $state): void
     {
-        if (!$this->enabled) {
+        if (!$this->enabled || null === $this->managerRegistry) {
             return;
         }
 
