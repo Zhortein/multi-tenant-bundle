@@ -462,6 +462,7 @@ jobs:
       TEST_DATABASE_APP_USER: rls_test_app
       TEST_DATABASE_APP_PASSWORD: rls_test_password
       TEST_DATABASE_REQUIRED: 1
+      TEST_DATABASE_SERVER_VERSION: '18'
       TEST_KERNEL_DATABASE_URL: postgresql://test_user:test_password@127.0.0.1:5432/multi_tenant_kernel_test
 
     steps:
