@@ -7,6 +7,8 @@ and releases will follow [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [1.0.0-rc.5] - 2026-09-02
+
 ### Security
 
 - Reset every persistent HTTP, Messenger, Console, and Scheduler-style boundary to the fail-closed `NONE` state without restoring process-local tenant state.
