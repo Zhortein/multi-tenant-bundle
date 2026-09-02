@@ -1,5 +1,11 @@
 # CLI Commands
 
+Every command dispatched by a reused Symfony `Console\Application` starts from
+`NONE`. The bundle resets state at `console.command`, `console.error`, and
+`console.terminate`. Tenant commands may install a tenant after the entry
+barrier, but the next command never inherits it. An exception does not restore
+the tenant that existed before the command.
+
 The multi-tenant bundle provides comprehensive console commands for managing tenants, databases, migrations, fixtures, and settings. All tenant-aware commands support global tenant context options.
 
 > 📖 **Navigation**: [← Back to Documentation Index](index.md) | [Database Strategies →](database-strategies.md)

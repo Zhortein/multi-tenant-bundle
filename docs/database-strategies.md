@@ -795,4 +795,10 @@ php bin/console tenant:schema:validate --all-tenants
 
 Multi-database work must resolve and switch the database before publishing the new tenant context. Use TenantEntityManagerFactory::runForTenant() for manual tenant operations; it creates a fresh EntityManager and explicitly clears and closes both the EntityManager and its DBAL connection in a finally path. Do not cache tenant EntityManagers or connections across requests, messages, command iterations, or jobs.
 
+RC5 boundary reset publishes the connection router state as `NONE` before it
+closes managed DBAL connections. It never restores the route active before a
+request, message, command, or scheduled callback. If the route or a connection
+cannot be cleaned safely, related EntityManagers and connections are
+quarantined and the non-sensitive reset exception is propagated.
+
 Messenger workers and tenant-looping commands must begin each operation without state from the previous tenant. Resolution failures must leave no new tenant context, and every success, exception, early return, and skipped operation must clear the context. External connection pools still require a reset policy appropriate to the driver and pooler.

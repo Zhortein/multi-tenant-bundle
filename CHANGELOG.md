@@ -7,7 +7,22 @@ and releases will follow [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+### Security
+
+- Reset every persistent HTTP, Messenger, Console, and Scheduler-style boundary to the fail-closed `NONE` state without restoring process-local tenant state.
+- Quarantine dirty or untrustworthy Doctrine managers and connections without flushing, and expose non-sensitive reset failures while preserving an existing application exception.
+
+### Changed
+
+- `TenantContextInterface` now extends Symfony's `ResetInterface`; custom implementations must reset all derived state idempotently.
+- Automatic early request resolution can be disabled with the existing `listeners.request_listener` option while the public `TenantRequestContextLoaderInterface` provides explicit post-authentication resolution.
+- Messenger received-message and reused Console application boundaries no longer restore a tenant that existed before the operation.
+
 ### Fixed
+
+- Clear stale tenant context, Doctrine filters and identity maps, RLS session variables, multi-database routes and connections, tenant scopes, and active global-scope authorization across persistent workers.
+- Make null and exceptional HTTP resolution leave `NONE`, preserve main-request state across sub-requests, and defer streamed-response cleanup until `kernel.terminate`.
+- Add a valid idempotent `reset()` to `TenantAwareCacheAdapterDecorator`, preventing the RC4 `Call to undefined method ...::reset()` failure from Symfony's real services resetter.
 
 - Preserved Symfony's public `NamespacedPoolInterface` contract when the tenant-aware decorator wraps `cache.app`, fixing container lint failures on Symfony 8.1 without changing RC3 tenant isolation.
 

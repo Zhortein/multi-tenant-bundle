@@ -11,6 +11,12 @@ zhortein_multi_tenant:
 
 Older examples using `resolver.type` or `resolution.strategy` were documentation errors and never matched the effective configuration tree. They are not compatibility aliases and are rejected with an actionable configuration error.
 
+`listeners.request_listener` controls automatic early HTTP resolution only.
+Setting it to `false` does not disable the unconditional main-request reset
+barrier. Use the public `TenantRequestContextLoaderInterface` for explicit
+post-authentication resolution. See [Tenant Resolution](tenant-resolution.md)
+and [RC4 to RC5 Migration](migration-rc4-to-rc5.md).
+
 
 This document provides a complete reference for configuring the Zhortein Multi-Tenant Bundle.
 

@@ -27,8 +27,13 @@ Third-party messages must be wrapped in a classified application message. Unclas
 The bundle automatically propagates tenant context across asynchronous message processing:
 
 1. **Sending Phase**: When dispatching a message, `TenantSendingMiddleware` automatically attaches a `TenantStamp` containing the current tenant ID
-2. **Worker Phase**: When processing messages, `TenantWorkerMiddleware` reads the `TenantStamp`, restores the tenant context, and configures the database session
-3. **Cleanup**: After success, handler exception, retry, or redelivery, PHP and database tenant state is cleared in `finally`
+2. **Worker Phase**: `TenantWorkerMiddleware` first resets stale process state, then reads the `TenantStamp`, installs the message tenant, and configures database state
+3. **Cleanup**: After success, invalid metadata, handler exception, retry, or redelivery, all tenant state is reset to `NONE` in `finally`
+
+The worker never saves or restores a tenant that existed before consumption.
+A global message also starts and ends at `NONE`; its explicit global Doctrine
+scope exists only around the handler. Stopping and resuming a Worker does not
+change this contract.
 
 On receipt, a tenant-aware message requires one or more mutually consistent, non-empty `TenantStamp` values and a tenant resolvable by the registry. Missing metadata throws `MissingTenantStampException`; an unavailable tenant throws `UnknownTenantException`. The handler is never called on these failures. `UnknownTenantException` is non-retryable unless the application knows that registry availability is transient; transport or registry infrastructure failures may be retryable under application policy.
 

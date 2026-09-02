@@ -27,6 +27,7 @@ Welcome to the documentation for the fail-closed Zhortein Multi-Tenant Bundle fo
 
 ### Core Concepts
 - [Tenant Context](tenant-context.md) - How tenant resolution and access works
+- [Persistent Process Lifecycle](persistent-lifecycle.md) - Reset contract and complete mutable-state inventory
 - [Tenant Resolution](tenant-resolution.md) - Subdomain, path, header, and custom resolvers
 - [Resolver Chain](resolver-chain.md) - Configurable multi-strategy resolution with fallbacks
 - [DNS TXT Resolver](dns-txt-resolver.md) - DNS-based tenant resolution with TXT records
@@ -38,9 +39,11 @@ Welcome to the documentation for the fail-closed Zhortein Multi-Tenant Bundle fo
 - [Decorators](decorators.md) - Tenant-aware decorators for caching, logging, and storage
 - [Mailer](mailer.md) - Tenant-aware email configuration and sending
 - [Messenger](messenger.md) - Tenant-aware message queues and processing
+- [Scheduler](scheduler.md) - Safe boundaries for scheduled and custom persistent loops
 - [Storage](storage.md) - Fail-closed tenant-specific file storage
 - [Security Contract Migration](migration-security-contracts.md) - Breaking storage, cache, mailer, and observability migration
 - [RC1 to RC2 Migration](migration-rc1-to-rc2.md) - Fail-closed Doctrine and Messenger migration
+- [RC4 to RC5 Migration](migration-rc4-to-rc5.md) - Persistent-worker reset and late HTTP resolution
 - [Observability](observability.md) - Monitoring, metrics, and logging for tenant operations
 
 ### Database Management

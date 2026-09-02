@@ -1,5 +1,31 @@
 # Tenant Resolution
 
+## Early and post-authentication resolution
+
+The automatic request listener runs early. Use it only for resolvers whose
+inputs already exist at that point: domain, subdomain, path, trusted headers,
+DNS, infrastructure, or platform configuration. It is not guaranteed to run
+after session attachment or Symfony firewalls.
+
+For session, authenticated-user, membership, or authorization resolution,
+disable automatic resolution while keeping the unconditional boundary:
+
+```yaml
+zhortein_multi_tenant:
+    listeners:
+        request_listener: false
+```
+
+Then call the public
+`TenantRequestContextLoaderInterface::load(Request $request)` after the
+application has established identity. The loader has no SecurityBundle
+dependency; the application's resolver may consult its own identity services.
+It always resets first. A `null` result or an exception leaves `NONE` and never
+restores a previous tenant. Sub-requests do not clear their main request.
+
+Do not treat listener priority `512` or any other priority as a universal
+post-firewall guarantee: lazy and multiple firewalls differ by application.
+
 Tenant resolution is the process of determining which tenant is associated with an incoming HTTP request. The bundle provides multiple resolution strategies and allows you to create custom resolvers for specific needs.
 
 > 📖 **Navigation**: [← Doctrine Tenant Filter](doctrine-tenant-filter.md) | [Back to Documentation Index](index.md) | [Resolver Chain →](resolver-chain.md)
