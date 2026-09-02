@@ -18,6 +18,7 @@ use Symfony\Component\Messenger\Middleware\StackInterface;
 use Zhortein\MultiTenantBundle\Context\TenantContextInterface;
 use Zhortein\MultiTenantBundle\Database\TenantSessionConfigurator;
 use Zhortein\MultiTenantBundle\Entity\TenantInterface;
+use Zhortein\MultiTenantBundle\Exception\TenantContextTransitionException;
 use Zhortein\MultiTenantBundle\Messenger\TenantStamp;
 use Zhortein\MultiTenantBundle\Registry\TenantRegistryInterface;
 
@@ -173,7 +174,7 @@ final class TenantSessionConfiguratorTest extends TestCase
         $this->configurator->onKernelRequest($event);
     }
 
-    public function testOnKernelRequestHandlesDatabaseException(): void
+    public function testOnKernelRequestRejectsDatabaseExceptionWithoutSensitiveDetails(): void
     {
         $event = $this->createRequestEvent(true);
         $tenant = $this->createTenant(123, 'tenant1');
@@ -198,12 +199,14 @@ final class TenantSessionConfiguratorTest extends TestCase
             ->with(
                 'Failed to configure PostgreSQL session variable for RLS',
                 [
-                    'exception' => 'Database error',
+                    'exception_type' => Exception\InvalidArgumentException::class,
                     'tenant_id' => 123,
                     'session_variable' => 'app.tenant_id',
                 ]
             );
 
+        $this->expectException(TenantContextTransitionException::class);
+        $this->expectExceptionMessage('PostgreSQL tenant session could not be configured safely.');
         $this->configurator->onKernelRequest($event);
     }
 

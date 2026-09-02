@@ -28,6 +28,7 @@ Each matrix cell runs strict Composer validation, a dependency security audit, P
 - Doctrine DBAL 3.8 and the 4.x line are supported through explicitly tested combinations.
 - PostgreSQL 18 is the reference database for RLS defense-in-depth guarantees.
 - The enabled Symfony cache decorator is compiled and exercised against aligned FrameworkBundle and Cache components on Symfony 7.4, 8.0, and 8.1. It preserves PSR-6, `CacheInterface`, `NamespacedPoolInterface`, and `AdapterInterface` for decorated Symfony pools.
+- The persistent-lifecycle Consumer App runs the real Symfony services resetter, an initialized cache, a no-reboot kernel, early resolution, disabled automatic resolution, explicit late resolution, and a dedicated SecurityBundle/lazy-firewall scenario. SecurityBundle remains absent from the bundle's required dependency graph.
 - The optional PSR-16 decorator requires `psr/simple-cache` 3.x because earlier interface versions do not define the typed PSR-16 signatures implemented by the bundle.
 
 Removing a matrix entry is a compatibility change. It requires evidence that the combination is no longer resolvable or supportable, an updated changelog, and migration guidance where applicable.

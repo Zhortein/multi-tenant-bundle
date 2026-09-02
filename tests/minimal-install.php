@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Zhortein\MultiTenantBundle\Context\TenantContext;
 use Zhortein\MultiTenantBundle\DependencyInjection\ZhorteinMultiTenantExtension;
+use Zhortein\MultiTenantBundle\Resolver\TenantResolverInterface;
 use Zhortein\MultiTenantBundle\Storage\LocalStorage;
 use Zhortein\MultiTenantBundle\ZhorteinMultiTenantBundle;
 
@@ -33,8 +34,12 @@ $container = new ContainerBuilder();
 $container->setParameter('kernel.environment', 'test');
 $container->setParameter('kernel.debug', false);
 $container->setParameter('kernel.project_dir', sys_get_temp_dir().'/multi-tenant-minimal-app');
+$container->register(TenantResolverInterface::class)
+    ->setSynthetic(true)
+    ->setPublic(true);
 
 (new ZhorteinMultiTenantExtension())->load([[
+    'resolver' => 'custom',
     'database' => ['rls' => ['enabled' => false]],
     'decorators' => [
         'cache' => ['enabled' => false],

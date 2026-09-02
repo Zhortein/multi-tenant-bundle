@@ -2,6 +2,12 @@
 
 A fail-closed Symfony 7.4 LTS and Symfony 8.x bundle for building multi-tenant applications, with PostgreSQL RLS as an optional defense in depth.
 
+RC5 makes tenant state explicitly resettable for persistent kernels and
+workers. Every main HTTP request, received Messenger message, reused Console
+command, and `TenantExecutionBoundaryInterface` callback starts from `NONE`.
+`TenantContext` remains a shared mutable service; it is not recreated for every
+request.
+
 [![PHP Version](https://img.shields.io/badge/php-%3E%3D8.3-blue.svg)](https://php.net/)
 [![Symfony Version](https://img.shields.io/badge/symfony-%3E%3D7.4%20%7C%208.0-green.svg)](https://symfony.com/)
 [![PostgreSQL Version](https://img.shields.io/badge/postgresql-%3E%3D16-blue.svg)](https://www.postgresql.org/)
@@ -191,6 +197,8 @@ class DashboardController extends AbstractController
 - [Messenger](docs/messenger.md) - Tenant-aware queues with automatic context propagation
 - [Storage](docs/storage.md) - Fail-closed file storage isolation
 - [Security Contract Migration](docs/migration-security-contracts.md) - Required storage, cache, mailer, and observability migration
+- [RC4 to RC5 Migration](docs/migration-rc4-to-rc5.md) - Persistent lifecycle reset and early/late HTTP resolution
+- [Persistent Process Lifecycle](docs/persistent-lifecycle.md) - Complete state inventory, reset order, and failure behavior
 
 ### 🗄️ Database Management
 - [Migrations](docs/migrations.md) - Database migrations

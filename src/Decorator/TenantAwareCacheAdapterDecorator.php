@@ -11,6 +11,7 @@ use Symfony\Component\Cache\Adapter\ProxyAdapter;
 use Symfony\Component\Cache\CacheItem;
 use Symfony\Contracts\Cache\CacheInterface;
 use Symfony\Contracts\Cache\NamespacedPoolInterface;
+use Symfony\Contracts\Service\ResetInterface;
 use Zhortein\MultiTenantBundle\Context\TenantContextInterface;
 
 /**
@@ -18,7 +19,7 @@ use Zhortein\MultiTenantBundle\Context\TenantContextInterface;
  *
  * @internal
  */
-final readonly class TenantAwareCacheAdapterDecorator implements AdapterInterface, CacheInterface, NamespacedPoolInterface
+final readonly class TenantAwareCacheAdapterDecorator implements AdapterInterface, CacheInterface, NamespacedPoolInterface, ResetInterface
 {
     private TenantCacheKeyPrefixer $keyPrefixer;
 
@@ -99,6 +100,12 @@ final readonly class TenantAwareCacheAdapterDecorator implements AdapterInterfac
             $this->enabled,
             $this->subNamespace.$namespace,
         );
+    }
+
+    public function reset(): void
+    {
+        // The namespace is recomputed for every operation. Symfony resets the
+        // decorated pool separately, so delegating here would reset it twice.
     }
 
     private function adapter(): ProxyAdapter

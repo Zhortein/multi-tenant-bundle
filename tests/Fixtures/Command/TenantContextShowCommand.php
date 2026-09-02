@@ -15,6 +15,9 @@ use Zhortein\MultiTenantBundle\Registry\TenantRegistryInterface;
 #[AsCommand(name: 'tenant:context:show')]
 final class TenantContextShowCommand extends Command
 {
+    /** @var list<string|null> */
+    private array $observedTenants = [];
+
     public function __construct(private readonly TenantRegistryInterface $registry, private readonly TenantContextInterface $context)
     {
         parent::__construct();
@@ -30,6 +33,7 @@ final class TenantContextShowCommand extends Command
         $selected = $input->getOption('tenant');
         $slug = is_string($selected) && '' !== $selected ? $selected : getenv('TENANT_ID');
         if (!is_string($slug) || '' === $slug) {
+            $this->observedTenants[] = null === $this->context->getTenant() ? null : $this->context->getTenant()?->getSlug();
             $output->writeln('No tenant context.');
 
             return Command::SUCCESS;
@@ -43,11 +47,18 @@ final class TenantContextShowCommand extends Command
 
         try {
             $this->context->setTenant($tenant);
+            $this->observedTenants[] = $this->context->getTenant()?->getSlug();
             $output->writeln('Tenant: '.$tenant->getSlug());
 
             return Command::SUCCESS;
         } finally {
             $this->context->clear();
         }
+    }
+
+    /** @return list<string|null> */
+    public function observedTenants(): array
+    {
+        return $this->observedTenants;
     }
 }

@@ -16,6 +16,7 @@ use Zhortein\MultiTenantBundle\Exception\TenantContextTransitionException;
 use Zhortein\MultiTenantBundle\Exception\TenantMismatchException;
 use Zhortein\MultiTenantBundle\Exception\UnclassifiedMessageException;
 use Zhortein\MultiTenantBundle\Exception\UnknownTenantException;
+use Zhortein\MultiTenantBundle\Lifecycle\TenantStateResetterInterface;
 use Zhortein\MultiTenantBundle\Registry\TenantRegistryInterface;
 
 /**
@@ -32,6 +33,7 @@ final readonly class TenantWorkerMiddleware implements MiddlewareInterface
         private TenantRegistryInterface $tenantRegistry,
         private ?TenantSessionConfigurator $sessionConfigurator = null,
         private ?GlobalDoctrineScopeInterface $globalDoctrineScope = null,
+        private ?TenantStateResetterInterface $stateResetter = null,
     ) {
     }
 
@@ -41,13 +43,11 @@ final readonly class TenantWorkerMiddleware implements MiddlewareInterface
             return $stack->next()->handle($envelope, $stack);
         }
 
-        $previousTenant = $this->tenantContext->getTenant();
-
         $result = null;
         $operationFailure = null;
         try {
             // A reused worker must start without state from the previous message.
-            $this->tenantContext->clear();
+            $this->resetState();
             $this->sessionConfigurator?->clearConfig();
 
             $message = $envelope->getMessage();
@@ -93,14 +93,10 @@ final readonly class TenantWorkerMiddleware implements MiddlewareInterface
         }
 
         try {
-            $this->tenantContext->clear();
+            $this->resetState();
             $this->sessionConfigurator?->clearConfig();
-            if (null !== $previousTenant) {
-                $this->tenantContext->setTenant($previousTenant);
-                $this->sessionConfigurator?->setConfig();
-            }
         } catch (\Throwable $cleanupFailure) {
-            throw new TenantContextTransitionException('Messenger tenant state could not be restored after handling.', 0, $operationFailure ?? $cleanupFailure, null, $operationFailure ? $cleanupFailure : null);
+            throw new TenantContextTransitionException('Messenger tenant state could not be reset after handling.', 0, $operationFailure ?? $cleanupFailure, null, $operationFailure ? $cleanupFailure : null);
         }
 
         if (null !== $operationFailure) {
@@ -108,5 +104,16 @@ final readonly class TenantWorkerMiddleware implements MiddlewareInterface
         }
 
         return $result;
+    }
+
+    private function resetState(): void
+    {
+        if (null !== $this->stateResetter) {
+            $this->stateResetter->reset();
+
+            return;
+        }
+
+        $this->tenantContext->reset();
     }
 }

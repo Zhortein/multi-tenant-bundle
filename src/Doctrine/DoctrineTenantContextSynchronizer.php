@@ -6,16 +6,18 @@ namespace Zhortein\MultiTenantBundle\Doctrine;
 
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\Persistence\ManagerRegistry;
+use Symfony\Contracts\Service\ResetInterface;
 use Zhortein\MultiTenantBundle\Exception\DirtyEntityManagerException;
 use Zhortein\MultiTenantBundle\Exception\DoctrineProtectionException;
 use Zhortein\MultiTenantBundle\Exception\TenantContextTransitionException;
+use Zhortein\MultiTenantBundle\Exception\TenantStateResetException;
 
 class DoctrineTenantContextSynchronizer implements TenantContextSynchronizerInterface
 {
     private TenantConnectionState $state;
 
     public function __construct(
-        private readonly ManagerRegistry $managerRegistry,
+        private readonly ?ManagerRegistry $managerRegistry,
         private readonly TenantConnectionLifecycleInterface $connectionLifecycle,
         private readonly ?TenantRlsStateSynchronizerInterface $rlsSynchronizer = null,
         private readonly string $filterName = 'tenant_filter',
@@ -99,9 +101,81 @@ class DoctrineTenantContextSynchronizer implements TenantContextSynchronizerInte
         $this->state = $target;
     }
 
+    public function reset(): void
+    {
+        $previousState = $this->state;
+        // The logical state is invalidated first. No subsequent code may treat
+        // the former tenant as active, even when physical cleanup fails.
+        $this->state = TenantConnectionState::none();
+
+        $managers = $this->entityManagers();
+        $quarantined = [];
+        $failureTypes = [];
+
+        foreach ($managers as $name => $manager) {
+            if (!$manager->isOpen()) {
+                $this->quarantine($manager, $name, $quarantined, $failureTypes);
+
+                continue;
+            }
+
+            try {
+                if ($this->isDirty($manager)) {
+                    $failureTypes[] = DirtyEntityManagerException::class;
+                    $this->quarantine($manager, $name, $quarantined, $failureTypes);
+
+                    continue;
+                }
+
+                $this->configureFilter($manager, TenantConnectionState::none(), $name);
+                $manager->clear();
+            } catch (\Throwable $failure) {
+                $failureTypes[] = $failure::class;
+                $this->quarantine($manager, $name, $quarantined, $failureTypes);
+            }
+        }
+
+        try {
+            $this->rlsSynchronizer?->apply(TenantConnectionState::none());
+        } catch (\Throwable $failure) {
+            $failureTypes[] = $failure::class;
+            foreach ($managers as $name => $manager) {
+                $this->quarantine($manager, $name, $quarantined, $failureTypes);
+            }
+        }
+
+        try {
+            $this->resetConnectionLifecycle($previousState);
+        } catch (\Throwable $failure) {
+            $failureTypes[] = $failure::class;
+            foreach ($managers as $name => $manager) {
+                $this->quarantine($manager, $name, $quarantined, $failureTypes);
+            }
+        }
+
+        foreach (array_keys($quarantined) as $name) {
+            try {
+                $this->managerRegistry?->resetManager($name);
+            } catch (\Throwable $failure) {
+                $failureTypes[] = $failure::class;
+            }
+        }
+
+        if ([] !== $failureTypes) {
+            /** @var list<class-string<\Throwable>> $failureTypes */
+            $failureTypes = array_values(array_unique($failureTypes));
+
+            throw new TenantStateResetException($failureTypes);
+        }
+    }
+
     /** @return array<string, EntityManagerInterface> */
     private function entityManagers(): array
     {
+        if (null === $this->managerRegistry) {
+            return [];
+        }
+
         $managers = [];
         foreach ($this->managerRegistry->getManagers() as $name => $manager) {
             if ($manager instanceof EntityManagerInterface) {
@@ -114,15 +188,21 @@ class DoctrineTenantContextSynchronizer implements TenantContextSynchronizerInte
 
     private function assertClean(EntityManagerInterface $manager, string $name): void
     {
+        if ($this->isDirty($manager)) {
+            throw new DirtyEntityManagerException(sprintf('Tenant context cannot change while entity manager "%s" has unflushed changes.', $name));
+        }
+    }
+
+    private function isDirty(EntityManagerInterface $manager): bool
+    {
         $unitOfWork = $manager->getUnitOfWork();
         $unitOfWork->computeChangeSets();
-        if ([] !== $unitOfWork->getScheduledEntityInsertions()
+
+        return [] !== $unitOfWork->getScheduledEntityInsertions()
             || [] !== $unitOfWork->getScheduledEntityUpdates()
             || [] !== $unitOfWork->getScheduledEntityDeletions()
             || [] !== $unitOfWork->getScheduledCollectionUpdates()
-            || [] !== $unitOfWork->getScheduledCollectionDeletions()) {
-            throw new DirtyEntityManagerException(sprintf('Tenant context cannot change while entity manager "%s" has unflushed changes.', $name));
-        }
+            || [] !== $unitOfWork->getScheduledCollectionDeletions();
     }
 
     private function configureFilter(EntityManagerInterface $manager, TenantConnectionState $state, string $name): void
@@ -145,6 +225,43 @@ class DoctrineTenantContextSynchronizer implements TenantContextSynchronizerInte
             return null;
         } catch (\Throwable $exception) {
             return $exception;
+        }
+    }
+
+    /**
+     * @param array<string, true>            $quarantined
+     * @param list<class-string<\Throwable>> $failureTypes
+     */
+    private function quarantine(EntityManagerInterface $manager, string $name, array &$quarantined, array &$failureTypes): void
+    {
+        try {
+            $manager->getConnection()->close();
+        } catch (\Throwable $failure) {
+            $failureTypes[] = $failure::class;
+        }
+
+        try {
+            $manager->close();
+        } catch (\Throwable $failure) {
+            $failureTypes[] = $failure::class;
+        }
+
+        $quarantined[$name] = true;
+    }
+
+    private function resetConnectionLifecycle(TenantConnectionState $previousState): void
+    {
+        if ($this->connectionLifecycle instanceof ResetInterface) {
+            $this->connectionLifecycle->reset();
+
+            return;
+        }
+
+        $transition = $this->connectionLifecycle->prepare($previousState, TenantConnectionState::none());
+        try {
+            $transition->activate();
+        } finally {
+            $transition->cleanup();
         }
     }
 }

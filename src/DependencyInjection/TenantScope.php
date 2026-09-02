@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Zhortein\MultiTenantBundle\DependencyInjection;
 
+use Symfony\Contracts\Service\ResetInterface;
 use Zhortein\MultiTenantBundle\Context\TenantContextInterface;
 use Zhortein\MultiTenantBundle\Entity\TenantInterface;
 
@@ -13,7 +14,7 @@ use Zhortein\MultiTenantBundle\Entity\TenantInterface;
  * This scope allows services to be scoped to a specific tenant,
  * ensuring that tenant-specific services are properly isolated.
  */
-final class TenantScope
+final class TenantScope implements ResetInterface
 {
     public const string SCOPE_NAME = 'tenant';
 
@@ -80,6 +81,11 @@ final class TenantScope
     {
         $this->services = [];
         $this->currentTenant = null;
+    }
+
+    public function reset(): void
+    {
+        $this->clearAll();
     }
 
     /**

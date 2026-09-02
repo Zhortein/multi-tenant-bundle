@@ -10,16 +10,20 @@ use Symfony\Component\Messenger\Envelope;
 use Symfony\Component\Messenger\Middleware\MiddlewareInterface;
 use Symfony\Component\Messenger\Middleware\StackInterface;
 use Symfony\Component\Messenger\Stamp\ReceivedStamp;
+use Zhortein\MultiTenantBundle\Context\TenantContext;
 use Zhortein\MultiTenantBundle\Context\TenantContextInterface;
 use Zhortein\MultiTenantBundle\Entity\TenantInterface;
 use Zhortein\MultiTenantBundle\Exception\MissingTenantStampException;
+use Zhortein\MultiTenantBundle\Exception\TenantContextTransitionException;
 use Zhortein\MultiTenantBundle\Exception\TenantMismatchException;
 use Zhortein\MultiTenantBundle\Exception\UnclassifiedMessageException;
 use Zhortein\MultiTenantBundle\Exception\UnknownTenantException;
+use Zhortein\MultiTenantBundle\Lifecycle\TenantStateResetterInterface;
 use Zhortein\MultiTenantBundle\Messenger\GlobalMessageInterface;
 use Zhortein\MultiTenantBundle\Messenger\TenantAwareMessageInterface;
 use Zhortein\MultiTenantBundle\Messenger\TenantStamp;
 use Zhortein\MultiTenantBundle\Messenger\TenantWorkerMiddleware;
+use Zhortein\MultiTenantBundle\Registry\InMemoryTenantRegistry;
 use Zhortein\MultiTenantBundle\Registry\TenantRegistryInterface;
 
 final class TenantWorkerMiddlewareTest extends TestCase
@@ -43,7 +47,7 @@ final class TenantWorkerMiddlewareTest extends TestCase
     public function testOutgoingDispatchIsIgnoredByWorkerMiddleware(): void
     {
         $envelope = new Envelope(new \stdClass());
-        $this->context->expects(self::never())->method('clear');
+        $this->context->expects(self::never())->method('reset');
         $this->next->expects(self::once())->method('handle')->willReturn($envelope);
         self::assertSame($envelope, $this->middleware->handle($envelope, $this->stack));
     }
@@ -54,7 +58,7 @@ final class TenantWorkerMiddlewareTest extends TestCase
         $envelope = $this->received(new WorkerTenantMessage(), new TenantStamp('a'));
         $this->registry->method('findById')->with('a')->willReturn($tenant);
         $this->context->expects(self::once())->method('setTenant')->with($tenant);
-        $this->context->expects(self::exactly(2))->method('clear');
+        $this->context->expects(self::exactly(2))->method('reset');
         $this->next->expects(self::once())->method('handle')->with($envelope, $this->stack)->willReturn($envelope);
         self::assertSame($envelope, $this->middleware->handle($envelope, $this->stack));
     }
@@ -62,7 +66,7 @@ final class TenantWorkerMiddlewareTest extends TestCase
     public function testContextIsClearedAfterHandlerException(): void
     {
         $this->registry->method('findById')->willReturn($this->tenant('a'));
-        $this->context->expects(self::exactly(2))->method('clear');
+        $this->context->expects(self::exactly(2))->method('reset');
         $this->next->method('handle')->willThrowException(new \RuntimeException('handler failed'));
         $this->expectExceptionMessage('handler failed');
         $this->middleware->handle($this->received(new WorkerTenantMessage(), new TenantStamp('a')), $this->stack);
@@ -71,7 +75,7 @@ final class TenantWorkerMiddlewareTest extends TestCase
     #[DataProvider('rejectedEnvelopeProvider')]
     public function testInvalidReceivedMessageIsRejectedBeforeHandler(Envelope $envelope, string $exception): void
     {
-        $this->context->expects(self::exactly(2))->method('clear');
+        $this->context->expects(self::exactly(2))->method('reset');
         $this->next->expects(self::never())->method('handle');
         $this->expectException($exception);
         $this->middleware->handle($envelope, $this->stack);
@@ -88,7 +92,7 @@ final class TenantWorkerMiddlewareTest extends TestCase
     public function testUnknownTenantIsRejectedBeforeHandler(): void
     {
         $this->registry->method('findById')->with('missing')->willReturn(null);
-        $this->context->expects(self::exactly(2))->method('clear');
+        $this->context->expects(self::exactly(2))->method('reset');
         $this->next->expects(self::never())->method('handle');
         $this->expectException(UnknownTenantException::class);
         $this->middleware->handle($this->received(new WorkerTenantMessage(), new TenantStamp('missing')), $this->stack);
@@ -98,12 +102,12 @@ final class TenantWorkerMiddlewareTest extends TestCase
     {
         $envelope = $this->received(new WorkerGlobalMessage());
         $this->registry->expects(self::never())->method('findById');
-        $this->context->expects(self::exactly(2))->method('clear');
+        $this->context->expects(self::exactly(2))->method('reset');
         $this->next->expects(self::once())->method('handle')->willReturn($envelope);
         self::assertSame($envelope, $this->middleware->handle($envelope, $this->stack));
     }
 
-    public function testPreExistingContextIsRestoredAfterReceivedMessage(): void
+    public function testPreExistingProcessContextIsNeverRestoredAfterReceivedMessage(): void
     {
         $previous = $this->tenant('previous');
         $messageTenant = $this->tenant('message');
@@ -112,12 +116,51 @@ final class TenantWorkerMiddlewareTest extends TestCase
         $this->registry->expects(self::once())->method('findById')->with('message')->willReturn($messageTenant);
         $this->stack->expects(self::once())->method('next')->willReturn($this->next);
         $this->next->expects(self::once())->method('handle')->willReturn($envelope);
-        $this->context->expects(self::exactly(2))->method('setTenant')->willReturnCallback(
-            static function (TenantInterface $tenant) use ($messageTenant, $previous): void {
-                self::assertTrue(in_array($tenant, [$messageTenant, $previous], true));
-            },
-        );
+        $this->context->expects(self::once())->method('setTenant')->with($messageTenant);
         self::assertSame($envelope, $this->middleware->handle($envelope, $this->stack));
+    }
+
+    public function testHandlerFailureRemainsPrimaryWhenCleanupAlsoFails(): void
+    {
+        $context = new TenantContext();
+        $tenant = $this->tenant('a');
+        $handlerFailure = new \RuntimeException('handler detail');
+        $cleanupFailure = new \LogicException('cleanup detail');
+        $resetter = new class($context, $cleanupFailure) implements TenantStateResetterInterface {
+            private int $calls = 0;
+
+            public function __construct(private readonly TenantContext $context, private readonly \Throwable $cleanupFailure)
+            {
+            }
+
+            public function reset(): void
+            {
+                $this->context->reset();
+                if (2 === ++$this->calls) {
+                    throw $this->cleanupFailure;
+                }
+            }
+        };
+        $next = $this->createStub(MiddlewareInterface::class);
+        $next->method('handle')->willThrowException($handlerFailure);
+        $stack = $this->createStub(StackInterface::class);
+        $stack->method('next')->willReturn($next);
+        $middleware = new TenantWorkerMiddleware(
+            $context,
+            new InMemoryTenantRegistry([$tenant]),
+            stateResetter: $resetter,
+        );
+
+        try {
+            $middleware->handle($this->received(new WorkerTenantMessage(), new TenantStamp('a')), $stack);
+            self::fail('The combined handler and cleanup failure must remain observable.');
+        } catch (TenantContextTransitionException $exception) {
+            self::assertSame($handlerFailure, $exception->getPrevious());
+            self::assertSame($cleanupFailure, $exception->getCleanupFailure());
+            self::assertStringNotContainsString('cleanup detail', $exception->getMessage());
+        }
+
+        self::assertNull($context->getTenant());
     }
 
     private function received(object $message, TenantStamp ...$stamps): Envelope

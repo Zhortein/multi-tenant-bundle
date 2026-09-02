@@ -6,15 +6,22 @@ namespace Zhortein\MultiTenantBundle\Doctrine;
 
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\Persistence\ManagerRegistry;
+use Symfony\Contracts\Service\ResetInterface;
 use Zhortein\MultiTenantBundle\Context\TenantContextInterface;
 use Zhortein\MultiTenantBundle\Exception\GlobalDoctrineScopeException;
+use Zhortein\MultiTenantBundle\Exception\TenantStateResetException;
 
-final class GlobalDoctrineScope implements GlobalDoctrineScopeInterface
+final class GlobalDoctrineScope implements GlobalDoctrineScopeInterface, ResetInterface
 {
     private bool $running = false;
 
+    private bool $invalidated = false;
+
+    /** @var array<string, array{string, \Doctrine\ORM\Query\FilterCollection}> */
+    private array $activeFilters = [];
+
     public function __construct(
-        private readonly ManagerRegistry $managerRegistry,
+        private readonly ?ManagerRegistry $managerRegistry,
         private readonly ?TenantContextInterface $tenantContext = null,
         private readonly ?TenantContextSynchronizerInterface $synchronizer = null,
         private readonly string $filterName = 'tenant_filter',
@@ -28,7 +35,8 @@ final class GlobalDoctrineScope implements GlobalDoctrineScopeInterface
         }
 
         $this->running = true;
-        $suspended = [];
+        $this->invalidated = false;
+        $this->activeFilters = [];
         $tenant = $this->tenantContext?->getTenant();
         $previousState = null === $tenant ? TenantConnectionState::none() : TenantConnectionState::tenant($tenant);
 
@@ -37,7 +45,7 @@ final class GlobalDoctrineScope implements GlobalDoctrineScopeInterface
 
         try {
             $this->synchronizer?->transition($previousState, TenantConnectionState::global());
-            foreach ($this->managerRegistry->getManagers() as $name => $manager) {
+            foreach ($this->managers() as $name => $manager) {
                 if (!$manager instanceof EntityManagerInterface) {
                     continue;
                 }
@@ -46,7 +54,7 @@ final class GlobalDoctrineScope implements GlobalDoctrineScopeInterface
                 if ($filters->isEnabled($this->filterName)) {
                     try {
                         $filters->suspend($this->filterName);
-                        $suspended[(string) spl_object_id($filters)] = [$name, $filters];
+                        $this->activeFilters['filter_'.spl_object_id($filters)] = [(string) $name, $filters];
                     } catch (\Throwable $exception) {
                         throw new GlobalDoctrineScopeException(sprintf('Unable to suspend tenant protection for entity manager "%s".', $name), 0, $exception);
                     }
@@ -60,14 +68,14 @@ final class GlobalDoctrineScope implements GlobalDoctrineScopeInterface
 
         $restorationFailure = null;
         $restorationManager = null;
-        $restorable = $suspended;
-        foreach ($this->managerRegistry->getManagers() as $name => $manager) {
+        $restorable = $this->activeFilters;
+        foreach ($this->managers() as $name => $manager) {
             if (!$manager instanceof EntityManagerInterface) {
                 continue;
             }
             $filters = $manager->getFilters();
             if ($filters->isSuspended($this->filterName)) {
-                $restorable[(string) spl_object_id($filters)] = [$name, $filters];
+                $restorable['filter_'.spl_object_id($filters)] = [(string) $name, $filters];
             }
         }
         foreach (array_reverse($restorable) as [$name, $filters]) {
@@ -81,7 +89,10 @@ final class GlobalDoctrineScope implements GlobalDoctrineScopeInterface
             }
         }
 
-        if (null === $restorationFailure) {
+        $invalidated = $this->isInvalidated()
+            || (null !== $this->synchronizer && TenantConnectionMode::GLOBAL !== $this->synchronizer->currentState()->mode);
+
+        if (null === $restorationFailure && !$invalidated) {
             try {
                 $this->synchronizer?->transition(TenantConnectionState::global(), $previousState);
             } catch (\Throwable $exception) {
@@ -91,6 +102,17 @@ final class GlobalDoctrineScope implements GlobalDoctrineScopeInterface
         }
 
         $this->running = false;
+        $this->activeFilters = [];
+
+        if ($invalidated) {
+            try {
+                $this->synchronizer?->reset();
+            } catch (\Throwable $exception) {
+                $restorationFailure ??= $exception;
+            }
+
+            throw new GlobalDoctrineScopeException('The global Doctrine scope was invalidated by a tenant lifecycle reset.', 0, $operationFailure ?? $restorationFailure, $operationFailure ? $restorationFailure : null);
+        }
 
         if (null !== $restorationFailure) {
             throw new GlobalDoctrineScopeException(sprintf('Unable to restore tenant protection for entity manager "%s".', $restorationManager), 0, $operationFailure ?? $restorationFailure, $operationFailure ? $restorationFailure : null);
@@ -105,6 +127,48 @@ final class GlobalDoctrineScope implements GlobalDoctrineScopeInterface
     /** @internal Used by ORM guards to recognize the explicit synchronous scope. */
     public function isActive(): bool
     {
-        return $this->running;
+        return $this->running && !$this->invalidated;
+    }
+
+    public function reset(): void
+    {
+        $failureTypes = [];
+        if ($this->running) {
+            $this->invalidated = true;
+            foreach (array_reverse($this->activeFilters) as [, $filters]) {
+                try {
+                    if ($filters->isSuspended($this->filterName)) {
+                        $filters->restore($this->filterName);
+                    }
+                } catch (\Throwable $failure) {
+                    $failureTypes[] = $failure::class;
+                }
+            }
+            $this->activeFilters = [];
+        }
+
+        try {
+            $this->synchronizer?->reset();
+        } catch (\Throwable $failure) {
+            $failureTypes[] = $failure::class;
+        }
+
+        if ([] !== $failureTypes) {
+            /** @var list<class-string<\Throwable>> $failureTypes */
+            $failureTypes = array_values(array_unique($failureTypes));
+
+            throw new TenantStateResetException($failureTypes);
+        }
+    }
+
+    private function isInvalidated(): bool
+    {
+        return $this->invalidated;
+    }
+
+    /** @return array<string, object> */
+    private function managers(): array
+    {
+        return null === $this->managerRegistry ? [] : $this->managerRegistry->getManagers();
     }
 }
