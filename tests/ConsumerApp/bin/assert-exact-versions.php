@@ -10,6 +10,7 @@ $expectedPhpVersionId = 80509;
 $expectedPackages = [
     'symfony/cache' => '8.1.5',
     'symfony/framework-bundle' => '8.1.5',
+    'symfony/security-bundle' => '8.1.6',
     'doctrine/orm' => '3.6.8',
     'doctrine/dbal' => '4.4.4',
     'doctrine/doctrine-bundle' => '3.3.1',

@@ -175,6 +175,7 @@ jobs:
           "phpunit/phpunit:^12.2"
           "symfony/browser-kit:${{ matrix.symfony }}"
           "symfony/dom-crawler:${{ matrix.symfony }}"
+          "symfony/security-bundle:${{ matrix.symfony }}"
 
       - name: Install the bundle as an external dependency
         run: composer update --prefer-dist --no-progress --no-interaction
@@ -282,11 +283,15 @@ jobs:
         run: vendor/bin/phpunit --no-coverage
 
   services-locaux-consumer:
-    name: Consumer / Services Locaux exact graph
+    name: Consumer / Services Locaux exact graph / PostgreSQL ${{ matrix.postgresql }}
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        postgresql: ['16', '18']
     services:
       postgres:
-        image: postgres:18
+        image: postgres:${{ matrix.postgresql }}
         env:
           POSTGRES_DB: consumer
           POSTGRES_USER: consumer
@@ -302,7 +307,7 @@ jobs:
       run:
         working-directory: /tmp/consumer
     env:
-      DATABASE_URL: postgresql://consumer:consumer@127.0.0.1:5432/consumer?serverVersion=18.6
+      DATABASE_URL: postgresql://consumer:consumer@127.0.0.1:5432/consumer?serverVersion=${{ matrix.postgresql }}
       DATABASE_STRATEGY: shared_db
       EXACT_CONSUMER: 1
     steps:
@@ -343,6 +348,11 @@ jobs:
           "doctrine/doctrine-bundle:3.3.1"
           "doctrine/doctrine-migrations-bundle:4.0.1"
 
+      - name: Select the exact optional SecurityBundle version
+        run: >-
+          docker run --rm --volume /tmp/consumer:/consumer services-locaux-consumer
+          composer require --dev --no-update "symfony/security-bundle:8.1.6"
+
       - name: Install the checkout as an external dependency
         run: >-
           docker run --rm --volume /tmp/consumer:/consumer
@@ -370,7 +380,6 @@ jobs:
           docker run --rm --network host --volume /tmp/consumer:/consumer
           --env DATABASE_URL --env DATABASE_STRATEGY --env EXACT_CONSUMER services-locaux-consumer
           php vendor/bin/phpunit --no-coverage
-          --filter '/(ServicesLocauxCompatibilityTest|TenantAwareCacheCompatibilityTest)/'
 
   compatibility:
     name: ${{ matrix.name }}
