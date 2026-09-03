@@ -296,7 +296,7 @@ final class MigrateTenantsCommandTest extends TestCase
         $application->addCommand($command);
         $tester = new ApplicationTester($application);
         $status = $tester->run(
-            ['command' => 'tenant:migrate', ...$arguments],
+            ['command' => 'tenant:migrate', '--verbose' => true, ...$arguments],
             ['interactive' => false, 'decorated' => false],
         );
 
