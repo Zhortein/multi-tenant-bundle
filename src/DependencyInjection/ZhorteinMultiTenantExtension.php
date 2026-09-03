@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Zhortein\MultiTenantBundle\DependencyInjection;
 
+use Doctrine\DBAL\Connection;
 use Symfony\Component\Cache\Adapter\AdapterInterface;
 use Symfony\Component\Config\FileLocator;
 use Symfony\Component\DependencyInjection\Argument\TaggedIteratorArgument;
@@ -579,6 +580,7 @@ final class ZhorteinMultiTenantExtension extends Extension implements PrependExt
             ->setAutowired(true)
             ->setAutoconfigured(true)
             ->setArgument('$migrationConfiguration', new Reference('doctrine.migrations.configuration'))
+            ->setArgument('$defaultConnection', new Reference(Connection::class))
             ->addTag('console.command');
 
         // Tenant schema creation command
