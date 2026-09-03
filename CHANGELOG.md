@@ -7,6 +7,12 @@ and releases will follow [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [1.0.0-rc.6] - 2026-09-03
+
+### Fixed
+
+- Wired `MigrateTenantsCommand` explicitly to Doctrine's default `Connection` alias, removing the Symfony 8.1 named-autowiring deprecation. This preserves DoctrineBundle 2.19 and 3.3 wiring and custom-named default connections without changing the command API, selected connection, or migration behavior. No consumer action is required.
+
 ## [1.0.0-rc.5] - 2026-09-02
 
 ### Security
