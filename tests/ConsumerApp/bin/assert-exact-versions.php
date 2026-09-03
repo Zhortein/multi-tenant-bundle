@@ -15,6 +15,7 @@ $expectedPackages = [
     'doctrine/dbal' => '4.4.4',
     'doctrine/doctrine-bundle' => '3.3.1',
     'doctrine/doctrine-migrations-bundle' => '4.0.1',
+    'doctrine/migrations' => '3.9.7',
 ];
 
 $errors = [];

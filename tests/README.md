@@ -19,6 +19,10 @@ external `tests/ConsumerApp` fixture.
 - `Integration/RlsIsolationTest.php` and
   `Functional/Database/RlsIntegrationTest.php` execute effective PostgreSQL RLS
   checks as a non-superuser application role.
+- `Integration/Command/MigrateTenantsCommandTest.php` executes the real Symfony
+  Console command against PostgreSQL and verifies dry-run immutability, ordered
+  schema/metadata changes, idempotence, A/B/A database isolation, failures, and
+  cleanup.
 - `Toolkit/` and `Fixtures/` are internal contributor utilities only.
 
 ## Commands
@@ -31,13 +35,18 @@ make phpstan
 make csfixer-check
 make test
 make test-with-postgres
+make test-tenant-migrate
 ```
 
 `make test-with-postgres-16` and `make test-with-postgres-18` start the two
 mandatory PostgreSQL versions, create the restricted
-application role, executes the real RLS group, and stops the environment. A
-green suite with skipped RLS tests is not effective RLS validation.
+application role, execute the real RLS and `tenant-migrate` groups, and stop the
+environment. A green suite with skipped database tests is not effective
+validation.
 
 The Compatibility workflow additionally covers the supported PHP, Symfony,
 Doctrine ORM, DBAL, shared-database, multi-database, and external-consumer
-matrix. Internal fixtures must never be copied into public Test Kit code.
+matrix. It pins DoctrineMigrationsBundle 3.4, 3.7, and 4.0.1 with resolvable
+migration-core 3.7.4 and 3.9.7 graphs, runs one shared Consumer App command recipe, and
+installs a Git-archive candidate in a fresh Composer consumer. Internal fixtures
+must never be copied into public Test Kit code.

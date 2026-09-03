@@ -7,7 +7,22 @@ and releases will follow [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+### Fixed
+
+- Execute `tenant:migrate` with Doctrine's calculated `MigrationPlanList` and an explicit `MigratorConfiguration`, restoring normal and dry-run operation across DoctrineMigrationsBundle 3.4, 3.7, and 4.0.1 with their supported Doctrine Migrations core 3.x graphs.
+- Build an isolated migration factory and connection for every `multi_db` tenant, preserve the consumer's metadata and transaction configuration, process tenants in stable order, and close and clear tenant state after success or failure.
+- Keep dry-run read-only when migration metadata does not exist, while rendering the SQL for the same latest-version plan used by normal execution.
+
+### Added
+
+- Add real PostgreSQL 16/18 behavior tests for ordered migrations, schema and metadata effects, dry-run immutability, idempotence, A/B/A database isolation, unknown tenants, connection failures, migration failures, and cleanup.
+- Make the DoctrineMigrationsBundle 3.4, 3.7, and 4.0.1 consumer jobs execute `tenant:migrate`, and validate a distribution-equivalent candidate archive on both the Bundle 3.4/core 3.7 and Bundle 4.0.1/core 3.9 graphs.
+
 ## [1.0.0-rc.6] - 2026-09-03
+
+### Known issues
+
+- `tenant:migrate` uses an obsolete migrator argument list and is incompatible with the DoctrineMigrationsBundle 4.0.1 graph. A fix is planned for a subsequent release candidate; a blanket dependency downgrade is not recommended as a general fix.
 
 ### Fixed
 

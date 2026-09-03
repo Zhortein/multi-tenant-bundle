@@ -185,6 +185,13 @@ php bin/console tenant:migrations:status
 - **shared_db**: Runs migrations once on the shared database
 - **multi_db**: Runs migrations on each tenant's separate database
 
+The command always calculates Doctrine's `latest` plan. In `multi_db`, tenants
+are processed in stable slug/ID order and processing stops at the first
+failure. `--dry-run` prints the planned SQL without creating schema or metadata;
+normal execution records metadata on the selected connection. The command does
+not expose rollback or arbitrary-target options. See [Tenant migrations](migrations.md)
+for the exact compatibility, transaction, cleanup, and release-status contract.
+
 ### Fixtures
 ```bash
 # Load fixtures for all tenants
