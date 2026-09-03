@@ -19,6 +19,7 @@ use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\HttpKernel\Kernel as BaseKernel;
 use Symfony\Component\Routing\Loader\Configurator\RoutingConfigurator;
 use Zhortein\MultiTenantBundle\Doctrine\TenantConnectionParametersProviderInterface;
+use Zhortein\MultiTenantBundle\Doctrine\TenantDoctrineFilter;
 use Zhortein\MultiTenantBundle\Resolver\TenantResolverInterface;
 use Zhortein\MultiTenantBundle\ZhorteinMultiTenantBundle;
 
@@ -48,6 +49,43 @@ final class Kernel extends BaseKernel
         $cacheDecoratorEnabled = '0' !== ($_SERVER['CACHE_DECORATOR_ENABLED'] ?? '1');
         $automaticResolution = '1' === ($_SERVER['AUTO_RESOLUTION'] ?? '0');
         $securityEnabled = '1' === ($_SERVER['SECURITY_ENABLED'] ?? '0');
+        $multipleDoctrineConnections = '1' === ($_SERVER['MULTIPLE_DOCTRINE_CONNECTIONS'] ?? '0');
+        $customDefaultConnectionName = '1' === ($_SERVER['CUSTOM_DEFAULT_CONNECTION_NAME'] ?? '0');
+        $defaultConnectionName = $customDefaultConnectionName ? 'primary' : 'default';
+        $databaseUrl = $_SERVER['DATABASE_URL'] ?? 'sqlite:///%kernel.cache_dir%/consumer.db';
+        $appMapping = [
+            'type' => 'attribute',
+            'dir' => '%kernel.project_dir%/src/Entity',
+            'prefix' => "App\Entity",
+        ];
+        $tenantFilterConfiguration = [
+            'tenant_filter' => [
+                'class' => TenantDoctrineFilter::class,
+                'enabled' => true,
+            ],
+        ];
+        $dbalConfiguration = $multipleDoctrineConnections ? [
+            'default_connection' => $defaultConnectionName,
+            'connections' => [
+                $defaultConnectionName => ['url' => $databaseUrl],
+                'reporting' => ['url' => $databaseUrl],
+            ],
+        ] : ['url' => $databaseUrl];
+        $ormConfiguration = $multipleDoctrineConnections ? [
+            'default_entity_manager' => $defaultConnectionName,
+            'entity_managers' => [
+                $defaultConnectionName => [
+                    'connection' => $defaultConnectionName,
+                    'mappings' => ['App' => $appMapping],
+                    'filters' => $tenantFilterConfiguration,
+                ],
+                'reporting' => [
+                    'connection' => 'reporting',
+                    'mappings' => [],
+                    'filters' => $tenantFilterConfiguration,
+                ],
+            ],
+        ] : ['mappings' => ['App' => $appMapping]];
 
         $container->loadFromExtension('framework', [
             'secret' => 'consumer-fixture-secret',
@@ -66,16 +104,8 @@ final class Kernel extends BaseKernel
             ],
         ]);
         $container->loadFromExtension('doctrine', [
-            'dbal' => ['url' => $_SERVER['DATABASE_URL'] ?? 'sqlite:///%kernel.cache_dir%/consumer.db'],
-            'orm' => [
-                'mappings' => [
-                    'App' => [
-                        'type' => 'attribute',
-                        'dir' => '%kernel.project_dir%/src/Entity',
-                        'prefix' => "App\Entity",
-                    ],
-                ],
-            ],
+            'dbal' => $dbalConfiguration,
+            'orm' => $ormConfiguration,
         ]);
         $container->loadFromExtension('doctrine_migrations', [
             'migrations_paths' => ['DoctrineMigrations' => '%kernel.project_dir%/migrations'],

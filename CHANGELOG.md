@@ -20,6 +20,7 @@ and releases will follow [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ### Fixed
 
+- Made `MigrateTenantsCommand` target Doctrine's `default` connection alias explicitly, removing the Symfony 8.1 named-autowiring deprecation. Alias feature detection preserves DoctrineBundle 2.19 wiring and custom-named default connections without changing the command API, selected connection, or migration behavior. No consumer action is required.
 - Clear stale tenant context, Doctrine filters and identity maps, RLS session variables, multi-database routes and connections, tenant scopes, and active global-scope authorization across persistent workers.
 - Make null and exceptional HTTP resolution leave `NONE`, preserve main-request state across sub-requests, and defer streamed-response cleanup until `kernel.terminate`.
 - Add a valid idempotent `reset()` to `TenantAwareCacheAdapterDecorator`, preventing the RC4 `Call to undefined method ...::reset()` failure from Symfony's real services resetter.
