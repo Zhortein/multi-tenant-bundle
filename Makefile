@@ -1,6 +1,6 @@
 # —— 🛠️ Configuration ————————————————————————————————————————————————————————————————
 .DEFAULT_GOAL := help
-.PHONY: help csfixer phpstan installdeps updatedeps composer test test-unit test-integration clean bundle-validate docs-validate
+.PHONY: help csfixer phpstan installdeps updatedeps composer test test-unit test-integration clean bundle-validate docs-validate test-tenant-migrate
 
 PHP_IMAGE := php:8.5.9-cli
 DOCKER_VOLUME := -v "$(PWD)":/app -w /app
@@ -65,6 +65,9 @@ test-cli: ## Run CLI tenant context tests
 test-decorators: ## Run decorator tests
 	$(DOCKER_RUN) vendor/bin/phpunit tests/Integration/DecoratorsTest.php --no-coverage
 
+test-tenant-migrate: ## Run real tenant:migrate tests (requires PostgreSQL)
+	docker compose -f tests/docker-compose.yml run --rm php-rls vendor/bin/phpunit --group tenant-migrate --no-coverage
+
 ## —— 🧪 QA tools ———————————————————————————————————————————————————————————————————————————
 csfixer: ## Run PHP-CS-Fixer on src/ and tests/
 	$(DOCKER_RUN) vendor/bin/php-cs-fixer fix --verbose
@@ -98,12 +101,13 @@ postgres-shell: ## Connect to PostgreSQL shell
 
 POSTGRES_IMAGE ?= postgres:18-alpine
 
-test-with-postgres: ## Run RLS tests with PostgreSQL
+test-with-postgres: ## Run RLS and tenant:migrate tests with PostgreSQL
 	@set -e; \
 	trap 'POSTGRES_IMAGE=$(POSTGRES_IMAGE) docker compose -f tests/docker-compose.yml down -v' EXIT; \
 	POSTGRES_IMAGE=$(POSTGRES_IMAGE) docker compose -f tests/docker-compose.yml up -d --wait postgres; \
 	POSTGRES_IMAGE=$(POSTGRES_IMAGE) docker compose -f tests/docker-compose.yml exec -T postgres postgres --version; \
-	POSTGRES_IMAGE=$(POSTGRES_IMAGE) docker compose -f tests/docker-compose.yml run --rm php-rls vendor/bin/phpunit --group rls --no-coverage
+	POSTGRES_IMAGE=$(POSTGRES_IMAGE) docker compose -f tests/docker-compose.yml run --rm php-rls vendor/bin/phpunit --group rls --no-coverage; \
+	POSTGRES_IMAGE=$(POSTGRES_IMAGE) docker compose -f tests/docker-compose.yml run --rm php-rls vendor/bin/phpunit --group tenant-migrate --no-coverage
 
 test-with-postgres-16: ## Run mandatory RLS and multi-database tests with PostgreSQL 16
 	$(MAKE) test-with-postgres POSTGRES_IMAGE=postgres:16-alpine

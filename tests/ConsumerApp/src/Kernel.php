@@ -107,9 +107,14 @@ final class Kernel extends BaseKernel
             'dbal' => $dbalConfiguration,
             'orm' => $ormConfiguration,
         ]);
-        $container->loadFromExtension('doctrine_migrations', [
-            'migrations_paths' => ['DoctrineMigrations' => '%kernel.project_dir%/migrations'],
-        ]);
+        if ('1' === ($_SERVER['MIGRATIONS_EMPTY'] ?? '0')) {
+            $migrationPaths = ['DoctrineMigrationsEmpty' => '%kernel.project_dir%/migrations-empty'];
+        } elseif ('1' === ($_SERVER['MIGRATION_FAILURE'] ?? '0')) {
+            $migrationPaths = ['DoctrineMigrationsFailure' => '%kernel.project_dir%/migrations-failure'];
+        } else {
+            $migrationPaths = ['DoctrineMigrations' => '%kernel.project_dir%/migrations'];
+        }
+        $container->loadFromExtension('doctrine_migrations', ['migrations_paths' => $migrationPaths]);
         if ($securityEnabled) {
             $container->loadFromExtension('security', [
                 'password_hashers' => [
