@@ -4,6 +4,9 @@
 SELECT format('CREATE DATABASE %I', database_name)
 FROM (VALUES
     ('multi_tenant_kernel_test'),
+    ('tenant_migrate_shared_test'),
+    ('tenant_migrate_tenant_a_test'),
+    ('tenant_migrate_tenant_b_test'),
     ('messenger_tenant_a_test'),
     ('messenger_tenant_b_test'),
     ('messenger_global_test')

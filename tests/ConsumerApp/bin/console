@@ -8,5 +8,7 @@ use Symfony\Bundle\FrameworkBundle\Console\Application;
 
 require dirname(__DIR__).'/vendor/autoload.php';
 
-$application = new Application(new Kernel('test', false));
+$environment = $_SERVER['APP_ENV'] ?? $_ENV['APP_ENV'] ?? 'test';
+$debug = filter_var($_SERVER['APP_DEBUG'] ?? $_ENV['APP_DEBUG'] ?? false, FILTER_VALIDATE_BOOL);
+$application = new Application(new Kernel($environment, $debug));
 $application->run();

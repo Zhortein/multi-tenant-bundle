@@ -26,4 +26,21 @@ The Symfony 8.1 job resolves the same direct components at `~8.1.0` and executes
 
 The fixture also compiles a fresh production container while recording named-autowiring deprecations. It verifies that `MigrateTenantsCommand` receives Doctrine's default connection both in the single-connection configuration and with explicit `default` and `reporting` connections and EntityManagers, then repeats the check with a custom-named `primary` default connection. The command argument references Doctrine's stable `Connection` type alias explicitly; DoctrineBundle 2.19 and 3.3 both map that alias to the configured default connection. This covers the only bundle constructor parameter that matches a framework-generated named alias. The other audited integration arguments are either unqualified type autowiring (Doctrine connections and EntityManagers, loggers and mailers) or explicit service references (configured cache pools, decorated cache services, migration configuration, Messenger factories and transports), so they do not require `#[Target]`.
 
-The stable `Consumer / Services Locaux exact graph` CI check pins the confirmed consumer graph exactly: PHP 8.5.9, FrameworkBundle 8.1.5, Doctrine ORM 3.6.8, DBAL 4.4.4, DoctrineBundle 3.3.1, DoctrineMigrationsBundle 4.0.1, and PostgreSQL 18. It compiles the container, validates Doctrine metadata, exercises a migration up/down/up cycle, and proves the essential fail-closed Doctrine and Messenger boundaries. Separate consumer jobs test the supported DoctrineMigrationsBundle 3 lower and upper bounds. The check name is a CI contract and must remain stable if selected by a repository ruleset.
+The stable `Consumer / Services Locaux exact graph` CI check pins the confirmed consumer graph exactly: PHP 8.5.9, FrameworkBundle 8.1.5, Doctrine ORM 3.6.8, DBAL 4.4.4, DoctrineBundle 3.3.1, DoctrineMigrationsBundle 4.0.1, Doctrine Migrations core 3.9.7, and PostgreSQL 16 and 18. It compiles the container, validates Doctrine metadata, executes the real `tenant:migrate --dry-run`/normal/idempotent recipe, seeds two tenants and selects each through the command, exercises an ordinary Doctrine migration down/up cycle, and proves the essential fail-closed Doctrine and Messenger boundaries. Separate required jobs run the same command recipe on DoctrineMigrationsBundle/core 3.4.0/3.7.4 and 3.7.0/3.9.7 with PostgreSQL 16 and 18. The check-name prefix is a CI contract and must remain stable if selected by a repository ruleset.
+
+`bin/test-tenant-migrate.sh` is the shared distribution recipe. Its dry run must
+render the probe SQL while leaving both schema and metadata absent; normal
+execution must create both expected tables and metadata rows; the second run
+must be idempotent. It then provisions two isolated PostgreSQL tenant databases,
+repeats dry-run/normal/idempotent execution across both, verifies targeted
+A/B/A selection, executes a controlled failing migration without corrupting
+either database, exercises an empty migration set, and rejects an unknown
+tenant. `bin/assert-migration-graph.php` prevents a matrix row from passing
+under a different Bundle, core, or DBAL patch than its published job name.
+
+The `Candidate archive` jobs use `git archive` for the exact commit, install the
+ZIP as `dev-candidate` through a temporary Composer package definition, compare
+the installed command bytes with the checkout, compile a production kernel, and
+repeat the command recipe on the core 3.7/Bundle 3.4/PostgreSQL 16 and core
+3.9/Bundle 4/PostgreSQL 18 graphs. No published Composer file contains a local
+repository, and the temporary version does not claim that the next RC exists.

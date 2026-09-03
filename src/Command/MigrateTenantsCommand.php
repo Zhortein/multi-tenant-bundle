@@ -10,6 +10,9 @@ use Doctrine\Migrations\Configuration\Configuration;
 use Doctrine\Migrations\Configuration\Connection\ExistingConnection;
 use Doctrine\Migrations\Configuration\Migration\ExistingConfiguration;
 use Doctrine\Migrations\DependencyFactory;
+use Doctrine\Migrations\Metadata\MigrationPlanList;
+use Doctrine\Migrations\MigratorConfiguration;
+use Doctrine\Migrations\Query\Query;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
@@ -19,6 +22,7 @@ use Symfony\Component\Console\Style\SymfonyStyle;
 use Zhortein\MultiTenantBundle\Context\TenantContextInterface;
 use Zhortein\MultiTenantBundle\Doctrine\TenantConnectionParametersProviderInterface;
 use Zhortein\MultiTenantBundle\Doctrine\TenantConnectionState;
+use Zhortein\MultiTenantBundle\Entity\TenantInterface;
 use Zhortein\MultiTenantBundle\Registry\TenantRegistryInterface;
 
 /**
@@ -93,7 +97,7 @@ EOT
             }
 
             return $this->executeMultiDbMigrations($io, $dryRun, $allowNoMigration);
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             $io->error(sprintf('Migration failed: %s', $e->getMessage()));
 
             return Command::FAILURE;
@@ -108,36 +112,48 @@ EOT
         $io->title('Shared Database Migrations');
         $io->note('Running migrations on shared database with tenant filtering.');
 
-        // Create dependency factory for default connection
         $dependencyFactory = $this->createDefaultDependencyFactory();
+        $migrationFailure = null;
 
-        // Execute migrations
-        $migrator = $dependencyFactory->getMigrator();
-        $availableMigrations = $dependencyFactory->getMigrationRepository()->getMigrations();
+        try {
+            $availableMigrations = $dependencyFactory->getMigrationRepository()->getMigrations();
 
-        if (0 === $availableMigrations->count()) {
-            if ($allowNoMigration) {
+            if (0 === $availableMigrations->count()) {
+                if ($allowNoMigration) {
+                    $io->success('No migrations to execute.');
+
+                    return Command::SUCCESS;
+                }
+                $io->warning('No migrations found.');
+
+                return Command::SUCCESS;
+            }
+
+            $plan = $this->createMigrationPlan($dependencyFactory, $dryRun);
+            if (0 === $plan->count()) {
                 $io->success('No migrations to execute.');
 
                 return Command::SUCCESS;
             }
-            $io->warning('No migrations found.');
+
+            $sql = $this->executeMigrationPlan($dependencyFactory, $plan, $dryRun, $allowNoMigration);
+
+            if ($dryRun) {
+                $io->note('Dry run mode - no migrations were executed.');
+                $this->writeSql($io, $sql);
+                $io->success(sprintf('Dry run completed for %d migrations.', $plan->count()));
+            } else {
+                $io->success(sprintf('Successfully executed %d migrations.', $plan->count()));
+            }
 
             return Command::SUCCESS;
-        }
+        } catch (\Throwable $exception) {
+            $migrationFailure = $exception;
 
-        if ($dryRun) {
-            $io->note('Dry run mode - no migrations will be executed.');
-            $sql = $migrator->migrate(null, true);
-            foreach ($sql as $query) {
-                $io->writeln($query);
-            }
-        } else {
-            $result = $migrator->migrate();
-            $io->success(sprintf('Successfully executed %d migrations.', count($result->getMigrations())));
+            throw $exception;
+        } finally {
+            $this->closeDependencyFactory($dependencyFactory, $migrationFailure, $io);
         }
-
-        return Command::SUCCESS;
     }
 
     /**
@@ -146,6 +162,7 @@ EOT
     private function executeMultiDbMigrations(SymfonyStyle $io, bool $dryRun, bool $allowNoMigration): int
     {
         $tenants = $this->getTargetTenants();
+        usort($tenants, static fn (TenantInterface $left, TenantInterface $right): int => [$left->getSlug(), (string) $left->getId()] <=> [$right->getSlug(), (string) $right->getId()]);
 
         if (empty($tenants)) {
             $io->warning('No tenants found to migrate.');
@@ -158,13 +175,13 @@ EOT
         foreach ($tenants as $tenant) {
             $io->section(sprintf('Migrating tenant: %s', $tenant->getSlug()));
             $dependencyFactory = null;
+            $migrationFailure = null;
 
             try {
                 $this->tenantContext->setTenant($tenant);
 
                 $connectionParams = $this->connectionParametersProvider->parametersFor(TenantConnectionState::tenant($tenant));
                 $dependencyFactory = $this->createTenantDependencyFactory($connectionParams);
-                $migrator = $dependencyFactory->getMigrator();
                 $migrations = $dependencyFactory->getMigrationRepository()->getMigrations();
 
                 if (0 === $migrations->count()) {
@@ -178,47 +195,39 @@ EOT
                     return Command::FAILURE;
                 }
 
-                $planCalculator = $dependencyFactory->getMigrationPlanCalculator();
-                /** @phpstan-ignore-next-line */
-                $plan = $planCalculator->getPlanToMigrateUp();
+                $plan = $this->createMigrationPlan($dependencyFactory, $dryRun);
 
-                if ($dryRun) {
-                    $io->note('Executing migration as dry run...');
-
-                    if ($plan->count() > 0) {
-                        $io->text('SQL that would be executed:');
-                        /* @phpstan-ignore-next-line */
-                        foreach ($plan->getItems() as $item) {
-                            /* @phpstan-ignore-next-line */
-                            $io->text(sprintf('-- Migration: %s', $item->getVersion()));
-                            $io->text('-- SQL queries would be shown here in a real implementation');
-                        }
-                    } else {
-                        $io->success('No migrations to execute.');
-                    }
+                if (0 === $plan->count()) {
+                    $io->note(sprintf('No migrations to execute for tenant %s', $tenant->getSlug()));
 
                     continue;
                 }
 
-                /* @phpstan-ignore-next-line */
-                if ($plan->count() > 0) {
-                    /* @phpstan-ignore-next-line */
-                    $migrator->migrate($plan, false);
+                $sql = $this->executeMigrationPlan($dependencyFactory, $plan, $dryRun, $allowNoMigration);
+
+                if ($dryRun) {
+                    $io->note('Dry run mode - no migrations were executed.');
+                    $this->writeSql($io, $sql);
                     $io->success(sprintf(
-                        'Successfully executed %d migrations for tenant %s',
-                        /* @phpstan-ignore-next-line */
+                        'Dry run completed for %d migrations for tenant %s',
                         $plan->count(),
                         $tenant->getSlug()
                     ));
-                } else {
-                    $io->note(sprintf('No migrations to execute for tenant %s', $tenant->getSlug()));
-                }
-            } finally {
-                if (null !== $dependencyFactory) {
-                    $dependencyFactory->getConnection()->close();
+
+                    continue;
                 }
 
-                $this->tenantContext->clear();
+                $io->success(sprintf(
+                    'Successfully executed %d migrations for tenant %s',
+                    $plan->count(),
+                    $tenant->getSlug()
+                ));
+            } catch (\Throwable $exception) {
+                $migrationFailure = $exception;
+
+                throw $exception;
+            } finally {
+                $this->cleanupTenant($dependencyFactory, $migrationFailure, $io);
             }
         }
 
@@ -232,9 +241,14 @@ EOT
      */
     private function createDefaultDependencyFactory(): DependencyFactory
     {
+        $dbalConfiguration = clone $this->defaultConnection->getConfiguration();
+        $dbalConfiguration->setSchemaAssetsFilter(static fn (): bool => true);
+        /** @phpstan-ignore-next-line */
+        $connection = DriverManager::getConnection($this->defaultConnection->getParams(), $dbalConfiguration);
+
         return DependencyFactory::fromConnection(
             new ExistingConfiguration($this->migrationConfiguration),
-            new ExistingConnection($this->defaultConnection),
+            new ExistingConnection($connection),
         );
     }
 
@@ -249,20 +263,137 @@ EOT
         /** @phpstan-ignore-next-line */
         $connection = DriverManager::getConnection($connectionParams);
 
-        // Create configuration for this tenant
-        $configuration = new Configuration();
-        $configuration->addMigrationsDirectory(
-            /* @phpstan-ignore-next-line */
-            $this->migrationConfiguration->getMigrationsNamespace(),
-            /* @phpstan-ignore-next-line */
-            $this->migrationConfiguration->getMigrationsDirectory()
-        );
-        $configuration->setAllOrNothing($this->migrationConfiguration->isAllOrNothing());
-        $configuration->setCheckDatabasePlatform($this->migrationConfiguration->isDatabasePlatformChecked());
+        $configuration = $this->copyMigrationConfigurationForTenant();
 
         return DependencyFactory::fromConnection(
             new ExistingConfiguration($configuration),
             new ExistingConnection($connection)
         );
+    }
+
+    private function copyMigrationConfigurationForTenant(): Configuration
+    {
+        $configuration = new Configuration();
+
+        foreach ($this->migrationConfiguration->getMigrationDirectories() as $namespace => $path) {
+            $configuration->addMigrationsDirectory($namespace, $path);
+        }
+
+        foreach ($this->migrationConfiguration->getMigrationClasses() as $migrationClass) {
+            $configuration->addMigrationClass($migrationClass);
+        }
+
+        $metadataStorageConfiguration = $this->migrationConfiguration->getMetadataStorageConfiguration();
+        if (null !== $metadataStorageConfiguration) {
+            $configuration->setMetadataStorageConfiguration($metadataStorageConfiguration);
+        }
+
+        if ($this->migrationConfiguration->areMigrationsOrganizedByYearAndMonth()) {
+            $configuration->setMigrationsAreOrganizedByYearAndMonth();
+        } elseif ($this->migrationConfiguration->areMigrationsOrganizedByYear()) {
+            $configuration->setMigrationsAreOrganizedByYear();
+        }
+
+        $configuration->setCustomTemplate($this->migrationConfiguration->getCustomTemplate());
+        $configuration->setAllOrNothing($this->migrationConfiguration->isAllOrNothing());
+        $configuration->setTransactional($this->migrationConfiguration->isTransactional());
+        $configuration->setCheckDatabasePlatform($this->migrationConfiguration->isDatabasePlatformChecked());
+
+        return $configuration;
+    }
+
+    private function createMigrationPlan(DependencyFactory $dependencyFactory, bool $dryRun): MigrationPlanList
+    {
+        if (!$dryRun) {
+            $dependencyFactory->getMetadataStorage()->ensureInitialized();
+        }
+
+        $target = $dependencyFactory->getVersionAliasResolver()->resolveVersionAlias('latest');
+
+        return $dependencyFactory->getMigrationPlanCalculator()->getPlanUntilVersion($target);
+    }
+
+    /**
+     * @return array<string, Query[]>
+     */
+    private function executeMigrationPlan(
+        DependencyFactory $dependencyFactory,
+        MigrationPlanList $plan,
+        bool $dryRun,
+        bool $allowNoMigration,
+    ): array {
+        $migratorConfiguration = (new MigratorConfiguration())
+            ->setDryRun($dryRun)
+            ->setAllOrNothing($dependencyFactory->getConfiguration()->isAllOrNothing())
+            ->setNoMigrationException($allowNoMigration);
+
+        return $dependencyFactory->getMigrator()->migrate($plan, $migratorConfiguration);
+    }
+
+    /**
+     * @param array<string, Query[]> $sql
+     */
+    private function writeSql(SymfonyStyle $io, array $sql): void
+    {
+        $io->text('SQL that would be executed:');
+
+        foreach ($sql as $version => $queries) {
+            $io->text(sprintf('-- Migration: %s', $version));
+            foreach ($queries as $query) {
+                $io->writeln($query->getStatement());
+            }
+        }
+    }
+
+    private function cleanupTenant(
+        ?DependencyFactory $dependencyFactory,
+        ?\Throwable $migrationFailure,
+        SymfonyStyle $io,
+    ): void {
+        $cleanupFailure = null;
+
+        if (null !== $dependencyFactory) {
+            try {
+                $this->closeDependencyFactory($dependencyFactory, $migrationFailure, $io);
+            } catch (\Throwable $exception) {
+                $cleanupFailure = $exception;
+            }
+        }
+
+        try {
+            $this->tenantContext->clear();
+        } catch (\Throwable $exception) {
+            $cleanupFailure ??= $exception;
+        }
+
+        if (null === $cleanupFailure) {
+            return;
+        }
+
+        if (null !== $migrationFailure) {
+            $io->warning('Tenant migration cleanup also failed; the original migration failure was preserved.');
+
+            return;
+        }
+
+        throw $cleanupFailure;
+    }
+
+    private function closeDependencyFactory(
+        DependencyFactory $dependencyFactory,
+        ?\Throwable $migrationFailure,
+        SymfonyStyle $io,
+    ): void {
+        try {
+            $dependencyFactory->getConnection()->close();
+        } catch (\Throwable $cleanupFailure) {
+            if (null !== $migrationFailure) {
+                $io->warning('Tenant migration connection cleanup also failed; the original migration failure was preserved.');
+
+                return;
+            }
+
+            throw $cleanupFailure;
+        }
     }
 }

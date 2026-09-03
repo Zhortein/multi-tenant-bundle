@@ -581,6 +581,7 @@ final class ZhorteinMultiTenantExtension extends Extension implements PrependExt
             ->setAutoconfigured(true)
             ->setArgument('$migrationConfiguration', new Reference('doctrine.migrations.configuration'))
             ->setArgument('$defaultConnection', new Reference(Connection::class))
+            ->setArgument('$databaseStrategy', '%zhortein_multi_tenant.database.strategy%')
             ->addTag('console.command');
 
         // Tenant schema creation command

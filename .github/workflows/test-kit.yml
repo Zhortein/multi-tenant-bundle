@@ -211,15 +211,43 @@ jobs:
           DATABASE_STRATEGY: multi_db
 
   doctrine-migrations-3:
-    name: Doctrine Migrations Bundle ${{ matrix.migrations_bundle }} / consumer
+    name: DoctrineMigrationsBundle ${{ matrix.migrations_bundle }} / DBAL ${{ matrix.dbal }} / PostgreSQL ${{ matrix.postgresql }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        migrations_bundle: ['3.4.0', '3.7.0']
+        include:
+          - migrations_bundle: '3.4.0'
+            migrations: '3.7.4'
+            php: '8.3'
+            orm: '3.5.*'
+            dbal: '3.8.7'
+            doctrine_bundle: '2.19.0'
+            postgresql: '16'
+          - migrations_bundle: '3.4.0'
+            migrations: '3.7.4'
+            php: '8.3'
+            orm: '3.5.*'
+            dbal: '3.8.7'
+            doctrine_bundle: '2.19.0'
+            postgresql: '18'
+          - migrations_bundle: '3.7.0'
+            migrations: '3.9.7'
+            php: '8.4'
+            orm: '3.6.8'
+            dbal: '4.4.4'
+            doctrine_bundle: '3.3.1'
+            postgresql: '16'
+          - migrations_bundle: '3.7.0'
+            migrations: '3.9.7'
+            php: '8.4'
+            orm: '3.6.8'
+            dbal: '4.4.4'
+            doctrine_bundle: '3.3.1'
+            postgresql: '18'
     services:
       postgres:
-        image: postgres:18
+        image: postgres:${{ matrix.postgresql }}
         env:
           POSTGRES_DB: consumer
           POSTGRES_USER: consumer
@@ -235,7 +263,9 @@ jobs:
       run:
         working-directory: /tmp/consumer
     env:
-      DATABASE_URL: postgresql://consumer:consumer@127.0.0.1:5432/consumer?serverVersion=18.6
+      DATABASE_URL: postgresql://consumer:consumer@127.0.0.1:5432/consumer?serverVersion=${{ matrix.postgresql }}
+      TENANT_DATABASE_A_URL: postgresql://consumer:consumer@127.0.0.1:5432/consumer_tenant_a?serverVersion=${{ matrix.postgresql }}
+      TENANT_DATABASE_B_URL: postgresql://consumer:consumer@127.0.0.1:5432/consumer_tenant_b?serverVersion=${{ matrix.postgresql }}
       DATABASE_STRATEGY: shared_db
       EXACT_CONSUMER: 1
     steps:
@@ -252,7 +282,7 @@ jobs:
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.3'
+          php-version: ${{ matrix.php }}
           extensions: pdo_pgsql
           coverage: none
 
@@ -260,23 +290,30 @@ jobs:
         run: >-
           composer require --no-update
           "symfony/framework-bundle:7.4.15"
-          "doctrine/orm:3.6.8"
-          "doctrine/dbal:4.4.4"
-          "doctrine/doctrine-bundle:2.19.0"
+          "doctrine/orm:${{ matrix.orm }}"
+          "doctrine/dbal:${{ matrix.dbal }}"
+          "doctrine/doctrine-bundle:${{ matrix.doctrine_bundle }}"
           "doctrine/doctrine-migrations-bundle:${{ matrix.migrations_bundle }}"
+          "doctrine/migrations:${{ matrix.migrations }}"
 
       - name: Install the checkout as an external dependency
         run: composer update --prefer-dist --no-progress --no-interaction --with-all-dependencies
+
+      - name: Assert selected Doctrine migration graph
+        run: php bin/assert-migration-graph.php "${{ matrix.migrations_bundle }}" "${{ matrix.migrations }}" "${{ matrix.dbal }}"
 
       - name: Validate container and Doctrine metadata
         run: |
           php bin/validate.php
           php bin/console doctrine:schema:validate --skip-sync
 
+      - name: Exercise tenant:migrate dry-run, execution, and idempotence
+        run: sh bin/test-tenant-migrate.sh
+
       - name: Exercise migration up, down, and up
         run: |
           php bin/console doctrine:migrations:migrate --no-interaction
-          php bin/console doctrine:migrations:execute --down 'DoctrineMigrations\Version20260831000000' --no-interaction
+          php bin/console doctrine:migrations:migrate prev --no-interaction
           php bin/console doctrine:migrations:migrate --no-interaction
 
       - name: Run consumer tests
@@ -308,6 +345,8 @@ jobs:
         working-directory: /tmp/consumer
     env:
       DATABASE_URL: postgresql://consumer:consumer@127.0.0.1:5432/consumer?serverVersion=${{ matrix.postgresql }}
+      TENANT_DATABASE_A_URL: postgresql://consumer:consumer@127.0.0.1:5432/consumer_tenant_a?serverVersion=${{ matrix.postgresql }}
+      TENANT_DATABASE_B_URL: postgresql://consumer:consumer@127.0.0.1:5432/consumer_tenant_b?serverVersion=${{ matrix.postgresql }}
       DATABASE_STRATEGY: shared_db
       EXACT_CONSUMER: 1
     steps:
@@ -369,10 +408,17 @@ jobs:
           docker run --rm --network host --volume /tmp/consumer:/consumer --env DATABASE_URL --env DATABASE_STRATEGY --env EXACT_CONSUMER services-locaux-consumer php bin/validate.php
           docker run --rm --network host --volume /tmp/consumer:/consumer --env DATABASE_URL --env DATABASE_STRATEGY --env EXACT_CONSUMER services-locaux-consumer php bin/console doctrine:schema:validate --skip-sync
 
+      - name: Exercise tenant:migrate dry-run, execution, and idempotence
+        run: >-
+          docker run --rm --network host --volume /tmp/consumer:/consumer
+          --env DATABASE_URL --env TENANT_DATABASE_A_URL --env TENANT_DATABASE_B_URL
+          --env DATABASE_STRATEGY --env EXACT_CONSUMER services-locaux-consumer
+          sh bin/test-tenant-migrate.sh
+
       - name: Exercise migration up, down, and up
         run: |
           docker run --rm --network host --volume /tmp/consumer:/consumer --env DATABASE_URL --env DATABASE_STRATEGY --env EXACT_CONSUMER services-locaux-consumer php bin/console doctrine:migrations:migrate --no-interaction
-          docker run --rm --network host --volume /tmp/consumer:/consumer --env DATABASE_URL --env DATABASE_STRATEGY --env EXACT_CONSUMER services-locaux-consumer php bin/console doctrine:migrations:execute --down 'DoctrineMigrations\Version20260831000000' --no-interaction
+          docker run --rm --network host --volume /tmp/consumer:/consumer --env DATABASE_URL --env DATABASE_STRATEGY --env EXACT_CONSUMER services-locaux-consumer php bin/console doctrine:migrations:migrate prev --no-interaction
           docker run --rm --network host --volume /tmp/consumer:/consumer --env DATABASE_URL --env DATABASE_STRATEGY --env EXACT_CONSUMER services-locaux-consumer php bin/console doctrine:migrations:migrate --no-interaction
 
       - name: Prove fail-closed consumer boundaries
@@ -380,6 +426,128 @@ jobs:
           docker run --rm --network host --volume /tmp/consumer:/consumer
           --env DATABASE_URL --env DATABASE_STRATEGY --env EXACT_CONSUMER services-locaux-consumer
           php vendor/bin/phpunit --no-coverage
+
+  candidate-archive:
+    name: Candidate archive / ${{ matrix.name }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: DoctrineMigrationsBundle 3.4 / DBAL 3.8 / PostgreSQL 16
+            php: '8.3'
+            symfony: '~7.4.0'
+            orm: '3.5.*'
+            dbal: '3.8.7'
+            doctrine_bundle: '2.19.0'
+            migrations_bundle: '3.4.0'
+            migrations: '3.7.4'
+            postgresql: '16'
+          - name: DoctrineMigrationsBundle 4.0.1 / DBAL 4.4 / PostgreSQL 18
+            php: '8.5.9'
+            symfony: '~8.1.0'
+            orm: '3.6.8'
+            dbal: '4.4.4'
+            doctrine_bundle: '3.3.1'
+            migrations_bundle: '4.0.1'
+            migrations: '3.9.7'
+            postgresql: '18'
+    services:
+      postgres:
+        image: postgres:${{ matrix.postgresql }}
+        env:
+          POSTGRES_DB: candidate_consumer
+          POSTGRES_USER: candidate_consumer
+          POSTGRES_PASSWORD: candidate_consumer
+        options: >-
+          --health-cmd "pg_isready -U candidate_consumer -d candidate_consumer"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    defaults:
+      run:
+        working-directory: /tmp/candidate-consumer
+    env:
+      DATABASE_URL: postgresql://candidate_consumer:candidate_consumer@127.0.0.1:5432/candidate_consumer?serverVersion=${{ matrix.postgresql }}
+      TENANT_DATABASE_A_URL: postgresql://candidate_consumer:candidate_consumer@127.0.0.1:5432/candidate_consumer_tenant_a?serverVersion=${{ matrix.postgresql }}
+      TENANT_DATABASE_B_URL: postgresql://candidate_consumer:candidate_consumer@127.0.0.1:5432/candidate_consumer_tenant_b?serverVersion=${{ matrix.postgresql }}
+      DATABASE_STRATEGY: shared_db
+      EXPECTED_CANDIDATE_COMMIT: ${{ github.sha }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: pdo_pgsql
+          coverage: none
+
+      - name: Build the distribution-equivalent candidate archive
+        working-directory: ${{ github.workspace }}
+        run: |
+          mkdir -p /tmp/candidate-dist /tmp/candidate-consumer
+          git archive --format=zip --prefix=zhortein-multi-tenant-bundle-candidate/ --output=/tmp/candidate-dist/zhortein-multi-tenant-bundle-candidate.zip "$GITHUB_SHA"
+          sha256sum /tmp/candidate-dist/zhortein-multi-tenant-bundle-candidate.zip
+          if unzip -Z1 /tmp/candidate-dist/zhortein-multi-tenant-bundle-candidate.zip \
+            | grep -Ev '(^|/)tests/ConsumerApp/var/cache/?$|(^|/)tests/ConsumerApp/var/cache/\.gitkeep$' \
+            | grep -Eq '(^|/)(vendor|var/cache|\.git)/'; then
+            echo 'The candidate archive contains a forbidden generated directory.' >&2
+            exit 1
+          fi
+          unzip -Z1 /tmp/candidate-dist/zhortein-multi-tenant-bundle-candidate.zip | grep -F 'src/Command/MigrateTenantsCommand.php'
+
+      - name: Prepare a fresh consumer with only the candidate archive repository
+        working-directory: ${{ github.workspace }}
+        run: |
+          cp -R tests/ConsumerApp/. /tmp/candidate-consumer/
+          repository_definition="$(php tests/create-candidate-package-repository.php /tmp/candidate-dist/zhortein-multi-tenant-bundle-candidate.zip "$GITHUB_SHA")"
+          composer --working-dir=/tmp/candidate-consumer config --json repositories.candidate "$repository_definition"
+          composer --working-dir=/tmp/candidate-consumer require --no-update "zhortein/multi-tenant-bundle:dev-candidate"
+
+      - name: Select the candidate compatibility graph
+        run: |
+          composer require --no-update \
+            "symfony/cache:${{ matrix.symfony }}" \
+            "symfony/config:${{ matrix.symfony }}" \
+            "symfony/console:${{ matrix.symfony }}" \
+            "symfony/dependency-injection:${{ matrix.symfony }}" \
+            "symfony/event-dispatcher:${{ matrix.symfony }}" \
+            "symfony/filesystem:${{ matrix.symfony }}" \
+            "symfony/finder:${{ matrix.symfony }}" \
+            "symfony/framework-bundle:${{ matrix.symfony }}" \
+            "symfony/http-foundation:${{ matrix.symfony }}" \
+            "symfony/http-kernel:${{ matrix.symfony }}" \
+            "symfony/mailer:${{ matrix.symfony }}" \
+            "symfony/messenger:${{ matrix.symfony }}" \
+            "doctrine/orm:${{ matrix.orm }}" \
+            "doctrine/dbal:${{ matrix.dbal }}" \
+            "doctrine/doctrine-bundle:${{ matrix.doctrine_bundle }}" \
+            "doctrine/doctrine-migrations-bundle:${{ matrix.migrations_bundle }}" \
+            "doctrine/migrations:${{ matrix.migrations }}"
+          composer require --dev --no-update "symfony/security-bundle:${{ matrix.symfony }}"
+
+      - name: Install the bundle exclusively from the candidate ZIP
+        run: composer update --prefer-dist --no-progress --no-interaction --with-all-dependencies
+
+      - name: Verify candidate version, commit, and installed bytes
+        run: |
+          php bin/assert-candidate-package.php
+          php bin/assert-migration-graph.php "${{ matrix.migrations_bundle }}" "${{ matrix.migrations }}" "${{ matrix.dbal }}"
+          cmp "${GITHUB_WORKSPACE}/src/Command/MigrateTenantsCommand.php" vendor/zhortein/multi-tenant-bundle/src/Command/MigrateTenantsCommand.php
+          composer show zhortein/multi-tenant-bundle
+
+      - name: Compile a production kernel from the candidate archive
+        run: |
+          APP_ENV=prod APP_DEBUG=0 php bin/console cache:clear --no-warmup
+          APP_ENV=prod APP_DEBUG=0 php bin/console cache:warmup
+          APP_ENV=prod APP_DEBUG=0 php bin/console lint:container
+
+      - name: Exercise candidate tenant:migrate against PostgreSQL
+        run: sh bin/test-tenant-migrate.sh
 
   compatibility:
     name: ${{ matrix.name }}
