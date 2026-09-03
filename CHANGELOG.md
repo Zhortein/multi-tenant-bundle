@@ -7,6 +7,8 @@ and releases will follow [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [1.0.0-rc.7] - 2026-09-03
+
 ### Fixed
 
 - Execute `tenant:migrate` with Doctrine's calculated `MigrationPlanList` and an explicit `MigratorConfiguration`, restoring normal and dry-run operation across DoctrineMigrationsBundle 3.4, 3.7, and 4.0.1 with their supported Doctrine Migrations core 3.x graphs.
@@ -17,6 +19,12 @@ and releases will follow [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 - Add real PostgreSQL 16/18 behavior tests for ordered migrations, schema and metadata effects, dry-run immutability, idempotence, A/B/A database isolation, unknown tenants, connection failures, migration failures, and cleanup.
 - Make the DoctrineMigrationsBundle 3.4, 3.7, and 4.0.1 consumer jobs execute `tenant:migrate`, and validate a distribution-equivalent candidate archive on both the Bundle 3.4/core 3.7 and Bundle 4.0.1/core 3.9 graphs.
+
+### Changed
+
+- Recommend replacing RC6 with RC7 rather than downgrading Doctrine dependencies to work around the RC6 `tenant:migrate` defect.
+- Preserve the existing public API and configuration without an intentional breaking change.
+- Keep the PostgreSQL support contract at >= 16, with required behavior proofs on PostgreSQL 16 and 18 and no PostgreSQL 18-only requirement.
 
 ## [1.0.0-rc.6] - 2026-09-03
 

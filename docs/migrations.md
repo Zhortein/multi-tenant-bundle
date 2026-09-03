@@ -10,9 +10,10 @@ connection selected by the bundle's database strategy.
 
 `v1.0.0-rc.6` contains a known defect: both normal and dry-run execution call
 the Doctrine migrator with an obsolete argument list and fail on the
-DoctrineMigrationsBundle 4.0.1 consumer graph. The fix is being prepared for a
-subsequent release candidate; that candidate is not published yet. A blanket
-dependency downgrade is not recommended as a general workaround.
+DoctrineMigrationsBundle 4.0.1 consumer graph. `v1.0.0-rc.7` replaces RC6 and
+restores normal and dry-run operation across the tested DoctrineMigrationsBundle
+3 and 4 graphs without an intentional public API or configuration break. A
+blanket dependency downgrade is not recommended as a general workaround.
 
 The required compatibility workflow exercises the real Console command with:
 
