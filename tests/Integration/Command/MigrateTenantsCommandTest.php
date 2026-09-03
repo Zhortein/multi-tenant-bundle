@@ -293,7 +293,7 @@ final class MigrateTenantsCommandTest extends TestCase
         $application = new Application();
         $application->setAutoExit(false);
         $application->setCatchExceptions(true);
-        $application->add($command);
+        $application->addCommand($command);
         $tester = new ApplicationTester($application);
         $status = $tester->run(
             ['command' => 'tenant:migrate', ...$arguments],
