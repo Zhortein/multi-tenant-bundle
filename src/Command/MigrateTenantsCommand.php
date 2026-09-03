@@ -16,7 +16,6 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
-use Symfony\Component\DependencyInjection\Attribute\Target;
 use Zhortein\MultiTenantBundle\Context\TenantContextInterface;
 use Zhortein\MultiTenantBundle\Doctrine\TenantConnectionParametersProviderInterface;
 use Zhortein\MultiTenantBundle\Doctrine\TenantConnectionState;
@@ -42,7 +41,6 @@ class MigrateTenantsCommand extends AbstractTenantAwareCommand
         TenantContextInterface $tenantContext,
         private readonly TenantConnectionParametersProviderInterface $connectionParametersProvider,
         private readonly Configuration $migrationConfiguration,
-        #[Target('default')]
         private readonly Connection $defaultConnection,
         private readonly string $databaseStrategy = 'shared_db',
     ) {
