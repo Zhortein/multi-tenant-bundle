@@ -7,6 +7,8 @@ and releases will follow [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [1.0.0-rc.9] - 2026-09-04
+
 ### Fixed
 
 - Support Symfony Scheduler's public `RedispatchMessage` path by validating
