@@ -376,7 +376,7 @@ jobs:
           "symfony/config:8.1.5"
           "symfony/console:8.1.5"
           "symfony/dependency-injection:8.1.5"
-          "symfony/doctrine-messenger:8.1.5"
+          "symfony/doctrine-messenger:8.1.4"
           "symfony/event-dispatcher:8.1.5"
           "symfony/filesystem:8.1.5"
           "symfony/finder:8.1.5"
