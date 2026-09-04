@@ -14,13 +14,32 @@ Before proposing a tag:
 2. Run Composer validation and audit, PHPStan at maximum level, PHP-CS-Fixer, the complete PHPUnit suite, and effective PostgreSQL RLS tests.
 3. Require the full PHP/Symfony/Doctrine matrix, including Symfony 7.4 and Symfony 8.1 on PHP 8.5.
 4. Build a Git archive from the exact candidate commit, reject generated or VCS directories, and install that ZIP through a temporary Composer package repository in a fresh consumer. Do not use a path repository, working-tree branch, or invented release version for this distribution proof.
-5. Compile the archive consumer's production kernel and execute real `tenant:migrate --dry-run` and `tenant:migrate` checks against the required Doctrine Migrations and PostgreSQL graphs.
+5. Compile the archive consumer's production kernel, prove
+   `SchedulerTransport` redispatch through a persistent transport without
+   business handling in the Scheduler Worker, and execute real
+   `tenant:migrate --dry-run` and `tenant:migrate` checks against the required
+   Doctrine Migrations and PostgreSQL graphs.
 6. Install the candidate through production Composer autoload in the external consumer fixture for `shared_db` and `multi_db`.
-7. Point the demo at the exact candidate commit or package version and run its complete functional and tenant-isolation pipeline.
+7. Verify Symfony 7.4, 8.0, and 8.1, the exact reference-consumer graph, and
+   PostgreSQL 16 and 18 before publishing. Update the demo only after the
+   candidate is publicly available and independently installable from
+   Packagist.
 8. Review migration guides, documentation links, configuration examples, and release notes.
 9. Obtain separate human authorization before creating a tag, GitHub release, or package publication.
 
 A failed or skipped required isolation check blocks the candidate. Symfony 8.0 remains useful lower-bound coverage while maintained at proportionate cost; it may only be removed through a documented compatibility decision.
+
+## Prerelease publication
+
+Promote a green `develop` through the normal protected pull-request path to
+`main`; direct pushes and protection bypasses are forbidden. After post-merge
+`main` CI succeeds, create one annotated prerelease tag on that exact commit and
+publish a public, non-draft GitHub prerelease. Never move a published tag.
+
+Packagist must then expose both source and dist for the same commit. Validate
+the license, advisory status, and a fresh installation that has no path, VCS,
+fork, or invented-version repository. Repeat the persistent Scheduler proof on
+the public package before updating downstream demonstration applications.
 
 ## Migration documentation
 

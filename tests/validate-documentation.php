@@ -32,6 +32,25 @@ if (false === $messengerContract) {
         }
     }
 }
+$schedulerContract = file_get_contents($root.'/docs/scheduler.md');
+if (false === $schedulerContract) {
+    $failures[] = 'Cannot read docs/scheduler.md.';
+} else {
+    foreach ([
+        'schedule Symfony\'s',
+        '`RedispatchMessage` control message',
+        '`SendMessageMiddleware` does not apply outgoing routing to a received envelope',
+        'maximum of eight redispatch levels',
+        'this is not a generic vendor-message allowlist',
+        'The first command may generate and persist due occurrences, but it must never',
+        '`symfony_routing` never adds a bundle `TransportNamesStamp`',
+        'PostgreSQL',
+    ] as $requiredContract) {
+        if (!str_contains($schedulerContract, $requiredContract)) {
+            $failures[] = sprintf('docs/scheduler.md is missing the Scheduler contract: %s.', $requiredContract);
+        }
+    }
+}
 foreach ($documents as $document) {
     $contents = file_get_contents($document);
     if (false === $contents) {

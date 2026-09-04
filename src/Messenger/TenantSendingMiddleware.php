@@ -10,7 +10,7 @@ use Symfony\Component\Messenger\Middleware\StackInterface;
 use Zhortein\MultiTenantBundle\Context\TenantContextInterface;
 use Zhortein\MultiTenantBundle\Exception\MissingTenantContextException;
 use Zhortein\MultiTenantBundle\Exception\TenantMismatchException;
-use Zhortein\MultiTenantBundle\Exception\UnclassifiedMessageException;
+use Zhortein\MultiTenantBundle\Messenger\Internal\MessageClassification;
 
 /**
  * Middleware that attaches tenant information to outgoing messages.
@@ -28,20 +28,8 @@ final readonly class TenantSendingMiddleware implements MiddlewareInterface
 
     public function handle(Envelope $envelope, StackInterface $stack): Envelope
     {
-        $message = $envelope->getMessage();
-        $tenantAware = $message instanceof TenantAwareMessageInterface;
-        $global = $message instanceof GlobalMessageInterface;
-
-        if ($tenantAware === $global) {
-            throw new UnclassifiedMessageException($tenantAware ? 'A message cannot be both tenant-aware and global.' : 'A message must implement TenantAwareMessageInterface or GlobalMessageInterface.');
-        }
-
-        $stamps = $envelope->all(TenantStamp::class);
-        if ($global) {
-            if ([] !== $stamps) {
-                throw new TenantMismatchException('A global message cannot carry a TenantStamp.');
-            }
-
+        $classification = MessageClassification::fromEnvelope($envelope);
+        if (!$classification->tenantAware) {
             return $stack->next()->handle($envelope, $stack);
         }
 
@@ -51,13 +39,13 @@ final readonly class TenantSendingMiddleware implements MiddlewareInterface
         }
 
         $tenantId = (string) $tenant->getId();
-        foreach ($stamps as $stamp) {
+        foreach ($classification->tenantStamps as $stamp) {
             if ($stamp->getTenantId() !== $tenantId) {
                 throw new TenantMismatchException('TenantStamp conflicts with the current tenant context.');
             }
         }
 
-        if ([] === $stamps) {
+        if ([] === $classification->tenantStamps) {
             $envelope = $envelope->with(new TenantStamp($tenantId));
         }
 

@@ -14,9 +14,9 @@ use Zhortein\MultiTenantBundle\Doctrine\GlobalDoctrineScopeInterface;
 use Zhortein\MultiTenantBundle\Exception\MissingTenantStampException;
 use Zhortein\MultiTenantBundle\Exception\TenantContextTransitionException;
 use Zhortein\MultiTenantBundle\Exception\TenantMismatchException;
-use Zhortein\MultiTenantBundle\Exception\UnclassifiedMessageException;
 use Zhortein\MultiTenantBundle\Exception\UnknownTenantException;
 use Zhortein\MultiTenantBundle\Lifecycle\TenantStateResetterInterface;
+use Zhortein\MultiTenantBundle\Messenger\Internal\MessageClassification;
 use Zhortein\MultiTenantBundle\Registry\TenantRegistryInterface;
 
 /**
@@ -50,29 +50,18 @@ final readonly class TenantWorkerMiddleware implements MiddlewareInterface
             $this->resetState();
             $this->sessionConfigurator?->clearConfig();
 
-            $message = $envelope->getMessage();
-            $tenantAware = $message instanceof TenantAwareMessageInterface;
-            $global = $message instanceof GlobalMessageInterface;
-            if ($tenantAware === $global) {
-                throw new UnclassifiedMessageException($tenantAware ? 'A message cannot be both tenant-aware and global.' : 'A received message must implement TenantAwareMessageInterface or GlobalMessageInterface.');
-            }
-
-            $stamps = $envelope->all(TenantStamp::class);
-            if ($global) {
-                if ([] !== $stamps) {
-                    throw new TenantMismatchException('A global message cannot carry a TenantStamp.');
-                }
-
+            $classification = MessageClassification::fromEnvelope($envelope);
+            if (!$classification->tenantAware) {
                 $result = null !== $this->globalDoctrineScope
                     ? $this->globalDoctrineScope->run(fn (): Envelope => $stack->next()->handle($envelope, $stack))
                     : $stack->next()->handle($envelope, $stack);
             } else {
-                if ([] === $stamps) {
+                if ([] === $classification->tenantStamps) {
                     throw new MissingTenantStampException('A received tenant-aware message requires a TenantStamp.');
                 }
 
-                $tenantId = $stamps[0]->getTenantId();
-                foreach ($stamps as $stamp) {
+                $tenantId = $classification->tenantStamps[0]->getTenantId();
+                foreach ($classification->tenantStamps as $stamp) {
                     if ($stamp->getTenantId() !== $tenantId) {
                         throw new TenantMismatchException('A received message carries contradictory TenantStamps.');
                     }

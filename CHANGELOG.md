@@ -7,6 +7,36 @@ and releases will follow [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [1.0.0-rc.9] - 2026-09-04
+
+### Fixed
+
+- Support Symfony Scheduler's public `RedispatchMessage` path by validating
+  the encapsulated application message recursively under the existing exact
+  tenant/global classification contract, without adding a generic vendor
+  allowlist or public classification extension point.
+- Preserve explicit Symfony redispatch destinations and Scheduler/application
+  stamps so a Scheduler Worker can enqueue persistent work without invoking
+  the business handler, while the application Worker repeats normal tenant and
+  registry validation after deserialization.
+
+### Security
+
+- Reject malformed, unreadable, cyclic, repeated, or more than eight-level
+  redispatch structures; absent or invalid destinations; unclassified or
+  doubly classified payloads; missing, unknown, or contradictory tenant data;
+  and global payloads carrying tenant stamps before business handling.
+- Keep every Messenger bus fail-closed and preserve context, Doctrine, RLS,
+  connection, routing, and identity-map cleanup after Scheduler generation,
+  serialization, retry, success, or failure.
+
+### Added
+
+- Add real `SchedulerTransport`/`Worker` integration coverage and a Consumer
+  App using a persistent Doctrine Messenger transport, with Symfony 7.4, 8.0,
+  and 8.1 plus the exact Services Locaux graph on PostgreSQL 16 and 18.
+- Document the required Scheduler redispatch shape and RC8-to-RC9 migration.
+
 ## [1.0.0-rc.8] - 2026-09-04
 
 ### Added

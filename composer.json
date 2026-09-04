@@ -55,6 +55,7 @@
     "symfony/dom-crawler": "^7.4 || ^8.0",
     "symfony/mailer": "^7.4 || ^8.0",
     "symfony/phpunit-bridge": "^7.4 || ^8.0",
+    "symfony/scheduler": "^7.4 || ^8.0",
     "symfony/twig-bundle": "^7.4 || ^8.0",
     "symfony/yaml": "^7.4 || ^8.0"
   },
@@ -89,6 +90,7 @@
     "symfony/browser-kit": "Needed by consumers extending the optional TenantWebTestCase",
     "symfony/dom-crawler": "Needed by consumers making crawler-based requests with TenantWebTestCase",
     "symfony/mailer": "Needed for dynamic tenant-aware mail sending",
+    "symfony/scheduler": "Needed to define recurring messages and redispatch them to persistent Messenger transports",
     "symfony/twig-bundle": "Needed for templated tenant-aware emails"
   }
 }

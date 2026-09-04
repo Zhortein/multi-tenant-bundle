@@ -99,6 +99,28 @@ There is no fallback to `default_transport` in `symfony_routing` mode. A message
 
 Both strategies retain the same fail-closed classification, tenant stamping, active-tenant consistency, receive-side registry validation, handler rejection, and cleanup rules. The bundle prepends these protections to every declared Messenger bus.
 
+## Symfony Scheduler redispatch
+
+Persistent scheduled work must use Symfony's `RedispatchMessage` with an
+explicit persistent destination. Scheduling the application message directly
+is unsafe for asynchronous intent: `SchedulerTransport` marks its envelope as
+received, so `SendMessageMiddleware` does not reapply outgoing routing and a
+business handler can run in the Scheduler Worker.
+
+The bundle narrowly supports only `RedispatchMessage`, recursively validates
+the encapsulated application message under the same exact tenant/global rules,
+checks every nested and outer `TenantStamp`, and caps nesting at eight levels.
+It does not trust `ScheduledStamp`, create a generic Symfony-message allowlist,
+or expose a classification extension point. Unknown technical messages and
+malformed wrappers remain fail-closed.
+
+Symfony's public redispatch handler preserves the explicit destination and
+lets its sender locator validate it. In `symfony_routing` mode the bundle still
+adds no transport stamp and provides no `default_transport` fallback; in
+`tenant_transport` mode existing ordinary routing behavior is unchanged. See
+the complete [Scheduler recipe](scheduler.md), including global and tenant
+examples and the persistent Worker boundary.
+
 ## Symfony Messenger Configuration
 
 Configure your transports in the standard Symfony Messenger configuration:
