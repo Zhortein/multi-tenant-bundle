@@ -22,6 +22,7 @@
         </testsuite>
         <testsuite name="Component">
             <file>tests/Messenger/TenantSendingMiddlewareTest.php</file>
+            <file>tests/Messenger/TenantMessengerTransportResolverTest.php</file>
             <file>tests/Messenger/TenantStampTest.php</file>
             <file>tests/Messenger/TenantWorkerMiddlewareTest.php</file>
         </testsuite>

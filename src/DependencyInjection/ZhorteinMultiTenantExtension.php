@@ -64,6 +64,7 @@ use Zhortein\MultiTenantBundle\Mailer\TenantMailerFallbackTransportFactory;
 use Zhortein\MultiTenantBundle\Mailer\TenantMailerTransportFactory;
 use Zhortein\MultiTenantBundle\Manager\TenantSettingsManager;
 use Zhortein\MultiTenantBundle\Manager\TenantSettingsManagerInterface;
+use Zhortein\MultiTenantBundle\Messenger\MessengerRoutingStrategy;
 use Zhortein\MultiTenantBundle\Messenger\TenantMessengerConfigurator;
 use Zhortein\MultiTenantBundle\Messenger\TenantMessengerTransportFactory;
 use Zhortein\MultiTenantBundle\Messenger\TenantMessengerTransportResolver;
@@ -193,6 +194,10 @@ final class ZhorteinMultiTenantExtension extends Extension implements PrependExt
         if (!is_array($mailerConfig)) {
             throw new \LogicException('The processed mailer configuration must be an array.');
         }
+        $messengerConfig = $config['messenger'];
+        if (!is_array($messengerConfig)) {
+            throw new \LogicException('The processed Messenger configuration must be an array.');
+        }
 
         $container->setParameter('zhortein_multi_tenant.tenant_entity', $config['tenant_entity']);
         $container->setParameter('zhortein_multi_tenant.resolver_type', $config['resolver']);
@@ -221,10 +226,11 @@ final class ZhorteinMultiTenantExtension extends Extension implements PrependExt
         $container->setParameter('zhortein_multi_tenant.mailer.enabled', $config['mailer']['enabled']);
         $container->setParameter('zhortein_multi_tenant.mailer.add_tenant_id_header', $mailerConfig['add_tenant_id_header']);
         $container->setParameter('zhortein_multi_tenant.mailer.add_tenant_name_header', $mailerConfig['add_tenant_name_header']);
-        $container->setParameter('zhortein_multi_tenant.messenger.enabled', $config['messenger']['enabled']);
-        $container->setParameter('zhortein_multi_tenant.messenger.default_transport', $config['messenger']['default_transport']);
-        $container->setParameter('zhortein_multi_tenant.messenger.add_tenant_headers', $config['messenger']['add_tenant_headers']);
-        $container->setParameter('zhortein_multi_tenant.messenger.tenant_transport_map', $config['messenger']['tenant_transport_map']);
+        $container->setParameter('zhortein_multi_tenant.messenger.enabled', $messengerConfig['enabled']);
+        $container->setParameter('zhortein_multi_tenant.messenger.default_transport', $messengerConfig['default_transport']);
+        $container->setParameter('zhortein_multi_tenant.messenger.routing_strategy', $messengerConfig['routing_strategy']);
+        $container->setParameter('zhortein_multi_tenant.messenger.add_tenant_headers', $messengerConfig['add_tenant_headers']);
+        $container->setParameter('zhortein_multi_tenant.messenger.tenant_transport_map', $messengerConfig['tenant_transport_map']);
         $container->setParameter('zhortein_multi_tenant.fixtures.enabled', $config['fixtures']['enabled']);
         $container->setParameter('zhortein_multi_tenant.events.dispatch_database_switch', $config['events']['dispatch_database_switch']);
         $container->setParameter('zhortein_multi_tenant.container.enable_tenant_scope', $config['container']['enable_tenant_scope']);
@@ -630,14 +636,23 @@ final class ZhorteinMultiTenantExtension extends Extension implements PrependExt
      */
     private function registerTenantAwareServices(ContainerBuilder $container, array $config): void
     {
+        $messengerConfig = $config['messenger'];
+        if (!is_array($messengerConfig)) {
+            throw new \LogicException('The processed Messenger configuration must be an array.');
+        }
+
         // Register mailer services
         if ($config['mailer']['enabled']) {
             $this->registerMailerServices($container);
         }
 
         // Register messenger services
-        if ($config['messenger']['enabled']) {
-            $this->registerMessengerServices($container);
+        if ($messengerConfig['enabled']) {
+            $routingStrategy = $messengerConfig['routing_strategy'];
+            if (!is_string($routingStrategy)) {
+                throw new \LogicException('The processed Messenger routing strategy must be a string.');
+            }
+            $this->registerMessengerServices($container, MessengerRoutingStrategy::from($routingStrategy));
         }
 
         // Register storage services
@@ -696,7 +711,7 @@ final class ZhorteinMultiTenantExtension extends Extension implements PrependExt
      *
      * @param ContainerBuilder $container The container builder
      */
-    private function registerMessengerServices(ContainerBuilder $container): void
+    private function registerMessengerServices(ContainerBuilder $container, MessengerRoutingStrategy $routingStrategy): void
     {
         // Only register messenger services if Symfony Messenger is available
         if (!interface_exists('Symfony\Component\Messenger\MessageBusInterface')) {
@@ -736,6 +751,7 @@ final class ZhorteinMultiTenantExtension extends Extension implements PrependExt
             ->setArgument('$tenantTransportMap', '%zhortein_multi_tenant.messenger.tenant_transport_map%')
             ->setArgument('$defaultTransport', '%zhortein_multi_tenant.messenger.default_transport%')
             ->setArgument('$addTenantHeaders', '%zhortein_multi_tenant.messenger.add_tenant_headers%')
+            ->setArgument('$routingStrategy', $routingStrategy)
             ->addTag('messenger.middleware', ['priority' => 100]);
         $container->setAlias(TenantMessengerTransportResolver::class, 'zhortein_multi_tenant.messenger.transport_resolver');
     }

@@ -7,6 +7,8 @@ namespace App;
 use App\Controller\TenantContextController;
 use App\Doctrine\ConsumerConnectionParametersProvider;
 use App\EventListener\PostAuthenticationTenantLoader;
+use App\Messenger\RoutingProbe;
+use App\Messenger\SynchronousTenantMessageHandler;
 use App\Resolver\HeaderTenantResolver;
 use App\Resolver\SecurityTenantResolver;
 use Doctrine\Bundle\DoctrineBundle\DoctrineBundle;
@@ -99,8 +101,15 @@ final class Kernel extends BaseKernel
             'mailer' => ['dsn' => 'null://null'],
             'messenger' => [
                 'default_bus' => 'messenger.bus.default',
-                'transports' => ['async' => 'in-memory://'],
-                'routing' => ["App\Message\TenantMessage" => 'async'],
+                'transports' => [
+                    'async' => 'in-memory://',
+                    'notifications' => 'in-memory://',
+                    'attribute_transport' => 'in-memory://',
+                ],
+                'routing' => [
+                    "App\Message\TenantMessage" => 'notifications',
+                    "App\Message\ConfiguredAndAttributedTenantMessage" => 'notifications',
+                ],
             ],
         ]);
         $container->loadFromExtension('doctrine', [
@@ -163,13 +172,20 @@ final class Kernel extends BaseKernel
                 'add_tenant_name_header' => false,
             ],
             'storage' => ['enabled' => false],
-            'messenger' => ['enabled' => true],
+            'messenger' => [
+                'enabled' => true,
+                'routing_strategy' => 'symfony_routing',
+                'default_transport' => 'unavailable_default',
+                'tenant_transport_map' => ['fixture' => 'unavailable_tenant_transport'],
+            ],
         ]);
 
         $container->register(TenantContextController::class)
             ->setAutowired(true)
             ->setAutoconfigured(true)
             ->setPublic(true);
+        $container->register(RoutingProbe::class)->setPublic(true);
+        $container->register(SynchronousTenantMessageHandler::class)->setAutowired(true)->setAutoconfigured(true);
 
         if ($securityEnabled) {
             $container->register(SecurityTenantResolver::class)

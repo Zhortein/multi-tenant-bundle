@@ -128,6 +128,7 @@ zhortein_multi_tenant:
         fallback_dsn: 'sync://'  # Fallback transport DSN
         fallback_bus: 'messenger.bus.default'  # Fallback messenger bus
         default_transport: 'async'  # Default transport name
+        routing_strategy: 'tenant_transport'  # 'tenant_transport' or 'symfony_routing'
         add_tenant_headers: true  # Add tenant information to message headers
         tenant_transport_map: {}  # Mapping of tenant slugs to transport names
     
@@ -371,6 +372,7 @@ zhortein_multi_tenant:
         fallback_dsn: 'sync://'
         fallback_bus: 'messenger.bus.default'
         default_transport: 'async'
+        routing_strategy: 'tenant_transport'
         add_tenant_headers: true
         tenant_transport_map:
             'premium_tenant': 'high_priority'
@@ -379,8 +381,10 @@ zhortein_multi_tenant:
 
 **Features:**
 - Automatic tenant context propagation in messages
-- Tenant-specific transport routing
+- Backward-compatible tenant-specific routing or native Symfony routing
 - Tenant information in message headers/stamps
+
+`tenant_transport` is the default and selects `tenant_transport_map`, then `default_transport`, unless an explicit `TransportNamesStamp` already exists. `symfony_routing` leaves every `TransportNamesStamp` unchanged and lets Symfony apply `framework.messenger.routing` and `#[AsMessage]`. In native mode, the map and default transport never affect the envelope and there is no bundle fallback. A message without a route can be handled synchronously when it has a handler, so applications requiring asynchronous delivery must route every such message explicitly.
 
 ### Storage Configuration
 
@@ -454,6 +458,7 @@ zhortein_multi_tenant:
     
     messenger:
         enabled: true
+        routing_strategy: 'tenant_transport'
         add_tenant_headers: true
         tenant_transport_map:
             'enterprise': 'high_priority'

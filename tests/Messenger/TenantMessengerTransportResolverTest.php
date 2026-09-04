@@ -10,6 +10,7 @@ use Symfony\Component\Messenger\Middleware\StackInterface;
 use Symfony\Component\Messenger\Stamp\TransportNamesStamp;
 use Zhortein\MultiTenantBundle\Context\TenantContextInterface;
 use Zhortein\MultiTenantBundle\Entity\TenantInterface;
+use Zhortein\MultiTenantBundle\Messenger\MessengerRoutingStrategy;
 use Zhortein\MultiTenantBundle\Messenger\TenantMessengerTransportResolver;
 use Zhortein\MultiTenantBundle\Messenger\TenantStamp;
 
@@ -24,8 +25,8 @@ class TenantMessengerTransportResolverTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->tenantContext = $this->createMock(TenantContextInterface::class);
-        $this->stack = $this->createMock(StackInterface::class);
+        $this->tenantContext = $this->createStub(TenantContextInterface::class);
+        $this->stack = $this->createStub(StackInterface::class);
 
         $this->resolver = new TenantMessengerTransportResolver(
             $this->tenantContext,
@@ -41,7 +42,7 @@ class TenantMessengerTransportResolverTest extends TestCase
     public function testHandleWithTenantTransportMapping(): void
     {
         // Arrange
-        $tenant = $this->createMock(TenantInterface::class);
+        $tenant = $this->createStub(TenantInterface::class);
         $tenant->method('getSlug')->willReturn('acme');
         $tenant->method('getId')->willReturn('123');
 
@@ -80,7 +81,7 @@ class TenantMessengerTransportResolverTest extends TestCase
     public function testHandleWithDefaultTransport(): void
     {
         // Arrange
-        $tenant = $this->createMock(TenantInterface::class);
+        $tenant = $this->createStub(TenantInterface::class);
         $tenant->method('getSlug')->willReturn('unknown');
         $tenant->method('getId')->willReturn('456');
 
@@ -153,7 +154,7 @@ class TenantMessengerTransportResolverTest extends TestCase
     public function testHandleWithExistingTransportStamp(): void
     {
         // Arrange
-        $tenant = $this->createMock(TenantInterface::class);
+        $tenant = $this->createStub(TenantInterface::class);
         $tenant->method('getSlug')->willReturn('acme');
         $tenant->method('getId')->willReturn('123');
 
@@ -200,7 +201,7 @@ class TenantMessengerTransportResolverTest extends TestCase
             false // Tenant headers disabled
         );
 
-        $tenant = $this->createMock(TenantInterface::class);
+        $tenant = $this->createStub(TenantInterface::class);
         $tenant->method('getSlug')->willReturn('acme');
         $tenant->method('getId')->willReturn('123');
 
@@ -233,5 +234,55 @@ class TenantMessengerTransportResolverTest extends TestCase
 
         // Assert
         $this->assertInstanceOf(Envelope::class, $result);
+    }
+
+    public function testSymfonyRoutingDoesNotAddATransportStamp(): void
+    {
+        $resolver = new TenantMessengerTransportResolver(
+            $this->tenantContext,
+            ['acme' => 'tenant_specific'],
+            'fallback',
+            true,
+            MessengerRoutingStrategy::SYMFONY_ROUTING,
+        );
+        $tenant = $this->createStub(TenantInterface::class);
+        $tenant->method('getSlug')->willReturn('acme');
+        $tenant->method('getId')->willReturn('123');
+        $this->tenantContext->method('getTenant')->willReturn($tenant);
+        $envelope = new Envelope(new \stdClass());
+        $nextMiddleware = $this->createMock(\Symfony\Component\Messenger\Middleware\MiddlewareInterface::class);
+        $this->stack->method('next')->willReturn($nextMiddleware);
+        $nextMiddleware->expects($this->once())
+            ->method('handle')
+            ->with($this->callback(static fn (Envelope $handled): bool => null === $handled->last(TransportNamesStamp::class)
+                && '123' === $handled->last(TenantStamp::class)?->getTenantId()), $this->stack)
+            ->willReturn($envelope);
+
+        self::assertSame($envelope, $resolver->handle($envelope, $this->stack));
+    }
+
+    public function testSymfonyRoutingKeepsAnExplicitTransportStampIntact(): void
+    {
+        $resolver = new TenantMessengerTransportResolver(
+            $this->tenantContext,
+            ['acme' => 'tenant_specific'],
+            'fallback',
+            true,
+            MessengerRoutingStrategy::SYMFONY_ROUTING,
+        );
+        $tenant = $this->createStub(TenantInterface::class);
+        $tenant->method('getSlug')->willReturn('acme');
+        $tenant->method('getId')->willReturn('123');
+        $this->tenantContext->method('getTenant')->willReturn($tenant);
+        $stamp = new TransportNamesStamp(['explicit']);
+        $envelope = new Envelope(new \stdClass(), [$stamp]);
+        $nextMiddleware = $this->createMock(\Symfony\Component\Messenger\Middleware\MiddlewareInterface::class);
+        $this->stack->method('next')->willReturn($nextMiddleware);
+        $nextMiddleware->expects($this->once())
+            ->method('handle')
+            ->with($this->callback(static fn (Envelope $handled): bool => $stamp === $handled->last(TransportNamesStamp::class)), $this->stack)
+            ->willReturn($envelope);
+
+        self::assertSame($envelope, $resolver->handle($envelope, $this->stack));
     }
 }

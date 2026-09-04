@@ -20,6 +20,8 @@ The lowest cell resolves runtime packages with `--prefer-lowest`, then updates P
 
 Each matrix cell runs strict Composer validation, a dependency security audit, PHPStan at maximum level, the PHPUnit suite, and the PostgreSQL 18 RLS group. Security advisories fail the audit. Abandoned transitive packages are reported because the lowest-supported dependency graph can contain upstream packages that Composer marks as abandoned. Coding style is a separate required job.
 
+The Symfony 7.4, 8.0, and 8.1 consumer cells also compile both Messenger routing strategies. They prove real bus-to-transport routing for `framework.messenger.routing`, `#[AsMessage]`, configured-route precedence, explicit `TransportNamesStamp` precedence, and synchronous handling when native routing has no sender. The fail-closed tenant/global and persistent-worker contracts are unchanged.
+
 The migration-command matrix is explicit because DoctrineMigrationsBundle and
 Doctrine Migrations core use separate version lines:
 
