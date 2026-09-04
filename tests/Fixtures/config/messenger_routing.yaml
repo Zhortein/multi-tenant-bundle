@@ -1,0 +1,6 @@
+framework:
+    messenger:
+        routing:
+            'Zhortein\MultiTenantBundle\Tests\Fixtures\Message\TestTenantAwareMessage': async
+            'Zhortein\MultiTenantBundle\Tests\Fixtures\Message\ConfiguredRouteTenantMessage': notifications
+            'Zhortein\MultiTenantBundle\Tests\Fixtures\Message\ConfiguredAndAttributedTenantMessage': notifications

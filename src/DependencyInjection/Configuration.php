@@ -7,6 +7,7 @@ namespace Zhortein\MultiTenantBundle\DependencyInjection;
 use Symfony\Component\Config\Definition\Builder\TreeBuilder;
 use Symfony\Component\Config\Definition\ConfigurationInterface;
 use Symfony\Component\Config\Definition\Exception\InvalidConfigurationException;
+use Zhortein\MultiTenantBundle\Messenger\MessengerRoutingStrategy;
 
 /**
  * Configuration definition for the multi-tenant bundle.
@@ -287,6 +288,11 @@ final class Configuration implements ConfigurationInterface
                         ->scalarNode('default_transport')
                             ->defaultValue('async')
                             ->info('Default transport name when no tenant-specific mapping exists')
+                        ->end()
+                        ->enumNode('routing_strategy')
+                            ->values(array_map(static fn (MessengerRoutingStrategy $strategy): string => $strategy->value, MessengerRoutingStrategy::cases()))
+                            ->defaultValue(MessengerRoutingStrategy::TENANT_TRANSPORT->value)
+                            ->info('Choose tenant-specific transport selection or native Symfony Messenger routing')
                         ->end()
                         ->booleanNode('add_tenant_headers')
                             ->defaultTrue()

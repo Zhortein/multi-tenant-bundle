@@ -20,16 +20,18 @@ use Zhortein\MultiTenantBundle\Entity\TenantInterface;
 final readonly class TenantMessengerTransportResolver implements MiddlewareInterface
 {
     /**
-     * @param TenantContextInterface $tenantContext      The tenant context service
-     * @param array<string, string>  $tenantTransportMap Mapping of tenant slugs to transport names
-     * @param string                 $defaultTransport   Default transport when no tenant-specific mapping exists
-     * @param bool                   $addTenantHeaders   Whether to add tenant information to message headers
+     * @param TenantContextInterface   $tenantContext      The tenant context service
+     * @param array<string, string>    $tenantTransportMap Mapping of tenant slugs to transport names
+     * @param string                   $defaultTransport   Default transport when no tenant-specific mapping exists
+     * @param bool                     $addTenantHeaders   Whether to add tenant information to message headers
+     * @param MessengerRoutingStrategy $routingStrategy    Routing strategy applied before Symfony resolves senders
      */
     public function __construct(
         private TenantContextInterface $tenantContext,
         private array $tenantTransportMap = [],
         private string $defaultTransport = 'async',
         private bool $addTenantHeaders = true,
+        private MessengerRoutingStrategy $routingStrategy = MessengerRoutingStrategy::TENANT_TRANSPORT,
     ) {
     }
 
@@ -38,7 +40,7 @@ final readonly class TenantMessengerTransportResolver implements MiddlewareInter
         $tenant = $this->tenantContext->getTenant();
 
         // Add tenant-specific transport if configured
-        if (null !== $tenant && !$envelope->last(TransportNamesStamp::class)) {
+        if (MessengerRoutingStrategy::TENANT_TRANSPORT === $this->routingStrategy && null !== $tenant && !$envelope->last(TransportNamesStamp::class)) {
             $transportName = $this->resolveTransportName($tenant->getSlug());
             $envelope = $envelope->with(new TransportNamesStamp([$transportName]));
         }

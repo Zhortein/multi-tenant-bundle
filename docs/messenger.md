@@ -1,6 +1,6 @@
 # Tenant-Aware Messenger
 
-The Zhortein Multi-Tenant Bundle provides comprehensive tenant-aware message queue functionality through its messenger integration. This allows you to route messages to tenant-specific transports and maintain tenant context throughout asynchronous processing.
+The Zhortein Multi-Tenant Bundle propagates and validates tenant context through Symfony Messenger. Applications can either keep the historical transport-per-tenant selection or let Symfony apply its native message routing.
 
 > 📖 **Navigation**: [← Mailer](mailer.md) | [Back to Documentation Index](index.md) | [Storage →](storage.md)
 
@@ -9,7 +9,7 @@ The Zhortein Multi-Tenant Bundle provides comprehensive tenant-aware message que
 The tenant-aware messenger system consists of several components:
 
 - **TenantMessengerConfigurator**: Manages tenant-specific messenger settings
-- **TenantMessengerTransportResolver**: Middleware that routes messages to tenant-specific transports
+- **TenantMessengerTransportResolver**: Middleware that optionally selects tenant-specific transports
 - **TenantStamp**: Carries tenant ID with messages for async processing
 - **TenantSendingMiddleware**: Automatically attaches tenant context to outgoing messages
 - **TenantWorkerMiddleware**: Restores tenant context when processing messages in workers
@@ -54,12 +54,8 @@ Enable the messenger integration in your bundle configuration:
 zhortein_multi_tenant:
     messenger:
         enabled: true
-        default_transport: 'async'
+        routing_strategy: 'symfony_routing'
         add_tenant_headers: true
-        tenant_transport_map:
-            acme: 'acme_transport'
-            bio: 'bio_transport'
-            startup: 'startup_transport'
         fallback_dsn: 'sync://'
         fallback_bus: 'messenger.bus.default'
 ```
@@ -67,11 +63,41 @@ zhortein_multi_tenant:
 ### Configuration Options
 
 - `enabled`: Enable/disable tenant-aware messenger functionality
-- `default_transport`: Default transport when no tenant-specific mapping exists
+- `routing_strategy`: `tenant_transport` (default) or `symfony_routing`
+- `default_transport`: Default transport when no tenant-specific mapping exists in `tenant_transport` mode
 - `add_tenant_headers`: Add tenant information to message stamps/headers
-- `tenant_transport_map`: Mapping of tenant slugs to transport names
+- `tenant_transport_map`: Mapping of tenant slugs to transport names in `tenant_transport` mode
 - `fallback_dsn`: Default messenger DSN when tenant has no specific configuration
 - `fallback_bus`: Default messenger bus when tenant has no specific configuration
+
+## Routing strategies
+
+`MessengerRoutingStrategy::TENANT_TRANSPORT` (`tenant_transport`) is the backward-compatible default. For a tenant-aware dispatch with an active tenant, the resolver keeps an existing `TransportNamesStamp` intact; otherwise, it adds one from `tenant_transport_map`, falling back to `default_transport`.
+
+```yaml
+zhortein_multi_tenant:
+    messenger:
+        routing_strategy: tenant_transport
+        default_transport: async
+        tenant_transport_map:
+            acme: acme_transport
+```
+
+`MessengerRoutingStrategy::SYMFONY_ROUTING` (`symfony_routing`) never adds, replaces, or removes a `TransportNamesStamp`. The bundle does not inspect `framework.messenger.routing`, `#[AsMessage]`, or Symfony's sender locator. Symfony therefore applies its normal order: an explicit stamp first, configured routing before `#[AsMessage]`, then no sender when nothing matches. Transport aliases and unknown aliases are validated by Symfony.
+
+```yaml
+zhortein_multi_tenant:
+    messenger:
+        routing_strategy: symfony_routing
+        # These values do not affect envelopes in native mode.
+        default_transport: async
+        tenant_transport_map:
+            acme: acme_transport
+```
+
+There is no fallback to `default_transport` in `symfony_routing` mode. A message with no native route and a handler can be handled synchronously by Symfony. Applications that require asynchronous delivery must define and test exhaustive Symfony routes for every such message.
+
+Both strategies retain the same fail-closed classification, tenant stamping, active-tenant consistency, receive-side registry validation, handler rejection, and cleanup rules. The bundle prepends these protections to every declared Messenger bus.
 
 ## Symfony Messenger Configuration
 
@@ -98,21 +124,12 @@ framework:
                     max_retries: 3
                     multiplier: 2
             
-            # Tenant-specific transports
-            acme_transport:
-                dsn: 'redis://localhost:6379/acme_messages'
-                retry_strategy:
-                    max_retries: 5
-                    
-            bio_transport:
-                dsn: 'amqp://guest:guest@localhost:5672/bio_vhost/bio_messages'
-                
-            startup_transport:
-                dsn: 'doctrine://default?queue_name=startup_messages'
+            notifications: 'doctrine://default?queue_name=notifications'
+            documents: 'doctrine://default?queue_name=documents'
         
         routing:
-            # Route messages to appropriate transports
-            'App\Message\*': async
+            'App\Message\SendNotification': notifications
+            'App\Message\GenerateDocument': documents
 ```
 
 ## Tenant Settings
@@ -147,7 +164,7 @@ The tenant propagation middleware is automatically registered when the bundle is
 
 1. **TenantWorkerMiddleware** (Priority: 200) - Restores tenant context for received messages
 2. **TenantSendingMiddleware** (Priority: 150) - Attaches tenant context to outgoing messages
-3. **TenantMessengerTransportResolver** (Priority: 100) - Routes messages to tenant-specific transports
+3. **TenantMessengerTransportResolver** (Priority: 100) - Applies the configured routing strategy without weakening tenant propagation
 
 ### Manual Middleware Configuration
 
@@ -169,7 +186,7 @@ services:
 
 ### Basic Message Dispatching
 
-Messages are automatically routed to tenant-specific transports and tagged with tenant context:
+Messages are tagged with tenant context and routed according to the selected strategy:
 
 ```php
 use Symfony\Component\Messenger\MessageBusInterface;
@@ -181,7 +198,7 @@ public function sendMessage(MessageBusInterface $bus): void
     
     // Message will be automatically:
     // 1. Tagged with current tenant ID (TenantStamp)
-    // 2. Routed to tenant-specific transport
+    // 2. Routed by the configured bundle strategy or Symfony routing
     // 3. Processed with tenant context restored in worker
     $bus->dispatch($message);
 }
@@ -327,11 +344,13 @@ public function getTransportInfo(TenantMessengerConfigurator $configurator): arr
 
 ## Transport Resolver Middleware
 
-The `TenantMessengerTransportResolver` middleware automatically:
+In `tenant_transport` mode, `TenantMessengerTransportResolver` automatically:
 
 1. **Routes messages** to tenant-specific transports based on configuration
 2. **Adds tenant stamps** to preserve tenant context in async processing
 3. **Handles fallbacks** when no tenant-specific transport is configured
+
+In `symfony_routing` mode it performs none of those transport-selection steps. It only preserves the shared tenant-propagation behavior and delegates unchanged to the next middleware.
 
 ### How It Works
 
@@ -349,7 +368,7 @@ $bus->dispatch(new MyMessage());
 
 ### Middleware Priority
 
-The transport resolver runs with high priority (100) to ensure tenant routing happens early in the middleware stack.
+The transport resolver runs with priority 100. Symfony's sender middleware sees either the historical explicit transport stamp or the untouched envelope used for native routing.
 
 ## Advanced Usage
 

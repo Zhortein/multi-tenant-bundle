@@ -18,6 +18,8 @@ use Zhortein\MultiTenantBundle\Tests\Fixtures\Command\TenantContextFailCommand;
 use Zhortein\MultiTenantBundle\Tests\Fixtures\Command\TenantContextShowCommand;
 use Zhortein\MultiTenantBundle\Tests\Fixtures\Controller\LifecycleController;
 use Zhortein\MultiTenantBundle\Tests\Fixtures\Controller\TestProductsController;
+use Zhortein\MultiTenantBundle\Tests\Fixtures\Messenger\MessengerRoutingProbe;
+use Zhortein\MultiTenantBundle\Tests\Fixtures\Messenger\SynchronousTenantMessageHandler;
 use Zhortein\MultiTenantBundle\ZhorteinMultiTenantBundle;
 
 final class TestKernel extends Kernel
@@ -57,9 +59,14 @@ final class TestKernel extends Kernel
                     'messenger.bus.default' => [],
                     'command.bus' => [],
                 ],
-                'transports' => ['async' => 'in-memory://'],
+                'transports' => [
+                    'async' => 'in-memory://',
+                    'notifications' => 'in-memory://',
+                    'attribute_transport' => 'in-memory://',
+                ],
             ],
         ]);
+        $loader->load($this->getProjectDir().'/tests/Fixtures/config/messenger_routing.yaml');
         $dbal = ['url' => $databaseUrl];
         $serverVersion = $_SERVER['TEST_DATABASE_SERVER_VERSION'] ?? $_ENV['TEST_DATABASE_SERVER_VERSION'] ?? null;
         if (is_string($serverVersion) && '' !== $serverVersion) {
@@ -106,7 +113,12 @@ final class TestKernel extends Kernel
                 'mairie-a.example.com' => 'mairie-a',
                 'mairie-b.example.com' => 'mairie-b',
             ]],
-            'messenger' => ['enabled' => true],
+            'messenger' => [
+                'enabled' => true,
+                'routing_strategy' => 'symfony_routing',
+                'default_transport' => 'unavailable_default',
+                'tenant_transport_map' => ['acme' => 'unavailable_tenant_transport'],
+            ],
             'mailer' => ['enabled' => false],
             'fixtures' => ['enabled' => false],
             'storage' => ['enabled' => false],
@@ -123,6 +135,8 @@ final class TestKernel extends Kernel
         $container->register(TenantContextFailCommand::class)->setAutowired(true)->setAutoconfigured(true);
         $container->register(TestProductsController::class)->setAutowired(true)->setPublic(true);
         $container->register(LifecycleController::class)->setAutowired(true)->setPublic(true);
+        $container->register(MessengerRoutingProbe::class)->setPublic(true);
+        $container->register(SynchronousTenantMessageHandler::class)->setAutowired(true)->setAutoconfigured(true);
     }
 
     protected function configureRoutes(RoutingConfigurator $routes): void

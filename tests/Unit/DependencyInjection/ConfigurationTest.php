@@ -19,6 +19,7 @@ use Zhortein\MultiTenantBundle\DependencyInjection\ZhorteinMultiTenantExtension;
 use Zhortein\MultiTenantBundle\Mailer\TenantAwareMailer;
 use Zhortein\MultiTenantBundle\Mailer\TenantMailerConfigurator;
 use Zhortein\MultiTenantBundle\Mailer\TenantMailerFallbackTransportFactory;
+use Zhortein\MultiTenantBundle\Messenger\MessengerRoutingStrategy;
 use Zhortein\MultiTenantBundle\Messenger\TenantMessengerConfigurator;
 use Zhortein\MultiTenantBundle\Messenger\TenantMessengerTransportFactory;
 use Zhortein\MultiTenantBundle\Messenger\TenantMessengerTransportResolver;
@@ -60,6 +61,58 @@ final class ConfigurationTest extends TestCase
         ]]);
         self::assertFalse($processed['mailer']['add_tenant_id_header']);
         self::assertTrue($processed['mailer']['add_tenant_name_header']);
+    }
+
+    public function testMessengerRoutingStrategyDefaultsToTenantTransport(): void
+    {
+        $processed = (new Processor())->processConfiguration(new Configuration(), [[]]);
+
+        self::assertSame(MessengerRoutingStrategy::TENANT_TRANSPORT->value, $processed['messenger']['routing_strategy']);
+    }
+
+    public function testSymfonyMessengerRoutingStrategyIsAccepted(): void
+    {
+        $processed = (new Processor())->processConfiguration(new Configuration(), [[
+            'messenger' => ['routing_strategy' => MessengerRoutingStrategy::SYMFONY_ROUTING->value],
+        ]]);
+
+        self::assertSame(MessengerRoutingStrategy::SYMFONY_ROUTING->value, $processed['messenger']['routing_strategy']);
+    }
+
+    public function testUnknownMessengerRoutingStrategyIsRejectedDuringConfigurationProcessing(): void
+    {
+        $this->expectException(InvalidConfigurationException::class);
+        $this->expectExceptionMessage('The value "automatic" is not allowed');
+
+        (new Processor())->processConfiguration(new Configuration(), [[
+            'messenger' => ['routing_strategy' => 'automatic'],
+        ]]);
+    }
+
+    public function testUnknownMessengerRoutingStrategyStopsContainerCompilation(): void
+    {
+        $container = new ContainerBuilder();
+        $extension = new ZhorteinMultiTenantExtension();
+        $container->registerExtension($extension);
+        $container->loadFromExtension($extension->getAlias(), [
+            'messenger' => ['routing_strategy' => 'automatic'],
+        ]);
+
+        $this->expectException(InvalidConfigurationException::class);
+        $container->compile();
+    }
+
+    public function testNativeMessengerRoutingStrategyIsWiredAsAnEnum(): void
+    {
+        $container = new ContainerBuilder();
+        (new ZhorteinMultiTenantExtension())->load([[
+            'messenger' => ['routing_strategy' => MessengerRoutingStrategy::SYMFONY_ROUTING->value],
+        ]], $container);
+
+        self::assertSame(
+            MessengerRoutingStrategy::SYMFONY_ROUTING,
+            $container->getDefinition('zhortein_multi_tenant.messenger.transport_resolver')->getArgument('$routingStrategy'),
+        );
     }
 
     public function testChainAcceptsEveryBuiltInResolver(): void
@@ -129,6 +182,10 @@ final class ConfigurationTest extends TestCase
             $messengerFactories->getExclude(),
         );
         self::assertSame('zhortein_multi_tenant.messenger.transport_resolver', (string) $container->getAlias(TenantMessengerTransportResolver::class));
+        self::assertSame(
+            MessengerRoutingStrategy::TENANT_TRANSPORT,
+            $container->getDefinition('zhortein_multi_tenant.messenger.transport_resolver')->getArgument('$routingStrategy'),
+        );
 
         foreach ([TenantWorkerMiddleware::class => 200, TenantSendingMiddleware::class => 150] as $service => $priority) {
             self::assertTrue($container->hasDefinition($service));
@@ -249,6 +306,7 @@ final class ConfigurationTest extends TestCase
         $reference = (new YamlReferenceDumper())->dump(new Configuration());
 
         self::assertStringContainsString('resolver:             path', $reference);
+        self::assertStringContainsString('routing_strategy:     tenant_transport', $reference);
         self::assertStringNotContainsString('resolution:', $reference);
         self::assertStringNotContainsString("resolver:\n        type:", $reference);
     }

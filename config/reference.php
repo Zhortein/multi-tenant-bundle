@@ -1003,6 +1003,7 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *         fallback_dsn?: scalar|Param|null, // Fallback messenger transport DSN when tenant has no specific configuration // Default: "sync://"
  *         fallback_bus?: scalar|Param|null, // Fallback messenger bus when tenant has no specific configuration // Default: "messenger.bus.default"
  *         default_transport?: scalar|Param|null, // Default transport name when no tenant-specific mapping exists // Default: "async"
+ *         routing_strategy?: "tenant_transport"|"symfony_routing"|Param, // Choose tenant-specific transport selection or native Symfony Messenger routing // Default: "tenant_transport"
  *         add_tenant_headers?: bool|Param, // Add tenant information to message headers/stamps // Default: true
  *         tenant_transport_map?: array<string, scalar|Param|null>,
  *     },
@@ -1056,7 +1057,7 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *     doctrine?: DoctrineConfig,
  *     doctrine_migrations?: DoctrineMigrationsConfig,
  *     zhortein_multi_tenant?: ZhorteinMultiTenantConfig,
- *     "when@test"?: array{
+ *     "when@persistent_kernel_scope"?: array{
  *         imports?: ImportsConfig,
  *         parameters?: ParametersConfig,
  *         services?: ServicesConfig,
@@ -1144,7 +1145,7 @@ namespace Symfony\Component\Routing\Loader\Configurator;
  *     deprecated?: array{package:string, version:string, message?:string},
  * }
  * @psalm-type RoutesConfig = array{
- *     "when@test"?: array<string, RouteConfig|ImportConfig|AliasConfig>,
+ *     "when@persistent_kernel_scope"?: array<string, RouteConfig|ImportConfig|AliasConfig>,
  *     ...<string, RouteConfig|ImportConfig|AliasConfig>
  * }
  */

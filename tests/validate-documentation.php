@@ -15,6 +15,9 @@ if (false === $messengerContract) {
         'tenant-aware message without an active tenant context is rejected',
         'tenant-aware message without a `TenantStamp`, or whose tenant is unknown, is rejected before its handler',
         'global message is accepted only without a `TenantStamp`',
+        'routing_strategy: symfony_routing',
+        'There is no fallback to `default_transport` in `symfony_routing` mode.',
+        'A message with no native route and a handler can be handled synchronously by Symfony.',
     ] as $requiredContract) {
         if (!str_contains($messengerContract, $requiredContract)) {
             $failures[] = sprintf('docs/messenger.md is missing the fail-closed contract: %s.', $requiredContract);
