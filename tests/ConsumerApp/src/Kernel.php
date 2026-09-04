@@ -11,6 +11,9 @@ use App\Messenger\RoutingProbe;
 use App\Messenger\SynchronousTenantMessageHandler;
 use App\Resolver\HeaderTenantResolver;
 use App\Resolver\SecurityTenantResolver;
+use App\Scheduler\SchedulerProbe;
+use App\Scheduler\SchedulerProbeHandler;
+use App\Scheduler\TenantSafeScheduleProvider;
 use Doctrine\Bundle\DoctrineBundle\DoctrineBundle;
 use Doctrine\Bundle\MigrationsBundle\DoctrineMigrationsBundle;
 use Symfony\Bundle\FrameworkBundle\FrameworkBundle;
@@ -99,12 +102,21 @@ final class Kernel extends BaseKernel
                 ],
             ],
             'mailer' => ['dsn' => 'null://null'],
+            'scheduler' => ['enabled' => true],
             'messenger' => [
                 'default_bus' => 'messenger.bus.default',
+                'buses' => [
+                    'messenger.bus.default' => [],
+                    'secondary.bus' => [],
+                ],
                 'transports' => [
                     'async' => 'in-memory://',
                     'notifications' => 'in-memory://',
                     'attribute_transport' => 'in-memory://',
+                    'scheduler_persistent' => [
+                        'dsn' => 'doctrine://default',
+                        'options' => ['queue_name' => 'scheduler_rc9'],
+                    ],
                 ],
                 'routing' => [
                     "App\Message\TenantMessage" => 'notifications',
@@ -186,6 +198,9 @@ final class Kernel extends BaseKernel
             ->setPublic(true);
         $container->register(RoutingProbe::class)->setPublic(true);
         $container->register(SynchronousTenantMessageHandler::class)->setAutowired(true)->setAutoconfigured(true);
+        $container->register(SchedulerProbe::class)->setPublic(true);
+        $container->register(SchedulerProbeHandler::class)->setAutowired(true)->setAutoconfigured(true);
+        $container->register(TenantSafeScheduleProvider::class)->setAutowired(true)->setAutoconfigured(true)->setPublic(true);
 
         if ($securityEnabled) {
             $container->register(SecurityTenantResolver::class)

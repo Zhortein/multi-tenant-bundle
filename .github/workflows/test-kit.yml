@@ -160,6 +160,7 @@ jobs:
           "symfony/config:${{ matrix.symfony }}"
           "symfony/console:${{ matrix.symfony }}"
           "symfony/dependency-injection:${{ matrix.symfony }}"
+          "symfony/doctrine-messenger:${{ matrix.symfony }}"
           "symfony/event-dispatcher:${{ matrix.symfony }}"
           "symfony/filesystem:${{ matrix.symfony }}"
           "symfony/finder:${{ matrix.symfony }}"
@@ -168,6 +169,7 @@ jobs:
           "symfony/http-kernel:${{ matrix.symfony }}"
           "symfony/mailer:${{ matrix.symfony }}"
           "symfony/messenger:${{ matrix.symfony }}"
+          "symfony/scheduler:${{ matrix.symfony }}"
 
       - name: Select compatible test dependencies
         run: >-
@@ -374,6 +376,7 @@ jobs:
           "symfony/config:8.1.5"
           "symfony/console:8.1.5"
           "symfony/dependency-injection:8.1.5"
+          "symfony/doctrine-messenger:8.1.4"
           "symfony/event-dispatcher:8.1.5"
           "symfony/filesystem:8.1.5"
           "symfony/finder:8.1.5"
@@ -382,6 +385,7 @@ jobs:
           "symfony/http-kernel:8.1.5"
           "symfony/mailer:8.1.5"
           "symfony/messenger:8.1.5"
+          "symfony/scheduler:8.1.5"
           "doctrine/orm:3.6.8"
           "doctrine/dbal:4.4.4"
           "doctrine/doctrine-bundle:3.3.1"
@@ -515,6 +519,7 @@ jobs:
             "symfony/config:${{ matrix.symfony }}" \
             "symfony/console:${{ matrix.symfony }}" \
             "symfony/dependency-injection:${{ matrix.symfony }}" \
+            "symfony/doctrine-messenger:${{ matrix.symfony }}" \
             "symfony/event-dispatcher:${{ matrix.symfony }}" \
             "symfony/filesystem:${{ matrix.symfony }}" \
             "symfony/finder:${{ matrix.symfony }}" \
@@ -523,6 +528,7 @@ jobs:
             "symfony/http-kernel:${{ matrix.symfony }}" \
             "symfony/mailer:${{ matrix.symfony }}" \
             "symfony/messenger:${{ matrix.symfony }}" \
+            "symfony/scheduler:${{ matrix.symfony }}" \
             "doctrine/orm:${{ matrix.orm }}" \
             "doctrine/dbal:${{ matrix.dbal }}" \
             "doctrine/doctrine-bundle:${{ matrix.doctrine_bundle }}" \
@@ -545,6 +551,9 @@ jobs:
           APP_ENV=prod APP_DEBUG=0 php bin/console cache:clear --no-warmup
           APP_ENV=prod APP_DEBUG=0 php bin/console cache:warmup
           APP_ENV=prod APP_DEBUG=0 php bin/console lint:container
+
+      - name: Prove candidate Scheduler persistent redispatch
+        run: vendor/bin/phpunit --no-coverage --filter 'AllMessengerBusesProtectedTest|SchedulerRedispatchTest'
 
       - name: Exercise candidate tenant:migrate against PostgreSQL
         run: sh bin/test-tenant-migrate.sh
@@ -654,12 +663,14 @@ jobs:
             "symfony/config:${{ matrix.symfony }}" \
             "symfony/console:${{ matrix.symfony }}" \
             "symfony/dependency-injection:${{ matrix.symfony }}" \
+            "symfony/doctrine-messenger:${{ matrix.symfony }}" \
             "symfony/event-dispatcher:${{ matrix.symfony }}" \
             "symfony/filesystem:${{ matrix.symfony }}" \
             "symfony/finder:${{ matrix.symfony }}" \
             "symfony/http-foundation:${{ matrix.symfony }}" \
             "symfony/http-kernel:${{ matrix.symfony }}" \
-            "symfony/messenger:${{ matrix.symfony }}"
+            "symfony/messenger:${{ matrix.symfony }}" \
+            "symfony/scheduler:${{ matrix.symfony }}"
           composer require --dev --no-update \
             "symfony/framework-bundle:${{ matrix.symfony }}"
 

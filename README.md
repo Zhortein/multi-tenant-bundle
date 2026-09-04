@@ -2,9 +2,10 @@
 
 A fail-closed Symfony 7.4 LTS and Symfony 8.x bundle for building multi-tenant applications, with PostgreSQL RLS as an optional defense in depth.
 
-RC5 makes tenant state explicitly resettable for persistent kernels and
-workers. Every main HTTP request, received Messenger message, reused Console
-command, and `TenantExecutionBoundaryInterface` callback starts from `NONE`.
+RC9 supports Symfony Scheduler's persistent `RedispatchMessage` path without
+weakening tenant/global classification. Every main HTTP request, received
+Messenger message, reused Console command, and
+`TenantExecutionBoundaryInterface` callback starts from `NONE`.
 `TenantContext` remains a shared mutable service; it is not recreated for every
 request.
 
@@ -33,12 +34,18 @@ Messenger messages implement exactly one of `TenantAwareMessageInterface` or `Gl
 
 Messenger transport selection is explicit: `tenant_transport` preserves the historical per-tenant map/default behavior, while `symfony_routing` leaves transport stamps untouched so `framework.messenger.routing` and `#[AsMessage]` work natively. Native mode has no bundle fallback; an unrouted message with a handler may run synchronously. See [Messenger](docs/messenger.md) and the [RC7 to RC8 migration guide](docs/migration-rc7-to-rc8.md).
 
+Persistent Symfony Scheduler work uses a classified application message inside
+Symfony's `RedispatchMessage`, with an explicit persistent destination. Directly
+scheduling the application message can execute its handler in the Scheduler
+Worker because the Scheduler envelope is already marked as received. See the
+[Scheduler recipe](docs/scheduler.md) and the [RC8 to RC9 migration guide](docs/migration-rc8-to-rc9.md).
+
 ## Installation
 
 Install the bundle via Composer:
 
 ```bash
-composer require "zhortein/multi-tenant-bundle:1.0.0-rc.8"
+composer require "zhortein/multi-tenant-bundle:1.0.0-rc.9"
 ```
 
 The core dependency set and optional Mailer, Twig, Monolog, and PSR-16 integrations are listed in the [dependency classification](docs/dependencies.md).
@@ -197,10 +204,12 @@ class DashboardController extends AbstractController
 ### 🔧 Service Integration
 - [Mailer](docs/mailer.md) - Tenant-aware email with templated support
 - [Messenger](docs/messenger.md) - Tenant-aware queues with automatic context propagation
+- [Scheduler](docs/scheduler.md) - Classified redispatch through a persistent transport
 - [Storage](docs/storage.md) - Fail-closed file storage isolation
 - [Security Contract Migration](docs/migration-security-contracts.md) - Required storage, cache, mailer, and observability migration
 - [RC4 to RC5 Migration](docs/migration-rc4-to-rc5.md) - Persistent lifecycle reset and early/late HTTP resolution
 - [RC7 to RC8 Migration](docs/migration-rc7-to-rc8.md) - Choose tenant-specific or native Symfony Messenger routing
+- [RC8 to RC9 Migration](docs/migration-rc8-to-rc9.md) - Adopt fail-closed persistent Scheduler redispatch
 - [Persistent Process Lifecycle](docs/persistent-lifecycle.md) - Complete state inventory, reset order, and failure behavior
 
 ### 🗄️ Database Management

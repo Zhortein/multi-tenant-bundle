@@ -386,6 +386,13 @@ zhortein_multi_tenant:
 
 `tenant_transport` is the default and selects `tenant_transport_map`, then `default_transport`, unless an explicit `TransportNamesStamp` already exists. `symfony_routing` leaves every `TransportNamesStamp` unchanged and lets Symfony apply `framework.messenger.routing` and `#[AsMessage]`. In native mode, the map and default transport never affect the envelope and there is no bundle fallback. A message without a route can be handled synchronously when it has a handler, so applications requiring asynchronous delivery must route every such message explicitly.
 
+Symfony Scheduler needs no bundle-specific option. For persistent scheduled
+work, configure a real Messenger transport and schedule a classified
+`RedispatchMessage` carrying that explicit destination; see the executable
+[Scheduler recipe](scheduler.md). The bundle validates the encapsulated
+tenant/global message and tenant stamps, while Symfony owns destination lookup
+and redispatch.
+
 ### Storage Configuration
 
 ```yaml

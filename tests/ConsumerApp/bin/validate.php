@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Kernel;
+use Symfony\Bundle\FrameworkBundle\Console\Application;
 
 require dirname(__DIR__).'/vendor/autoload.php';
 
@@ -28,6 +29,11 @@ if ('symfony_routing' !== $container->getParameter('zhortein_multi_tenant.messen
 }
 if (!enum_exists(Zhortein\MultiTenantBundle\Messenger\MessengerRoutingStrategy::class)) {
     throw new RuntimeException('The public Messenger routing strategy enum is unavailable.');
+}
+
+$application = new Application($kernel);
+if (!$application->has('debug:scheduler') || !$application->has('messenger:consume')) {
+    throw new RuntimeException('The Scheduler and Messenger console commands must be available.');
 }
 
 $testContainer = $container->get('test.service_container');
