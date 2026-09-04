@@ -7,6 +7,8 @@ and releases will follow [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [1.0.0-rc.8] - 2026-09-04
+
 ### Added
 
 - Add the public `MessengerRoutingStrategy` enum and strict `messenger.routing_strategy` configuration with `tenant_transport` as the backward-compatible default and `symfony_routing` for native Symfony sender selection.
