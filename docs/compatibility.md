@@ -12,7 +12,7 @@ Every supported combination is resolved from `composer.json` and exercised in Gi
 | 8.4 | 8.0 | 3.3 | 3.6 | 4.4 | Latest supported versions |
 | 8.5 | 7.4 | 3.3 | 3.6 | 4.4 | Latest supported versions |
 | 8.5 | 8.0 | 3.3 | 3.6 | 4.4 | Latest supported versions |
-| 8.5.9 | 8.1 | 3.3 | 3.6 | 4.4 | RC4 reference consumer graph; PostgreSQL 18 |
+| 8.5.9 | 8.1 | 3.3 | 3.6 | 4.4 | Services Locaux reference graph; PostgreSQL 16 and 18 |
 
 Symfony 8 is not tested on PHP 8.3 because Symfony 8 requires PHP 8.4 or later. Symfony 8.0 remains in the matrix as the lower bound of the supported `^8.0` constraint even though its normal support window has ended; Symfony 8.1 on PHP 8.5 is the required current Symfony 8 combination. DoctrineBundle 2.19 preserves the PHP 8.3 path, while DoctrineBundle 3.3 provides the Symfony 8-compatible path on PHP 8.4 and later. Doctrine DBAL 3 support is exercised with the oldest supported ORM line, while DBAL 4 is exercised with the current ORM line.
 
@@ -21,6 +21,15 @@ The lowest cell resolves runtime packages with `--prefer-lowest`, then updates P
 Each matrix cell runs strict Composer validation, a dependency security audit, PHPStan at maximum level, the PHPUnit suite, and the PostgreSQL 18 RLS group. Security advisories fail the audit. Abandoned transitive packages are reported because the lowest-supported dependency graph can contain upstream packages that Composer marks as abandoned. Coding style is a separate required job.
 
 The Symfony 7.4, 8.0, and 8.1 consumer cells also compile both Messenger routing strategies. They prove real bus-to-transport routing for `framework.messenger.routing`, `#[AsMessage]`, configured-route precedence, explicit `TransportNamesStamp` precedence, and synchronous handling when native routing has no sender. The fail-closed tenant/global and persistent-worker contracts are unchanged.
+
+Those three Symfony cells also install their aligned Scheduler and Doctrine
+Messenger components. A real `SchedulerTransport` and Worker redispatch a
+classified occurrence through a serialized Doctrine transport before a second
+Worker invokes the application handler. The Scheduler Worker is asserted not
+to invoke that handler. The same tests cover the public `RedispatchMessage`,
+`ScheduledStamp`, `ReceivedStamp`, `TransportNamesStamp`, `RecurringMessage`,
+`MessageGenerator`, `SendMessageMiddleware`, and redispatch-handler contract
+shared by Symfony 7.4, 8.0, and 8.1.
 
 The migration-command matrix is explicit because DoctrineMigrationsBundle and
 Doctrine Migrations core use separate version lines:
@@ -36,7 +45,7 @@ DoctrineMigrationsBundle 4.0.1 depends on the 3.x migration core; it is not a
 this bundle's Symfony 7.4 floor because its Symfony Console and Stopwatch
 constraints end at Symfony 6; core 3.7.4 is the oldest pinned migration-engine
 proof. The exact Bundle 4 consumer graph also uses PHP 8.5.9, Symfony 8.1.5,
-ORM 3.6.8, and DoctrineBundle 3.3.1. Real
+Messenger 8.1.5, Scheduler 8.1.5, ORM 3.6.8, and DoctrineBundle 3.3.1. Real
 PostgreSQL behavior tests cover the command's multi-database and failure paths,
 and the candidate-archive jobs repeat the shared-database command from a ZIP
 installed without a path repository.
@@ -48,7 +57,9 @@ installed without a path repository.
 - Doctrine ORM 3.5 and later within the 3.x line are supported.
 - Doctrine DBAL 3.8 and the 4.x line are supported through explicitly tested combinations.
 - DoctrineMigrationsBundle 3.4, 3.7, and 4.0.1 are explicitly tested with the real `tenant:migrate` command; migration-core 3.7.4 and 3.9.7 are the pinned resolvable proof points.
-- PostgreSQL 18 is the reference database for RLS defense-in-depth guarantees.
+- PostgreSQL >= 16 is supported. Required RLS, multi-database, migration, and
+  Scheduler persistence recipes run on PostgreSQL 16 and 18 and use no
+  PostgreSQL 18-only feature.
 - The enabled Symfony cache decorator is compiled and exercised against aligned FrameworkBundle and Cache components on Symfony 7.4, 8.0, and 8.1. It preserves PSR-6, `CacheInterface`, `NamespacedPoolInterface`, and `AdapterInterface` for decorated Symfony pools.
 - The persistent-lifecycle Consumer App runs the real Symfony services resetter, an initialized cache, a no-reboot kernel, early resolution, disabled automatic resolution, explicit late resolution, and a dedicated SecurityBundle/lazy-firewall scenario. SecurityBundle remains absent from the bundle's required dependency graph.
 - The optional PSR-16 decorator requires `psr/simple-cache` 3.x because earlier interface versions do not define the typed PSR-16 signatures implemented by the bundle.

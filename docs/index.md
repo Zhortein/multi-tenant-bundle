@@ -45,6 +45,7 @@ Welcome to the documentation for the fail-closed Zhortein Multi-Tenant Bundle fo
 - [RC1 to RC2 Migration](migration-rc1-to-rc2.md) - Fail-closed Doctrine and Messenger migration
 - [RC4 to RC5 Migration](migration-rc4-to-rc5.md) - Persistent-worker reset and late HTTP resolution
 - [RC7 to RC8 Migration](migration-rc7-to-rc8.md) - Explicit Messenger routing strategies
+- [RC8 to RC9 Migration](migration-rc8-to-rc9.md) - Persistent fail-closed Symfony Scheduler redispatch
 - [Observability](observability.md) - Monitoring, metrics, and logging for tenant operations
 
 ### Database Management
