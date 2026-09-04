@@ -7,6 +7,15 @@ and releases will follow [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+### Added
+
+- Add the public `MessengerRoutingStrategy` enum and strict `messenger.routing_strategy` configuration with `tenant_transport` as the backward-compatible default and `symfony_routing` for native Symfony sender selection.
+- Add real bus-to-transport regression coverage for YAML routing, `#[AsMessage]`, their Symfony precedence, explicit stamps, synchronous handling without a route, and native invalid-alias errors.
+
+### Changed
+
+- Let native routing preserve every `TransportNamesStamp` unchanged and ignore the tenant transport map/default without changing fail-closed classification, tenant propagation, receive validation, worker cleanup, or all-bus installation.
+
 ## [1.0.0-rc.7] - 2026-09-03
 
 ### Fixed

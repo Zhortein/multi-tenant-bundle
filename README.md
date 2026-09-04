@@ -31,12 +31,14 @@ Tenant-aware Doctrine reads and writes require a valid current tenant and reject
 
 Messenger messages implement exactly one of `TenantAwareMessageInterface` or `GlobalMessageInterface`. Tenant-aware messages require consistent tenant metadata at send and receive time, while global messages must never carry a tenant stamp. See the [RC1 to RC2 migration guide](docs/migration-rc1-to-rc2.md).
 
+Messenger transport selection is explicit: `tenant_transport` preserves the historical per-tenant map/default behavior, while `symfony_routing` leaves transport stamps untouched so `framework.messenger.routing` and `#[AsMessage]` work natively. Native mode has no bundle fallback; an unrouted message with a handler may run synchronously. See [Messenger](docs/messenger.md) and the [RC7 to RC8 migration guide](docs/migration-rc7-to-rc8.md).
+
 ## Installation
 
 Install the bundle via Composer:
 
 ```bash
-composer require "zhortein/multi-tenant-bundle:1.0.0-rc.2"
+composer require "zhortein/multi-tenant-bundle:1.0.0-rc.8"
 ```
 
 The core dependency set and optional Mailer, Twig, Monolog, and PSR-16 integrations are listed in the [dependency classification](docs/dependencies.md).
@@ -198,6 +200,7 @@ class DashboardController extends AbstractController
 - [Storage](docs/storage.md) - Fail-closed file storage isolation
 - [Security Contract Migration](docs/migration-security-contracts.md) - Required storage, cache, mailer, and observability migration
 - [RC4 to RC5 Migration](docs/migration-rc4-to-rc5.md) - Persistent lifecycle reset and early/late HTTP resolution
+- [RC7 to RC8 Migration](docs/migration-rc7-to-rc8.md) - Choose tenant-specific or native Symfony Messenger routing
 - [Persistent Process Lifecycle](docs/persistent-lifecycle.md) - Complete state inventory, reset order, and failure behavior
 
 ### 🗄️ Database Management
