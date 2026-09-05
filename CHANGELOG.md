@@ -17,6 +17,14 @@ and releases will follow [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ### Added
 
+- Add an opt-in, backend-independent object storage core with versioned durable
+  references, opaque tenant namespaces and server-generated keys, explicit
+  provider/location registries and effective physical bindings, bounded streams
+  and listing, same-location transfers, private temporary URL capabilities,
+  structured backend outcomes, reusable adapter tests and Symfony reset hooks.
+  Keep RC10 file storage and production dependencies unchanged; no Flysystem,
+  S3 SDK, automatic object migration or release publication is included.
+
 - Preserve an exact public RC10 global-dispatch reproducer and regression tests
   for compiled buses, both routing strategies, persistent Doctrine transports,
   Scheduler redispatch, invalid metadata, and Worker cleanup.

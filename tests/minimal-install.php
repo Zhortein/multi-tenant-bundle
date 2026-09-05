@@ -16,6 +16,8 @@ use Zhortein\MultiTenantBundle\ZhorteinMultiTenantBundle;
 require dirname(__DIR__).'/vendor/autoload.php';
 
 $optionalSymbols = [
+    'League\\Flysystem\\FilesystemOperator',
+    'Aws\\S3\\S3Client',
     "Monolog\Processor\ProcessorInterface",
     "Psr\SimpleCache\CacheInterface",
     "Symfony\Component\Mailer\MailerInterface",
@@ -59,6 +61,7 @@ $container->register(TenantResolverInterface::class)
     'mailer' => ['enabled' => true],
     'messenger' => ['enabled' => false],
     'storage' => ['enabled' => false],
+    'object_storage' => ['enabled' => false],
 ]], $container);
 
 if ($container->hasDefinition('zhortein_multi_tenant.mailer.tenant_aware')) {
@@ -72,6 +75,12 @@ if ($container->hasDefinition('zhortein_multi_tenant.logger_processor')) {
 foreach ([TenantWorkerMiddleware::class, TenantSendingMiddleware::class, 'zhortein_multi_tenant.messenger.transport_resolver', 'zhortein_multi_tenant.messenger.transport_factory', 'zhortein_multi_tenant.messenger.configurator'] as $service) {
     if ($container->has($service)) {
         throw new RuntimeException(sprintf('Disabled Messenger integration registered service %s.', $service));
+    }
+}
+
+foreach (array_keys($container->getDefinitions()) as $service) {
+    if (str_starts_with($service, 'zhortein_multi_tenant.object_storage')) {
+        throw new RuntimeException('Disabled object storage registered an operational service.');
     }
 }
 

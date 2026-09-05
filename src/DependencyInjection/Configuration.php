@@ -375,6 +375,8 @@ final class Configuration implements ConfigurationInterface
                     ->end()
                 ->end()
 
+                ->append(ObjectStorageConfiguration::node())
+
                 // Container scoping configuration
                 ->arrayNode('container')
                     ->addDefaultsIfNotSet()
