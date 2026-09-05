@@ -317,6 +317,12 @@ This bundle is released under the MIT License. See the [LICENSE](LICENSE) file f
 - **Issues**: [GitHub Issues](https://github.com/zhortein/multi-tenant-bundle/issues)
 - **Discussions**: [GitHub Discussions](https://github.com/zhortein/multi-tenant-bundle/discussions)
 
+## Object storage
+
+The optional [object storage core](docs/object-storage.md) provides durable tenant-aware
+references and a backend-independent contract, disabled by default. It ships no
+Flysystem/S3 adapter and leaves the historical file API unchanged.
+
 ## Changelog
 
 See [CHANGELOG.md](CHANGELOG.md) for version history and upgrade instructions.

@@ -93,6 +93,8 @@ use Zhortein\MultiTenantBundle\Storage\TenantFileStorageInterface;
 /**
  * Extension class for the multi-tenant bundle.
  *
+ * @phpstan-import-type StorageConfig from ObjectStorageConfiguration as ObjectStorageConfig
+ *
  * This class handles the configuration and registration of all bundle services,
  * including tenant resolvers, context managers, event listeners, and commands.
  */
@@ -163,6 +165,11 @@ final class ZhorteinMultiTenantExtension extends Extension implements PrependExt
 
         // Register tenant-aware services
         $this->registerTenantAwareServices($container, $config);
+
+        /** @var ObjectStorageConfig $objectStorage */
+        $objectStorage = $config['object_storage'];
+        // The configuration tree has validated and normalized this isolated block.
+        ObjectStorageConfiguration::register($container, $objectStorage);
 
         // Register decorators
         $this->registerDecorators($container, $config);

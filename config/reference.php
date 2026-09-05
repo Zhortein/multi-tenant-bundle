@@ -1026,6 +1026,27 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *             base_url?: scalar|Param|null, // Base URL for S3 files (CloudFront, etc.) // Default: null
  *         },
  *     },
+ *     object_storage?: array{
+ *         enabled?: bool|Param, // Default: false
+ *         default_provider?: scalar|Param|null, // Default: "shared"
+ *         namespace_resolver?: scalar|Param|null, // Default: null
+ *         provider_selector?: scalar|Param|null, // Default: null
+ *         tenant_overrides?: array<string, scalar|Param|null>,
+ *         providers?: array<string, array{ // Default: []
+ *             active_location?: scalar|Param|null,
+ *         }>,
+ *         locations?: array<string, array{ // Default: []
+ *             backend?: scalar|Param|null,
+ *             binding?: scalar|Param|null,
+ *             allowed_tenants?: list<scalar|Param|null>,
+ *             temporary_urls?: bool|Param, // Default: false
+ *         }>,
+ *         temporary_urls?: array{
+ *             enabled?: bool|Param, // Default: false
+ *             default_ttl?: int|Param, // Default: 300
+ *             max_ttl?: int|Param, // Default: 900
+ *         },
+ *     },
  *     container?: array{
  *         enable_tenant_scope?: bool|Param, // Enable tenant-scoped services in the container // Default: false
  *     },
