@@ -19,6 +19,7 @@
     "symfony/mailer": "~7.4.0",
     "symfony/messenger": "~7.4.0",
     "symfony/scheduler": "~7.4.0",
+    "symfony/validator": "~7.4.0",
     "zhortein/multi-tenant-bundle": "@dev"
   },
   "require-dev": {

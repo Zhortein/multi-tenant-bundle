@@ -7,6 +7,7 @@ namespace App;
 use App\Controller\TenantContextController;
 use App\Doctrine\ConsumerConnectionParametersProvider;
 use App\EventListener\PostAuthenticationTenantLoader;
+use App\Messenger\ConsumerMiddlewareProbe;
 use App\Messenger\RoutingProbe;
 use App\Messenger\SynchronousTenantMessageHandler;
 use App\Resolver\HeaderTenantResolver;
@@ -102,12 +103,13 @@ final class Kernel extends BaseKernel
                 ],
             ],
             'mailer' => ['dsn' => 'null://null'],
+            'validation' => ['enable_attributes' => true],
             'scheduler' => ['enabled' => true],
             'messenger' => [
                 'default_bus' => 'messenger.bus.default',
                 'buses' => [
-                    'messenger.bus.default' => [],
-                    'secondary.bus' => [],
+                    'messenger.bus.default' => ['middleware' => ['validation', ConsumerMiddlewareProbe::class]],
+                    'secondary.bus' => ['middleware' => [ConsumerMiddlewareProbe::class, 'validation']],
                 ],
                 'transports' => [
                     'async' => 'in-memory://',
@@ -197,6 +199,7 @@ final class Kernel extends BaseKernel
             ->setAutoconfigured(true)
             ->setPublic(true);
         $container->register(RoutingProbe::class)->setPublic(true);
+        $container->register(ConsumerMiddlewareProbe::class)->setAutowired(true)->setPublic(true);
         $container->register(SynchronousTenantMessageHandler::class)->setAutowired(true)->setAutoconfigured(true);
         $container->register(SchedulerProbe::class)->setPublic(true);
         $container->register(SchedulerProbeHandler::class)->setAutowired(true)->setAutoconfigured(true);

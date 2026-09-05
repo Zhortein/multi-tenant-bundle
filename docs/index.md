@@ -175,3 +175,6 @@ We welcome contributions! Please see our [contributing guidelines](../CONTRIBUTI
 ## License
 
 This bundle is released under the MIT License. See the [LICENSE](../LICENSE) file for details.
+
+- [Migrating from RC9 to RC10](migration-rc9-to-rc10.md)
+- [RC9 Messenger composition audit and RC10 prototypes](audit-rc9-messenger-composition.md)

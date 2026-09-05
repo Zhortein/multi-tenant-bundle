@@ -32,18 +32,75 @@ The bundle automatically propagates tenant context across asynchronous message p
 
 The worker never saves or restores a tenant that existed before consumption.
 A global message also starts and ends at `NONE`; its explicit global Doctrine
-scope exists only around the handler. Stopping and resuming a Worker does not
+scope encloses the complete downstream middleware chain. Stopping and resuming a Worker does not
 change this contract.
 
 On receipt, a tenant-aware message requires one or more mutually consistent, non-empty `TenantStamp` values and a tenant resolvable by the registry. Missing metadata throws `MissingTenantStampException`; an unavailable tenant throws `UnknownTenantException`. The handler is never called on these failures. `UnknownTenantException` is non-retryable unless the application knows that registry availability is transient; transport or registry infrastructure failures may be retryable under application policy.
 
+## Automatic composition in RC10
+
+RC9 prepended middleware through `prependExtensionConfig()`. Symfony's
+`framework.messenger.buses.*.middleware` node uses `performNoDeepMerging()`:
+any later application list replaces that entire prepended list. A normal
+`middleware: [validation]` could therefore leave validation running while
+removing tenant isolation.
+
+RC10 composes each service carrying Symfony's public `messenger.bus` tag after
+`MessengerPass`, before DI optimization and decoration. The internal pass reads
+the `IteratorArgument` passed to the public `MessageBus::__construct(iterable)`
+argument zero and retains existing service references. It neither reads nor
+writes a `<bus>.middleware` parameter, rebuilds routing, nor calls private
+Symfony methods. The supported generated-definition contract is checked on
+Symfony 7.4, 8.0 and 8.1, including the dumped container and profiler.
+An unsupported bus definition fails compilation explicitly rather than leaving
+an unprotected bus.
+
+Only the necessary order relations are enforced:
+
+- Symfony envelope preparation (default stamps, bus metadata, redelivery
+  rejection and available failure decoding/receiver restoration) precedes
+  classification.
+- The received-context boundary precedes outgoing preparation, application
+  validation, middleware and handlers. Outgoing preparation precedes
+  `SendMessageMiddleware`.
+- `DispatchAfterCurrentBusMiddleware` runs inside the context boundary. Its
+  saved downstream continuation therefore finishes before tenant cleanup,
+  including when delayed handling throws.
+- Application middleware retain their relative order and execute once per
+  actual pass. Symfony remains responsible for sending, handling and deferred
+  queue behavior.
+
+The pass relocates only envelope preparation and the bundle guards; the
+remaining chain retains its relative order. Explicit references to the public
+bundle middleware are retained once, including their configured arguments.
+Those classes and their positional constructors remain functional outside
+automatic registration. `fallback_bus` still creates the RC9 fallback bus;
+all discovered buses are protected regardless of that setting.
+
+Application middleware lists need no additions:
+
+```yaml
+framework:
+    messenger:
+        buses:
+            messenger.bus.default:
+                middleware:
+                    - validation
+                    - App\Messenger\ApplicationMiddleware
+```
+
+This also applies to multiple buses, configuration split across environments,
+and `default_middleware: false` with an explicit complete Symfony chain. When
+bundle Messenger integration is disabled, the pass leaves Symfony's chain
+untouched. See the [prototype audit](audit-rc9-messenger-composition.md) and
+[RC9 migration](migration-rc9-to-rc10.md).
+
 ## Requirements
 
-The messenger functionality requires the following package:
-
-```bash
-composer require symfony/messenger
-```
+`symfony/messenger` is a required runtime dependency, as in RC9, and is installed
+automatically. No consumer dependency change is required for RC10. Setting
+`zhortein_multi_tenant.messenger.enabled: false` disables the bundle integration
+while keeping the component and public middleware classes available.
 
 ## Configuration
 
