@@ -34,6 +34,7 @@ use Zhortein\MultiTenantBundle\ObjectStorage\TenantStorageProviderSelectorInterf
  */
 final class ObjectStorageConfiguration
 {
+    /** @return ArrayNodeDefinition<TreeBuilder<'array'>> */
     public static function node(): ArrayNodeDefinition
     {
         $node = (new TreeBuilder('object_storage'))->getRootNode();
