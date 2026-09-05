@@ -170,6 +170,7 @@ jobs:
           "symfony/mailer:${{ matrix.symfony }}"
           "symfony/messenger:${{ matrix.symfony }}"
           "symfony/scheduler:${{ matrix.symfony }}"
+          "symfony/validator:${{ matrix.symfony }}"
 
       - name: Select compatible test dependencies
         run: >-
@@ -386,6 +387,7 @@ jobs:
           "symfony/mailer:8.1.5"
           "symfony/messenger:8.1.5"
           "symfony/scheduler:8.1.5"
+          "symfony/validator:8.1.6"
           "doctrine/orm:3.6.8"
           "doctrine/dbal:4.4.4"
           "doctrine/doctrine-bundle:3.3.1"
@@ -529,6 +531,7 @@ jobs:
             "symfony/mailer:${{ matrix.symfony }}" \
             "symfony/messenger:${{ matrix.symfony }}" \
             "symfony/scheduler:${{ matrix.symfony }}" \
+            "symfony/validator:${{ matrix.symfony }}" \
             "doctrine/orm:${{ matrix.orm }}" \
             "doctrine/dbal:${{ matrix.dbal }}" \
             "doctrine/doctrine-bundle:${{ matrix.doctrine_bundle }}" \
@@ -670,7 +673,8 @@ jobs:
             "symfony/http-foundation:${{ matrix.symfony }}" \
             "symfony/http-kernel:${{ matrix.symfony }}" \
             "symfony/messenger:${{ matrix.symfony }}" \
-            "symfony/scheduler:${{ matrix.symfony }}"
+            "symfony/scheduler:${{ matrix.symfony }}" \
+            "symfony/validator:${{ matrix.symfony }}"
           composer require --dev --no-update \
             "symfony/framework-bundle:${{ matrix.symfony }}"
 

@@ -241,7 +241,7 @@ final class ConfigurationTest extends TestCase
         );
     }
 
-    public function testMessengerMiddlewareIsPrependedToTheConfiguredBus(): void
+    public function testMessengerFallbackBusIsCreatedWithoutMiddlewareConfiguration(): void
     {
         $container = new ContainerBuilder();
         $container->registerExtension(new \Symfony\Bundle\FrameworkBundle\DependencyInjection\FrameworkExtension());
@@ -258,16 +258,12 @@ final class ConfigurationTest extends TestCase
 
         $frameworkConfig = $container->getExtensionConfig('framework');
         self::assertSame(
-            [
-                TenantWorkerMiddleware::class,
-                TenantSendingMiddleware::class,
-                TenantMessengerTransportResolver::class,
-            ],
-            $frameworkConfig[0]['messenger']['buses']['application.bus']['middleware'],
+            [],
+            $frameworkConfig[0]['messenger']['buses']['application.bus'],
         );
     }
 
-    public function testMessengerMiddlewareIsPrependedToEveryDeclaredBus(): void
+    public function testMessengerPrependPreservesConsumerConfiguration(): void
     {
         $container = new ContainerBuilder();
         $container->registerExtension(new \Symfony\Bundle\FrameworkBundle\DependencyInjection\FrameworkExtension());
@@ -276,7 +272,7 @@ final class ConfigurationTest extends TestCase
         $container->loadFromExtension('framework', [
             'messenger' => [
                 'buses' => [
-                    'command.bus' => [],
+                    'command.bus' => ['middleware' => ['validation']],
                     'event.bus' => [],
                 ],
             ],
@@ -289,16 +285,10 @@ final class ConfigurationTest extends TestCase
 
         $frameworkConfig = $container->getExtensionConfig('framework')[0];
         self::assertSame(
-            ['query.bus', 'command.bus', 'event.bus'],
+            ['query.bus'],
             array_keys($frameworkConfig['messenger']['buses']),
         );
-        foreach ($frameworkConfig['messenger']['buses'] as $bus) {
-            self::assertSame([
-                TenantWorkerMiddleware::class,
-                TenantSendingMiddleware::class,
-                TenantMessengerTransportResolver::class,
-            ], $bus['middleware']);
-        }
+        self::assertSame(['validation'], $container->getExtensionConfig('framework')[1]['messenger']['buses']['command.bus']['middleware']);
     }
 
     public function testReferenceUsesCanonicalResolverSyntax(): void
