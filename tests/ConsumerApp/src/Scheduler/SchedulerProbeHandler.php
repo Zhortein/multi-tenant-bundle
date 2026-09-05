@@ -20,5 +20,8 @@ final readonly class SchedulerProbeHandler
     public function __invoke(ScheduledGlobalMessage $message): void
     {
         $this->probe->record($message->label, $this->tenantContext->getTenant()?->getSlug());
+        if ('consumer-scheduler-failure' === $message->label) {
+            throw new \RuntimeException('Controlled application Worker failure.');
+        }
     }
 }

@@ -185,3 +185,24 @@ $boundary->run(function (): void {
     // Resolve and set one tenant explicitly, or perform classified global work.
 });
 ```
+
+## RC10 application middleware coexistence
+
+Application `validation` and custom middleware remain installed alongside the
+bundle's automatic guards. No Scheduler or routing configuration changes are
+required for this composition fix. The context established for a received
+`RedispatchMessage` encloses Symfony's redispatch handler and its nested send;
+cleanup happens after the whole chain, including failures.
+
+The Consumer App records real Validator callbacks and application middleware
+at three dispatches: the Scheduler's technical wrapper, the outgoing
+application message before Doctrine persistence, and the deserialized
+application message in the separate Worker. Each configured validator and
+middleware runs once per dispatch. Symfony does not automatically validate the
+inner payload merely by validating a `RedispatchMessage` wrapper; the nested
+application dispatch performs that payload validation normally.
+
+The persistent proof checks that the Scheduler Worker never invokes the
+business handler, and that the application Worker clears context after either
+success or an application exception. See [Messenger composition](messenger.md)
+and the [RC9 migration](migration-rc9-to-rc10.md).

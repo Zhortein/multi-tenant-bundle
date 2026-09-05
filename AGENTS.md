@@ -53,8 +53,10 @@ matrix in CI.
   keys, console commands, events, and documented extension points as public API.
 - Prefer additive changes and deprecation paths. Document intentional breaking
   changes and provide migration guidance.
-- Optional integrations (Mailer, Messenger, cache, storage, RLS) must remain
+- Optional components (Mailer, Twig, Monolog, PSR-16 and Scheduler) must remain
   optional at installation and fail clearly when enabled without prerequisites.
+  Messenger remains a required runtime component for RC9 compatibility; its
+  integration must support explicit disabling independently of installation.
 - Shared-database isolation must be tested both through Doctrine ORM and with
   the Doctrine filter bypassed where PostgreSQL RLS is claimed as defense in
   depth.

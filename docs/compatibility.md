@@ -83,3 +83,26 @@ The GitHub Actions matrix is authoritative for cross-version support because the
 PostgreSQL `>= 16` is supported. CI targets PostgreSQL 16 and PostgreSQL 18;
 PostgreSQL 17 may be exercised as an additional matrix entry. RLS remains optional
 defense in depth and uses no PostgreSQL 18-specific syntax.
+
+## RC10 Messenger integration contract
+
+The internal composition pass uses public DependencyInjection definitions,
+references, inherited definition metadata and `IteratorArgument`, together with
+the `messenger.bus` tag and `MessageBus`'s iterable constructor. It runs after
+`MessengerPass` at before-optimization priority -100; it does not use the
+intermediate `<bus>.middleware` parameter or private Symfony methods.
+
+The compiled-container suite checks Symfony 7.4/8.0/8.1 with implicit buses,
+validation, multiple application middleware and bus chains, default-free
+configuration, split YAML, explicit bundle middleware, disabled integration,
+profiler, repeat composition and a second boot of the same dumped container.
+Behavior checks cover tenant-aware validation, sending, nested and deferred
+dispatch, exception cleanup, retries, failure replay and available Symfony 8.1
+redecoding. The Consumer App additionally exercises real serialized Doctrine
+Scheduler redispatch with application validation and middleware on PostgreSQL
+16 and 18. See the [composition audit](audit-rc9-messenger-composition.md).
+
+Messenger remains a required runtime dependency for RC9 compatibility. The
+minimal production gate installs it and explicitly disables the integration;
+it verifies that no bundle Messenger services are registered. Optional Mailer,
+Twig, Monolog, PSR-16 and Scheduler components remain absent from that gate.

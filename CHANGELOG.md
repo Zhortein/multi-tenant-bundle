@@ -7,6 +7,31 @@ and releases will follow [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [1.0.0-rc.10] - 2026-09-05
+
+### Fixed
+
+- Compose tenant protection on every tagged Symfony Messenger bus after
+  `MessengerPass`. Application middleware lists (including `validation`) no
+  longer replace the bundle guards through `performNoDeepMerging()`.
+- Keep the received tenant active through validation, application middleware,
+  handlers, and deferred dispatch completion; restore state after exceptions.
+  Preserve Symfony routing, default stamps, failure replay, and Scheduler
+  redispatch, and deduplicate explicitly configured bundle guards.
+
+### Added
+
+- Compiled-container regression coverage for multiple buses, explicit default-free
+  chains, split YAML configuration, disabled integration, profiler, repeated
+  compilation, cached containers, nested/deferred dispatch, retries and failure
+  replay on Symfony 7.4, 8.0 and 8.1.
+- Consumer proof of `validation` and application middleware coexisting with a
+  real Scheduler Worker, persistent Doctrine transport and application Worker.
+- Preserve the standalone public RC9 reproducer and document the A/B prototype
+  comparison and [RC9 migration](docs/migration-rc9-to-rc10.md).
+- Verify the minimal production container with Messenger installed and its
+  integration explicitly disabled; retain RC9's required dependency contract.
+
 ## [1.0.0-rc.9] - 2026-09-04
 
 ### Fixed

@@ -125,22 +125,14 @@ final class ZhorteinMultiTenantExtension extends Extension implements PrependExt
         $messengerConfig = $config['messenger'] ?? [];
         $messengerEnabled = true === ($messengerConfig['enabled'] ?? false);
         if ($messengerEnabled && $container->hasExtension('framework')) {
-            $buses = [];
             $fallbackBus = is_string($messengerConfig['fallback_bus'] ?? null)
                 ? $messengerConfig['fallback_bus']
                 : 'messenger.bus.default';
-            foreach ($this->messengerBusNames($container, $fallbackBus) as $busName) {
-                $buses[$busName] = [
-                    'middleware' => [
-                        TenantWorkerMiddleware::class,
-                        TenantSendingMiddleware::class,
-                        TenantMessengerTransportResolver::class,
-                    ],
-                ];
-            }
+            // Preserve RC9 fallback-bus creation. Middleware is composed only
+            // after MessengerPass, never through a replaceable configuration list.
             $container->prependExtensionConfig('framework', [
                 'messenger' => [
-                    'buses' => $buses,
+                    'buses' => [$fallbackBus => []],
                 ],
             ]);
         }
@@ -922,28 +914,5 @@ final class ZhorteinMultiTenantExtension extends Extension implements PrependExt
         } catch (\Exception) {
             // Services file is optional, continue without it
         }
-    }
-
-    /** @return list<string> */
-    private function messengerBusNames(ContainerBuilder $container, string $fallbackBus): array
-    {
-        $names = [$fallbackBus => true];
-        foreach ($container->getExtensionConfig('framework') as $frameworkConfig) {
-            $frameworkMessenger = $frameworkConfig['messenger'] ?? null;
-            if (!is_array($frameworkMessenger)) {
-                continue;
-            }
-            $configuredBuses = $frameworkMessenger['buses'] ?? null;
-            if (!is_array($configuredBuses)) {
-                continue;
-            }
-            foreach (array_keys($configuredBuses) as $name) {
-                if (is_string($name) && '' !== $name) {
-                    $names[$name] = true;
-                }
-            }
-        }
-
-        return array_keys($names);
     }
 }

@@ -1,0 +1,8 @@
+framework:
+    messenger:
+        buses:
+            messenger.bus.default:
+                middleware:
+                    - validation
+                    - Zhortein\MultiTenantBundle\Tests\Fixtures\Messenger\CompositionProbe
+                    - Zhortein\MultiTenantBundle\Tests\Fixtures\Messenger\CompositionSecondMiddleware

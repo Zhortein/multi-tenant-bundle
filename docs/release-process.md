@@ -25,7 +25,7 @@ Before proposing a tag:
    candidate is publicly available and independently installable from
    Packagist.
 8. Review migration guides, documentation links, configuration examples, and release notes.
-9. Obtain separate human authorization before creating a tag, GitHub release, or package publication.
+9. Confirm explicit human authorization covers the tag, GitHub release and package publication. An existing release-mission authorization is sufficient within its stated scope; never bypass branch protection.
 
 A failed or skipped required isolation check blocks the candidate. Symfony 8.0 remains useful lower-bound coverage while maintained at proportionate cost; it may only be removed through a documented compatibility decision.
 
@@ -44,3 +44,22 @@ the public package before updating downstream demonstration applications.
 ## Migration documentation
 
 Every intentional break must state the previous behavior, the new contract, required application or data migration, and rollback considerations. The current security-contract migration is documented in [Security Contract Migration](migration-security-contracts.md).
+
+## RC10 composition gate
+
+Retain the RC9 red reproducer and the A/B findings. Require the compiled-bus
+matrix and the Consumer App's validation/application-middleware/Scheduler proof
+on the exact candidate SHA. Review only necessary ordering relations; do not
+freeze Symfony's entire middleware order. Record any skipped tests and notices
+separately from passed required isolation recipes.
+
+Keep Messenger as a runtime dependency. The minimal production gate must prove
+that the component is installed and the integration is explicitly disabled;
+an installation without the component is not the RC10 compatibility contract.
+
+After the implementation PR merges to `develop`, wait for post-merge CI, promote
+through a normal PR to `main`, and wait for `main` CI before creating the
+annotated prerelease tag. Check Packagist source/dist references against that
+SHA and repeat a fresh public install with the exact reference graph on
+PostgreSQL 16 and 18. Only then update and merge the demo to `develop`; do not
+promote the demo to `main` as part of this release.

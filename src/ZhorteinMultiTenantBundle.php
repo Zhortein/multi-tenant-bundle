@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace Zhortein\MultiTenantBundle;
 
+use Symfony\Component\DependencyInjection\Compiler\PassConfig;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\HttpKernel\Bundle\Bundle;
 use Zhortein\MultiTenantBundle\DependencyInjection\Compiler\AddDoctrineFilterCompilerPass;
 use Zhortein\MultiTenantBundle\DependencyInjection\Compiler\AutoTagTenantAwareEntitiesPass;
+use Zhortein\MultiTenantBundle\DependencyInjection\Compiler\ComposeTenantMessengerPass;
 use Zhortein\MultiTenantBundle\DependencyInjection\Compiler\ConditionalCacheDecoratorsPass;
 use Zhortein\MultiTenantBundle\DependencyInjection\Compiler\ConfigureTenantEntityManagersPass;
 use Zhortein\MultiTenantBundle\DependencyInjection\Compiler\ValidateMultiDatabaseConfigurationPass;
@@ -35,6 +37,7 @@ final class ZhorteinMultiTenantBundle extends Bundle
         $container->addCompilerPass(new AutoTagTenantAwareEntitiesPass());
         $container->addCompilerPass(new ConditionalCacheDecoratorsPass());
         $container->addCompilerPass(new ValidateMultiDatabaseConfigurationPass());
+        $container->addCompilerPass(new ComposeTenantMessengerPass(), PassConfig::TYPE_BEFORE_OPTIMIZATION, -100);
     }
 
     public function getPath(): string
