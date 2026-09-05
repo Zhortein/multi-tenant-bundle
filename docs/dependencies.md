@@ -33,7 +33,11 @@ composer require psr/simple-cache:^3.0
 
 Mailer services are not registered when Symfony Mailer is unavailable. Templated mail additionally requires Twig. The Monolog processor is not registered when Monolog is unavailable. PSR Simple Cache versions earlier than 3.0 are incompatible with the typed PSR-16 decorator and are explicitly rejected.
 
-Messenger is not optional in the current public API because `TenantSessionConfigurator` implements Symfony Messenger middleware. Changing that contract would require a separate backward-compatibility decision.
+Messenger remains a required runtime component in RC10, preserving RC9's
+transitive dependency contract and the public `TenantSessionConfigurator`
+middleware interface. Its integration can independently be disabled with
+`zhortein_multi_tenant.messenger.enabled: false`; disabled integration registers
+no bundle Messenger services and leaves Symfony's bus chains unchanged.
 
 ## Optional consumer test dependencies
 
@@ -50,4 +54,11 @@ PHPUnit, PHPStan and its extensions, PHP-CS-Fixer, Symfony BrowserKit and DomCra
 
 ## Verification
 
-GitHub Actions resolves a production-only installation with `composer update --no-dev`, confirms that Mailer, Twig, Monolog, and PSR-16 are absent, and compiles the bundle container with those integrations unavailable. The compatibility matrix installs the development integrations and runs their existing unit, integration, and functional scenarios.
+GitHub Actions resolves a production-only installation with `composer update
+--no-dev`, confirms that Mailer, Twig, Monolog, PSR-16 and Scheduler are absent,
+and verifies that Messenger and the public session configurator remain
+loadable. It compiles the container with Messenger integration explicitly
+disabled and asserts that its integration services are absent. The compatibility
+matrix installs the development integrations and runs their unit, integration
+and functional scenarios. The [composition audit](audit-rc9-messenger-composition.md)
+records why the optional-Messenger experiment was rejected for RC10.

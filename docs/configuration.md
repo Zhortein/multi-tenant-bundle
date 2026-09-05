@@ -523,3 +523,16 @@ zhortein_multi_tenant:
 ---
 
 > 📖 **Navigation**: [← Back to Documentation Index](index.md) | [Installation Guide →](installation.md)
+
+## Messenger middleware composition (RC10)
+
+`messenger.enabled` controls automatic tenant protection for every tagged bus.
+Setting it to `false` disables integration while the required Messenger component
+remains installed, preserving RC9's dependency and public middleware contracts.
+`fallback_bus` keeps its RC9 creation behavior; it does not restrict protection
+to one bus. Keep application `framework.messenger.buses.*.middleware` lists,
+including `validation`, unchanged. RC10 composes the final constructor iterable
+after Symfony builds each bus, avoiding the configuration list replacement
+caused by `performNoDeepMerging()`. Explicit complete chains with
+`default_middleware: false` are supported. See [Messenger](messenger.md) for
+the guaranteed order relations and [RC9 migration](migration-rc9-to-rc10.md).

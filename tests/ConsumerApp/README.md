@@ -54,3 +54,12 @@ the installed command bytes with the checkout, compile a production kernel, and
 repeat the command recipe on the core 3.7/Bundle 3.4/PostgreSQL 16 and core
 3.9/Bundle 4/PostgreSQL 18 graphs. No published Composer file contains a local
 repository, and the temporary version does not claim that the next RC exists.
+
+The RC10 composition regression configures `validation` plus a real application
+middleware on the default bus, and the reverse application order on the
+secondary bus. The Scheduler test records Validator callbacks and middleware
+entry/exit once at each wrapper/outgoing/received dispatch. It proves success
+and controlled application-handler failure with cleanup after both Workers.
+This consumer declares Messenger and Validator explicitly. The separate minimal
+production test keeps the required Messenger component installed and disables
+the bundle integration explicitly, preserving RC9's dependency contract.
