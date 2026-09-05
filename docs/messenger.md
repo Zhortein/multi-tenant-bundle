@@ -24,9 +24,22 @@ Every application message must implement exactly one public marker interface:
 
 Third-party messages must be wrapped in a classified application message. Unclassified messages, doubly classified messages, global messages carrying a `TenantStamp`, and tenant-aware messages sent without context are rejected before downstream middleware. Existing identical stamps are retained; contradictory stamps are rejected.
 
+A global message receives no automatic `TenantStamp`, even when dispatched
+while tenant A is active. It follows normal Symfony routing in both bundle
+routing strategies; tenant-specific map/default selection applies only to
+tenant-aware messages. An explicit tenant stamp on a global message is
+contradictory and rejected, never silently removed. Sending does not end the
+caller's tenant lifecycle. At consumption, the bundle clears any previous
+tenant before the global handler and clears state again after success or failure.
+
+The recognized Symfony `RedispatchMessage` wrappers inherit the classification
+of their recursively encapsulated application message. Sending, transport
+resolution, and consumption use the same internal classification authority;
+an unknown wrapper receives no implicit global status.
+
 The bundle automatically propagates tenant context across asynchronous message processing:
 
-1. **Sending Phase**: When dispatching a message, `TenantSendingMiddleware` automatically attaches a `TenantStamp` containing the current tenant ID
+1. **Sending Phase**: When dispatching a tenant-aware message, `TenantSendingMiddleware` automatically attaches a `TenantStamp` containing the current tenant ID
 2. **Worker Phase**: `TenantWorkerMiddleware` first resets stale process state, then reads the `TenantStamp`, installs the message tenant, and configures database state
 3. **Cleanup**: After success, invalid metadata, handler exception, retry, or redelivery, all tenant state is reset to `NONE` in `finally`
 

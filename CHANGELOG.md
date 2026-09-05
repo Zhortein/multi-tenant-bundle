@@ -7,6 +7,20 @@ and releases will follow [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+### Fixed
+
+- Keep global Messenger messages and recognized Scheduler redispatch wrappers
+  free of automatically added tenant stamps and tenant-specific routing when
+  dispatched under an active tenant. Reuse the existing recursive classification
+  in transport resolution; explicit global tenant stamps remain rejected and
+  the receiving Worker clears tenant context before global handling.
+
+### Added
+
+- Preserve an exact public RC10 global-dispatch reproducer and regression tests
+  for compiled buses, both routing strategies, persistent Doctrine transports,
+  Scheduler redispatch, invalid metadata, and Worker cleanup.
+
 ## [1.0.0-rc.10] - 2026-09-05
 
 ### Fixed

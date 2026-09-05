@@ -76,6 +76,13 @@ For global work, redispatch the classified message directly. For tenant work,
 put the application message and its tenant ID in an `Envelope`; the Scheduler
 process has no request from which the bundle could infer a tenant.
 
+Recognized `RedispatchMessage` wrappers inherit the encapsulated application's
+tenant/global classification recursively. A global payload and its wrappers
+remain without `TenantStamp` even when dispatched from an active tenant
+context; an explicit stamp at either level is rejected. The receiving Worker
+clears any previous tenant before calling the global handler and after the
+message completes, including on exception.
+
 ```php
 <?php
 
