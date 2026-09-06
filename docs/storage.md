@@ -1,5 +1,10 @@
 # Tenant-Aware Storage
 
+This page describes the historical RC10 file API. The separate opt-in
+[object storage core](object-storage.md) uses durable references and opaque tenant
+namespaces. Neither API migrates or reroutes the other. Historical `S3Storage`
+is incomplete and its S3 operations remain stubs.
+
 Tenant storage is fail-closed and uses an explicit namespace for every active tenant.
 
 ## Contract

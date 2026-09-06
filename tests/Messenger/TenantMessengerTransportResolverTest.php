@@ -4,13 +4,19 @@ declare(strict_types=1);
 
 namespace Zhortein\MultiTenantBundle\Tests\Messenger;
 
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Messenger\Envelope;
+use Symfony\Component\Messenger\Message\RedispatchMessage;
 use Symfony\Component\Messenger\Middleware\StackInterface;
 use Symfony\Component\Messenger\Stamp\TransportNamesStamp;
 use Zhortein\MultiTenantBundle\Context\TenantContextInterface;
 use Zhortein\MultiTenantBundle\Entity\TenantInterface;
+use Zhortein\MultiTenantBundle\Exception\TenantMismatchException;
+use Zhortein\MultiTenantBundle\Exception\UnclassifiedMessageException;
+use Zhortein\MultiTenantBundle\Messenger\GlobalMessageInterface;
 use Zhortein\MultiTenantBundle\Messenger\MessengerRoutingStrategy;
+use Zhortein\MultiTenantBundle\Messenger\TenantAwareMessageInterface;
 use Zhortein\MultiTenantBundle\Messenger\TenantMessengerTransportResolver;
 use Zhortein\MultiTenantBundle\Messenger\TenantStamp;
 
@@ -48,7 +54,7 @@ class TenantMessengerTransportResolverTest extends TestCase
 
         $this->tenantContext->method('getTenant')->willReturn($tenant);
 
-        $message = new \stdClass();
+        $message = new ResolverTenantMessage();
         $envelope = new Envelope($message);
 
         $nextMiddleware = $this->createMock(\Symfony\Component\Messenger\Middleware\MiddlewareInterface::class);
@@ -87,7 +93,7 @@ class TenantMessengerTransportResolverTest extends TestCase
 
         $this->tenantContext->method('getTenant')->willReturn($tenant);
 
-        $message = new \stdClass();
+        $message = new ResolverTenantMessage();
         $envelope = new Envelope($message);
 
         $nextMiddleware = $this->createMock(\Symfony\Component\Messenger\Middleware\MiddlewareInterface::class);
@@ -122,7 +128,7 @@ class TenantMessengerTransportResolverTest extends TestCase
         // Arrange
         $this->tenantContext->method('getTenant')->willReturn(null);
 
-        $message = new \stdClass();
+        $message = new ResolverTenantMessage();
         $envelope = new Envelope($message);
 
         $nextMiddleware = $this->createMock(\Symfony\Component\Messenger\Middleware\MiddlewareInterface::class);
@@ -160,7 +166,7 @@ class TenantMessengerTransportResolverTest extends TestCase
 
         $this->tenantContext->method('getTenant')->willReturn($tenant);
 
-        $message = new \stdClass();
+        $message = new ResolverTenantMessage();
         $existingTransportStamp = new TransportNamesStamp(['existing_transport']);
         $envelope = new Envelope($message, [$existingTransportStamp]);
 
@@ -207,7 +213,7 @@ class TenantMessengerTransportResolverTest extends TestCase
 
         $this->tenantContext->method('getTenant')->willReturn($tenant);
 
-        $message = new \stdClass();
+        $message = new ResolverTenantMessage();
         $envelope = new Envelope($message);
 
         $nextMiddleware = $this->createMock(\Symfony\Component\Messenger\Middleware\MiddlewareInterface::class);
@@ -249,7 +255,7 @@ class TenantMessengerTransportResolverTest extends TestCase
         $tenant->method('getSlug')->willReturn('acme');
         $tenant->method('getId')->willReturn('123');
         $this->tenantContext->method('getTenant')->willReturn($tenant);
-        $envelope = new Envelope(new \stdClass());
+        $envelope = new Envelope(new ResolverTenantMessage());
         $nextMiddleware = $this->createMock(\Symfony\Component\Messenger\Middleware\MiddlewareInterface::class);
         $this->stack->method('next')->willReturn($nextMiddleware);
         $nextMiddleware->expects($this->once())
@@ -275,7 +281,7 @@ class TenantMessengerTransportResolverTest extends TestCase
         $tenant->method('getId')->willReturn('123');
         $this->tenantContext->method('getTenant')->willReturn($tenant);
         $stamp = new TransportNamesStamp(['explicit']);
-        $envelope = new Envelope(new \stdClass(), [$stamp]);
+        $envelope = new Envelope(new ResolverTenantMessage(), [$stamp]);
         $nextMiddleware = $this->createMock(\Symfony\Component\Messenger\Middleware\MiddlewareInterface::class);
         $this->stack->method('next')->willReturn($nextMiddleware);
         $nextMiddleware->expects($this->once())
@@ -285,4 +291,65 @@ class TenantMessengerTransportResolverTest extends TestCase
 
         self::assertSame($envelope, $resolver->handle($envelope, $this->stack));
     }
+
+    public static function globalEnvelopes(): iterable
+    {
+        foreach (MessengerRoutingStrategy::cases() as $strategy) {
+            foreach ([false, true] as $explicitRoute) {
+                $stamps = $explicitRoute ? [new TransportNamesStamp(['explicit'])] : [];
+                $global = new Envelope(new ResolverGlobalMessage(), $stamps);
+                yield $strategy->value.' direct '.(int) $explicitRoute => [$strategy, $global];
+                yield $strategy->value.' wrapper '.(int) $explicitRoute => [$strategy, new Envelope(new RedispatchMessage($global, 'persistent'), $stamps)];
+            }
+        }
+    }
+
+    #[DataProvider('globalEnvelopes')]
+    public function testGlobalEnvelopeIsUnchangedUnderAnActiveTenant(MessengerRoutingStrategy $strategy, Envelope $envelope): void
+    {
+        $tenant = $this->createStub(TenantInterface::class);
+        $tenant->method('getId')->willReturn('123');
+        $tenant->method('getSlug')->willReturn('acme');
+        $this->tenantContext->method('getTenant')->willReturn($tenant);
+        $resolver = new TenantMessengerTransportResolver($this->tenantContext, ['acme' => 'tenant_only'], 'fallback', true, $strategy);
+        $next = $this->createMock(\Symfony\Component\Messenger\Middleware\MiddlewareInterface::class);
+        $this->stack->method('next')->willReturn($next);
+        $next->expects($this->once())->method('handle')->with($this->identicalTo($envelope), $this->stack)->willReturn($envelope);
+
+        self::assertSame($envelope, $resolver->handle($envelope, $this->stack));
+        self::assertNull($envelope->last(TenantStamp::class));
+    }
+
+    public static function invalidEnvelopes(): iterable
+    {
+        yield 'unclassified' => [new Envelope(new \stdClass()), UnclassifiedMessageException::class];
+        yield 'double classification' => [new Envelope(new ResolverDoubleMessage()), UnclassifiedMessageException::class];
+        yield 'unknown wrapper' => [new Envelope(new class {
+            public object $message;
+        }), UnclassifiedMessageException::class];
+        yield 'global stamp' => [new Envelope(new ResolverGlobalMessage(), [new TenantStamp('123')]), TenantMismatchException::class];
+        yield 'outer global stamp' => [new Envelope(new RedispatchMessage(new ResolverGlobalMessage(), 'persistent'), [new TenantStamp('123')]), TenantMismatchException::class];
+        yield 'inner global stamp' => [new Envelope(new RedispatchMessage(new Envelope(new ResolverGlobalMessage(), [new TenantStamp('123')]), 'persistent')), TenantMismatchException::class];
+    }
+
+    #[DataProvider('invalidEnvelopes')]
+    public function testInvalidClassificationNeverReachesTheNextMiddleware(Envelope $envelope, string $exception): void
+    {
+        $stack = $this->createMock(StackInterface::class);
+        $stack->expects($this->never())->method('next');
+        $this->expectException($exception);
+        $this->resolver->handle($envelope, $stack);
+    }
+}
+
+final class ResolverTenantMessage implements TenantAwareMessageInterface
+{
+}
+
+final class ResolverGlobalMessage implements GlobalMessageInterface
+{
+}
+
+final class ResolverDoubleMessage implements TenantAwareMessageInterface, GlobalMessageInterface
+{
 }

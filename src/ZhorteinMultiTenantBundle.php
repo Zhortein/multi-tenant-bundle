@@ -12,7 +12,9 @@ use Zhortein\MultiTenantBundle\DependencyInjection\Compiler\AutoTagTenantAwareEn
 use Zhortein\MultiTenantBundle\DependencyInjection\Compiler\ComposeTenantMessengerPass;
 use Zhortein\MultiTenantBundle\DependencyInjection\Compiler\ConditionalCacheDecoratorsPass;
 use Zhortein\MultiTenantBundle\DependencyInjection\Compiler\ConfigureTenantEntityManagersPass;
+use Zhortein\MultiTenantBundle\DependencyInjection\Compiler\ValidateFlysystemBridgePass;
 use Zhortein\MultiTenantBundle\DependencyInjection\Compiler\ValidateMultiDatabaseConfigurationPass;
+use Zhortein\MultiTenantBundle\DependencyInjection\Compiler\ValidateObjectStoragePass;
 
 /**
  * Multi-tenant bundle for Symfony applications.
@@ -37,6 +39,8 @@ final class ZhorteinMultiTenantBundle extends Bundle
         $container->addCompilerPass(new AutoTagTenantAwareEntitiesPass());
         $container->addCompilerPass(new ConditionalCacheDecoratorsPass());
         $container->addCompilerPass(new ValidateMultiDatabaseConfigurationPass());
+        $container->addCompilerPass(new ValidateFlysystemBridgePass());
+        $container->addCompilerPass(new ValidateObjectStoragePass());
         $container->addCompilerPass(new ComposeTenantMessengerPass(), PassConfig::TYPE_BEFORE_OPTIMIZATION, -100);
     }
 

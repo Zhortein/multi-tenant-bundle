@@ -10,6 +10,7 @@ use Symfony\Component\Messenger\Middleware\StackInterface;
 use Symfony\Component\Messenger\Stamp\TransportNamesStamp;
 use Zhortein\MultiTenantBundle\Context\TenantContextInterface;
 use Zhortein\MultiTenantBundle\Entity\TenantInterface;
+use Zhortein\MultiTenantBundle\Messenger\Internal\MessageClassification;
 
 /**
  * Middleware that resolves tenant-specific message transports.
@@ -37,6 +38,10 @@ final readonly class TenantMessengerTransportResolver implements MiddlewareInter
 
     public function handle(Envelope $envelope, StackInterface $stack): Envelope
     {
+        if (!MessageClassification::fromEnvelope($envelope)->tenantAware) {
+            return $stack->next()->handle($envelope, $stack);
+        }
+
         $tenant = $this->tenantContext->getTenant();
 
         // Add tenant-specific transport if configured

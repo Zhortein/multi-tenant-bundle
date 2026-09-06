@@ -1,0 +1,20 @@
+{
+  "name": "zhortein/object-storage-consumer-fixture",
+  "description": "Disposable external consumer proving optional S3-compatible object storage",
+  "type": "project",
+  "license": "proprietary",
+  "require": {
+    "php": ">=8.3",
+    "symfony/framework-bundle": "^7.4 || ^8.0",
+    "zhortein/multi-tenant-bundle": "@dev"
+  },
+  "require-dev": {
+    "aws/aws-sdk-php": "3.394.9",
+    "league/flysystem": "3.36.0",
+    "league/flysystem-aws-s3-v3": "3.35.3"
+  },
+  "autoload": {
+    "psr-4": {"ObjectStorageConsumer\\": "src/"}
+  },
+  "config": {"sort-packages": true}
+}

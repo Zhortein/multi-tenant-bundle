@@ -66,6 +66,29 @@ installed without a path repository.
 
 Removing a matrix entry is a compatibility change. It requires evidence that the combination is no longer resolvable or supportable, an updated changelog, and migration guidance where applicable.
 
+## RC11 optional object storage matrix
+
+The core and historical file API remain installable without Flysystem, the S3
+adapter or SDK. Production dependency constraints are unchanged from RC10.
+The optional bridge adds these exact dependency graphs:
+
+| Graph | Flysystem | S3 adapter | SDK |
+|---|---|---|---|
+| Lower | 3.30.2 | 3.30.1 | 3.371.5 |
+| Upper | 3.36.0 | 3.35.3 | 3.394.9 |
+
+Both graphs run real MinIO proofs on PHP 8.3 / Symfony 7.4, PHP 8.4 / Symfony
+7.4 and 8.0, and PHP 8.5.9 / Symfony 7.4, 8.0 and 8.1. Three separate external
+consumer cells compile Symfony 7.4, 8.0 and 8.1 with the integration disabled
+without optional packages, then explicitly enabled with them. A Flysystem-only
+cell checks that the S3 adapter and SDK remain optional too.
+
+The existing Messenger, Scheduler, cache, Doctrine, migrations, RLS, multi-base
+and exact consumer graph remain required. PostgreSQL 16 and 18 are validation
+targets; RC11 introduces no SQL and does not require PostgreSQL 18 in production.
+See the [migration guide](migration-rc10-to-rc11.md) and
+[real MinIO recipe](object-storage-flysystem.md#disposable-minio-test-kit).
+
 ## Local validation
 
 The default local environment validates with PHP 8.5.9. Cross-version support remains an explicit CI matrix rather than an accidentally mixed dependency graph.

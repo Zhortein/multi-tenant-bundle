@@ -7,6 +7,39 @@ and releases will follow [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [1.0.0-rc.11] - 2026-09-06
+
+This is a prerelease. Upgrading executes no production migration and does not
+enable object storage. See the [RC10 to RC11 migration guide](docs/migration-rc10-to-rc11.md).
+
+### Fixed
+
+- Keep global Messenger messages and recognized Scheduler redispatch wrappers
+  free of automatically added tenant stamps and tenant-specific routing when
+  dispatched under an active tenant. Reuse the existing recursive classification
+  in transport resolution; explicit global tenant stamps remain rejected and
+  the receiving Worker clears tenant context before global handling.
+
+### Added
+
+- Add an optional Flysystem object storage bridge and S3-compatible construction
+  with deterministic physical bindings, explicit bounded pagination/existence
+  and HTTPS temporary signing, sanitized backend failures, and a disposable
+  real MinIO test kit with external consumer and compatibility matrices. Keep
+  production dependencies and RC10 storage APIs unchanged.
+
+- Add an opt-in, backend-independent object storage core with versioned durable
+  references, opaque tenant namespaces and server-generated keys, explicit
+  provider/location registries and effective physical bindings, bounded streams
+  and listing, same-location transfers, private temporary URL capabilities,
+  structured backend outcomes, reusable adapter tests and Symfony reset hooks.
+  Keep RC10 file storage and production dependencies unchanged. Flysystem and
+  the S3 SDK remain optional; no automatic object migration is included.
+
+- Preserve an exact public RC10 global-dispatch reproducer and regression tests
+  for compiled buses, both routing strategies, persistent Doctrine transports,
+  Scheduler redispatch, invalid metadata, and Worker cleanup.
+
 ## [1.0.0-rc.10] - 2026-09-05
 
 ### Fixed

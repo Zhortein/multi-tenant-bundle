@@ -165,6 +165,40 @@ final class MessengerCompositionTest extends TestCase
         self::assertNull($async->getSent()[0]->last(TenantStamp::class));
     }
 
+    public static function globalRoutingConfigurations(): iterable
+    {
+        foreach (['standard', 'tenanttransport'] as $scenario) {
+            foreach (['messenger.bus.default', 'other.bus'] as $bus) {
+                yield $scenario.' '.$bus => [$scenario, $bus];
+            }
+        }
+    }
+
+    #[DataProvider('globalRoutingConfigurations')]
+    public function testGlobalDispatchUnderTenantPreservesNativeRoutingAndConsumerOrder(string $scenario, string $busId): void
+    {
+        $this->boot($scenario);
+        $container = $this->kernel->getContainer()->get('test.service_container');
+        $bus = $container->get($busId);
+        $tenant = (new TestTenant())->setId(1)->setSlug('acme');
+        $this->context->setTenant($tenant);
+        $envelope = $bus->dispatch(new CompositionGlobalMessage());
+        self::assertNull($envelope->last(TenantStamp::class));
+        self::assertNull($envelope->last(TransportNamesStamp::class));
+        self::assertCount(1, $container->get('messenger.transport.async')->getSent());
+        self::assertCount(0, $container->get('messenger.transport.other')->getSent());
+        self::assertSame($tenant, $this->context->getTenant(), 'Sending does not end the caller tenant lifecycle.');
+        $expected = 'messenger.bus.default' === $busId
+            ? ['validation', 'one.before', 'two.before', 'two.after', 'one.after']
+            : ['two.before', 'validation', 'two.after'];
+        self::assertSame($expected, array_column($this->probe->events, 0));
+        $this->probe->events = [];
+        $bus->dispatch($envelope, [new ReceivedStamp('async')]);
+        self::assertContains(['handler', 'global', null], $this->probe->events);
+        self::assertSame([null], array_values(array_unique(array_column($this->probe->events, 2))));
+        self::assertNull($this->context->getTenant());
+    }
+
     public function testTenantTransportMappingIsUnchanged(): void
     {
         $this->boot('tenanttransport');

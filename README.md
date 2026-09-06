@@ -317,6 +317,15 @@ This bundle is released under the MIT License. See the [LICENSE](LICENSE) file f
 - **Issues**: [GitHub Issues](https://github.com/zhortein/multi-tenant-bundle/issues)
 - **Discussions**: [GitHub Discussions](https://github.com/zhortein/multi-tenant-bundle/discussions)
 
+## Object storage
+
+The optional [object storage core](docs/object-storage.md) provides durable tenant-aware
+references and a backend-independent contract, disabled by default. The
+[optional Flysystem/S3-compatible bridge](docs/object-storage-flysystem.md) adds
+real MinIO proofs and leaves the historical file API unchanged.
+RC11 remains a prerelease; upgrading enables no new integration and executes no
+production migration. See the [RC10 to RC11 migration guide](docs/migration-rc10-to-rc11.md).
+
 ## Changelog
 
 See [CHANGELOG.md](CHANGELOG.md) for version history and upgrade instructions.

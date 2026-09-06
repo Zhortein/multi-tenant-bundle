@@ -44,6 +44,13 @@ For tenant-aware ORM entities, missing context, invalid identifiers, invalid map
 
 ## Complete Configuration Reference
 
+The separate `object_storage` integration is disabled by default. Its complete
+[configuration and service contracts](object-storage.md#configuration) and
+[optional Flysystem service example](object-storage-flysystem.md#common-construction-and-explicit-services)
+cover providers, immutable locations, namespace resolution and temporary URLs.
+It does not alter the historical `storage` block below. See the
+[RC10 to RC11 migration guide](migration-rc10-to-rc11.md) before enabling it.
+
 ```yaml
 # config/packages/zhortein_multi_tenant.yaml
 zhortein_multi_tenant:

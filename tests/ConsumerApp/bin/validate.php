@@ -37,6 +37,12 @@ if (!$application->has('debug:scheduler') || !$application->has('messenger:consu
 }
 
 $testContainer = $container->get('test.service_container');
+if ($testContainer->has(Zhortein\MultiTenantBundle\ObjectStorage\TenantObjectStorageInterface::class)) {
+    throw new RuntimeException('Object storage must remain disabled by default in existing consumers.');
+}
+if (interface_exists('League\\Flysystem\\FilesystemOperator')) {
+    throw new RuntimeException('The compatibility consumer must compile without Flysystem.');
+}
 $tenantContext = $testContainer->get(Zhortein\MultiTenantBundle\Context\TenantContextInterface::class);
 $tenantContext->setTenant(new App\Entity\Tenant());
 $testContainer->get(Symfony\Component\Messenger\MessageBusInterface::class)->dispatch(
