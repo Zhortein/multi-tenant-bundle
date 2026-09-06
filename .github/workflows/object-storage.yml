@@ -1,0 +1,126 @@
+name: Object storage
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+permissions:
+  contents: read
+
+jobs:
+  minio:
+    name: Object storage / PHP ${{ matrix.runtime.php }} / Symfony ${{ matrix.runtime.symfony }} / ${{ matrix.dependencies }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        runtime:
+          - {php: '8.3', symfony: '~7.4.0'}
+          - {php: '8.4', symfony: '~7.4.0'}
+          - {php: '8.4', symfony: '~8.0.0'}
+          - {php: '8.5.9', symfony: '~7.4.0'}
+          - {php: '8.5.9', symfony: '~8.0.0'}
+          - {php: '8.5.9', symfony: '~8.1.0'}
+        dependencies: [low, high]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.runtime.php }}
+          coverage: none
+      - name: Select exact optional versions and aligned Symfony components
+        run: php tests/ObjectStorage/select-graph.php '${{ matrix.runtime.symfony }}' '${{ matrix.dependencies }}'
+      - name: Resolve and audit the selected graph
+        run: |
+          composer update --prefer-dist --no-progress --no-interaction
+          composer validate --strict
+          composer audit --no-interaction --abandoned=report
+      - name: Unit contracts and maximum static analysis
+        run: |
+          vendor/bin/phpunit --no-coverage tests/Unit/ObjectStorage tests/Integration/ObjectStorage
+          vendor/bin/phpstan analyse src -c phpstan.neon --memory-limit=512M
+      - name: Real MinIO HTTPS, isolation, signing and persistent worker proofs
+        env:
+          MTB_OBJECT_PHP_IMAGE: php:${{ matrix.runtime.php }}-cli
+        run: sh tests/ObjectStorage/run-minio.sh
+      - name: Preserve the exact resolved dependency graph
+        uses: actions/upload-artifact@v4
+        with:
+          name: object-storage-php-${{ matrix.runtime.php }}-symfony-${{ matrix.runtime.symfony }}-${{ matrix.dependencies }}
+          path: composer.lock
+          retention-days: 14
+
+  consumer:
+    name: Object storage / external consumer / Symfony ${{ matrix.symfony }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {php: '8.3', symfony: '~7.4.0'}
+          - {php: '8.4', symfony: '~8.0.0'}
+          - {php: '8.5.9', symfony: '~8.1.0'}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          coverage: none
+      - name: Prepare an external consumer of the checkout
+        run: |
+          mkdir -p /tmp/mtb-object-consumer
+          cp -R tests/ObjectStorage/Consumer/. /tmp/mtb-object-consumer/
+          composer --working-dir=/tmp/mtb-object-consumer config --json repositories.bundle "{\"type\":\"path\",\"url\":\"${GITHUB_WORKSPACE}\",\"options\":{\"symlink\":false}}"
+          composer --working-dir=/tmp/mtb-object-consumer require --no-update \
+            'symfony/cache:${{ matrix.symfony }}' \
+            'symfony/config:${{ matrix.symfony }}' \
+            'symfony/console:${{ matrix.symfony }}' \
+            'symfony/dependency-injection:${{ matrix.symfony }}' \
+            'symfony/doctrine-messenger:${{ matrix.symfony }}' \
+            'symfony/event-dispatcher:${{ matrix.symfony }}' \
+            'symfony/filesystem:${{ matrix.symfony }}' \
+            'symfony/finder:${{ matrix.symfony }}' \
+            'symfony/framework-bundle:${{ matrix.symfony }}' \
+            'symfony/http-foundation:${{ matrix.symfony }}' \
+            'symfony/http-kernel:${{ matrix.symfony }}' \
+            'symfony/messenger:${{ matrix.symfony }}' \
+            'symfony/scheduler:${{ matrix.symfony }}' \
+            'symfony/validator:${{ matrix.symfony }}'
+      - name: Compile a production installation without optional dependencies
+        working-directory: /tmp/mtb-object-consumer
+        run: |
+          composer update --no-dev --prefer-dist --no-progress --no-interaction
+          php bin/validate.php
+
+      - name: Install optional dependencies and compile enabled production services
+        working-directory: /tmp/mtb-object-consumer
+        env:
+          MTB_OBJECT_ENABLED: '1'
+          MTB_OBJECT_ENDPOINT: https://object-storage.example.invalid
+          MTB_OBJECT_SIGNING_ENDPOINT: https://download.example.invalid
+          MTB_OBJECT_BUCKET: mtb-object-consumer-test
+          MTB_OBJECT_ACCESS_KEY: disposable-test-only
+          MTB_OBJECT_SECRET_KEY: disposable-test-only-never-use-in-production
+          MTB_OBJECT_CA: /etc/ssl/certs/ca-certificates.crt
+        run: |
+          composer install --prefer-dist --no-progress --no-interaction
+          composer audit --no-interaction --abandoned=report
+          php bin/validate.php
+
+  missing-s3:
+    name: Object storage / Flysystem without S3 dependencies
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          coverage: none
+      - name: Install Flysystem without development or S3 packages
+        run: |
+          composer remove --dev --no-update league/flysystem
+          composer require --no-update 'league/flysystem:^3.30.2'
+          composer update --no-dev --prefer-dist --no-progress --no-interaction
+          php tests/ObjectStorage/missing-s3.php

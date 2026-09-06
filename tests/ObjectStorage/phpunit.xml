@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<phpunit bootstrap="../../vendor/autoload.php" cacheDirectory="../../var/object-storage-testkit/phpunit" failOnWarning="true" failOnRisky="true" failOnSkipped="true">
+    <testsuites><testsuite name="Real MinIO"><directory>Minio</directory></testsuite></testsuites>
+</phpunit>

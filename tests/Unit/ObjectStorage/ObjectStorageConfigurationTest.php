@@ -62,9 +62,9 @@ final class ObjectStorageConfigurationTest extends TestCase
         self::assertFalse($container->has(TenantObjectStorageInterface::class));
     }
 
-    public function testEnabledRegistersExplicitServicesAndBothResetHooksWithoutFlysystem(): void
+    public function testEnabledRegistersExplicitServicesAndBothResetHooks(): void
     {
-        self::assertFalse(interface_exists('League\\Flysystem\\FilesystemOperator'));
+        // Actual absence is exercised in tests/minimal-install.php under --no-dev.
         $container = $this->container(self::validConfig());
         $definition = $container->getDefinition('zhortein_multi_tenant.object_storage');
         self::assertTrue($definition->hasTag('kernel.reset'));

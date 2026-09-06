@@ -50,6 +50,9 @@ test-coverage: ## Run tests with coverage report
 test-kit: ## Run Test Kit integration tests
 	$(DOCKER_RUN) vendor/bin/phpunit tests/Integration --no-coverage
 
+test-object-storage: ## Run disposable real MinIO HTTPS object storage proofs
+	sh tests/ObjectStorage/run-minio.sh
+
 test-rls: ## Run RLS isolation tests (requires PostgreSQL)
 	docker compose -f tests/docker-compose.yml run --rm php-rls vendor/bin/phpunit --group rls --no-coverage
 

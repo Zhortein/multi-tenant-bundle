@@ -320,8 +320,9 @@ This bundle is released under the MIT License. See the [LICENSE](LICENSE) file f
 ## Object storage
 
 The optional [object storage core](docs/object-storage.md) provides durable tenant-aware
-references and a backend-independent contract, disabled by default. It ships no
-Flysystem/S3 adapter and leaves the historical file API unchanged.
+references and a backend-independent contract, disabled by default. The
+[optional Flysystem/S3-compatible bridge](docs/object-storage-flysystem.md) adds
+real MinIO proofs and leaves the historical file API unchanged.
 
 ## Changelog
 
