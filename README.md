@@ -323,6 +323,8 @@ The optional [object storage core](docs/object-storage.md) provides durable tena
 references and a backend-independent contract, disabled by default. The
 [optional Flysystem/S3-compatible bridge](docs/object-storage-flysystem.md) adds
 real MinIO proofs and leaves the historical file API unchanged.
+RC11 remains a prerelease; upgrading enables no new integration and executes no
+production migration. See the [RC10 to RC11 migration guide](docs/migration-rc10-to-rc11.md).
 
 ## Changelog
 

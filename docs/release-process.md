@@ -41,6 +41,45 @@ the license, advisory status, and a fresh installation that has no path, VCS,
 fork, or invented-version repository. Repeat the persistent Scheduler proof on
 the public package before updating downstream demonstration applications.
 
+## RC11 distribution gate
+
+Audit the complete RC10-to-candidate diff, including the global Messenger fix,
+object storage core and optional bridge. Documentation preparation targets
+`develop`; any functional or security correction requires its own validated PR
+before promotion. Preserve an outstanding published `main` merge in `develop`
+through a normal synchronization merge and PR, without rewriting or copying
+commits. Wait for CI on the terminal `develop` commit.
+
+Build the candidate ZIP from that exact SHA. Fresh consumers must install it
+through Composer's explicit `dev-candidate` package repository, with source/dist
+references recorded; path repositories and manual copies into `vendor` do not
+count as release distribution proofs. Compare the installed files with the
+candidate tree. Execute both minimal production compilation without Flysystem
+and enabled object storage with explicitly installed optional dependencies and
+real pinned MinIO, including isolation, historical generations, streams,
+pagination, signing/download/expiry and serialized Messenger references.
+
+Require all 38 compatibility/object-storage checks, including the 12 protected
+contexts, and the documented PHP/Symfony/Doctrine/PostgreSQL matrices. No critical
+MinIO or isolation scenario may be skipped. Record historical PHPUnit notices
+and unrelated fixture skips separately. Ordinary external-consumer path jobs
+alone do not satisfy the candidate or public distribution gate.
+
+Promote through a normal non-draft PR with no unresolved discussion or blocking
+review, then wait for all post-merge `main` checks on the exact final commit.
+Only afterward create the previously absent annotated `v1.0.0-rc.11` tag, push
+only that tag and publish a public non-draft GitHub prerelease. Never move an
+earlier tag. Release notes must state that RC11 remains a prerelease and that
+upgrading executes no production migration.
+
+Wait reasonably for Packagist indexing. Verify exact version, source/dist SHA,
+MIT license, Composer constraints and advisory status, and compare archive bytes
+with the tag. Repeat both profiles in new consumers using only
+`zhortein/multi-tenant-bundle:1.0.0-rc.11` from Packagist, with no alternative
+repository. Include production compilation, audit, PostgreSQL 16/18 persistent
+recipes and Symfony compatibility bounds. Preserve evidence of installed
+versions and bytes. Downstream applications are separate release lots.
+
 ## Migration documentation
 
 Every intentional break must state the previous behavior, the new contract, required application or data migration, and rollback considerations. The current security-contract migration is documented in [Security Contract Migration](migration-security-contracts.md).

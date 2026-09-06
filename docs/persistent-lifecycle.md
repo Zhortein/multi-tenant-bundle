@@ -69,6 +69,29 @@ Persistent tenant data in a database, tenant-keyed cache entries, queued
 envelopes, and immutable configuration are not active process-local state and
 are not deleted by a lifecycle reset.
 
+## RC11 object storage lifecycle
+
+`TenantObjectStorage` retains only an invalidation token, with no cached tenant,
+provider selection, reference, stream or page. It participates in `kernel.reset`,
+the bundle lifecycle resetter and tenant-context start/end events. Reset is
+idempotent and performs no storage I/O. Every operation revalidates its tenant,
+persisted reference, location and physical binding; a provider's active location
+is consulted only for new allocations.
+
+Streams are synchronous and scoped to one operation. Reset or a tenant switch
+invalidates access, including A/B/A transitions. Caller-owned resources remain
+open; adapters close their own resources. Partial or unknown results require
+consumer recovery decisions. Persisted references survive reset but grant no
+authorization. Temporary bearer URLs have their own expiry and are not revoked
+by a context reset. A shared mutable tenant context must not be used concurrently
+by multiple fibers. See [object storage](object-storage.md#lifecycle-and-responsibilities).
+
+RC11 also prevents automatic tenant stamps on global Messenger messages sent
+under an active tenant. The sender retains its context; received global work
+runs at `NONE` and cleans up after success or failure. Explicit global tenant
+stamps remain rejected. The [Messenger](messenger.md) and [Scheduler](scheduler.md)
+guides describe both direct and wrapped dispatch.
+
 ## Doctrine and UnitOfWork
 
 A reset calls `computeChangeSets()` and checks scheduled entity insertions,
