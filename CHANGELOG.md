@@ -17,6 +17,12 @@ and releases will follow [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ### Added
 
+- Add an optional Flysystem object storage bridge and S3-compatible construction
+  with deterministic physical bindings, explicit bounded pagination/existence
+  and HTTPS temporary signing, sanitized backend failures, and a disposable
+  real MinIO test kit with external consumer and compatibility matrices. Keep
+  production dependencies, RC10 storage APIs and release version unchanged.
+
 - Add an opt-in, backend-independent object storage core with versioned durable
   references, opaque tenant namespaces and server-generated keys, explicit
   provider/location registries and effective physical bindings, bounded streams

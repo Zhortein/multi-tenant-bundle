@@ -86,4 +86,26 @@ foreach (array_keys($container->getDefinitions()) as $service) {
 
 $container->compile();
 
+$bridgeClass = 'Zhortein\\MultiTenantBundle\\ObjectStorage\\Bridge\\Flysystem\\FlysystemBackend';
+if (class_exists($bridgeClass, false)) {
+    throw new RuntimeException('Disabled object storage loaded a Flysystem bridge class.');
+}
+$missingBridge = new ContainerBuilder();
+(new ZhorteinMultiTenantBundle())->build($missingBridge);
+$missingBridge->register('missing.flysystem', $bridgeClass)->setPublic(true);
+$missingBridge->setParameter('zhortein_multi_tenant.object_storage.service_requirements', [
+    ['missing.flysystem', 'Zhortein\\MultiTenantBundle\\ObjectStorage\\ObjectStorageBackendInterface'],
+]);
+try {
+    $missingBridge->compile();
+    throw new RuntimeException('Enabling a missing Flysystem bridge must fail at compilation.');
+} catch (LogicException $exception) {
+    if (!str_contains($exception->getMessage(), 'composer require league/flysystem:')) {
+        throw $exception;
+    }
+}
+if (class_exists($bridgeClass, false)) {
+    throw new RuntimeException('Dependency validation loaded the unavailable bridge.');
+}
+
 echo "Minimal production container compiled with Messenger installed and its integration explicitly disabled.\n";

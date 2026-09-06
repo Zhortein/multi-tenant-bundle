@@ -1,0 +1,44 @@
+services:
+  minio:
+    image: quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z@sha256:14cea493d9a34af32f524e538b8346cf79f3321eff8e708c1e2960462bd8936e
+    command: server /data --certs-dir /tls --console-address :9001
+    environment:
+      MINIO_ROOT_USER: mtb-object-test-only
+      MINIO_ROOT_PASSWORD: mtb-object-synthetic-disposable-password
+      MINIO_BROWSER: "off"
+    volumes:
+      - ${MTB_OBJECT_TLS_DIR:?test TLS directory required}:/tls:ro
+    tmpfs:
+      - /data
+    networks:
+      default:
+        aliases: [minio-public]
+    healthcheck:
+      test: [CMD, curl, --cacert, /tls/public.crt, --fail, --silent, https://localhost:9000/minio/health/ready]
+      interval: 1s
+      timeout: 3s
+      retries: 40
+  provision:
+    image: quay.io/minio/mc:RELEASE.2025-08-13T08-35-41Z@sha256:a7fe349ef4bd8521fb8497f55c6042871b2ae640607cf99d9bede5e9bdf11727
+    entrypoint: [/bin/sh, -ec]
+    command:
+      - |
+        mc alias set mtb https://minio:9000 mtb-object-test-only mtb-object-synthetic-disposable-password >/dev/null 2>&1
+        mc admin user add mtb mtb-object-rotated mtb-object-rotated-synthetic-password >/dev/null 2>&1
+        mc admin policy attach mtb readwrite --user mtb-object-rotated >/dev/null 2>&1
+    volumes:
+      - ${MTB_OBJECT_TLS_DIR:?test TLS directory required}/public.crt:/root/.mc/certs/CAs/test.crt:ro
+  tests:
+    image: ${MTB_OBJECT_PHP_IMAGE:-php:8.5.9-cli}
+    working_dir: /app
+    volumes:
+      - ../..:/app
+      - ${MTB_OBJECT_TLS_DIR:?test TLS directory required}:/tls:ro
+    environment:
+      MTB_OBJECT_ENDPOINT: https://minio:9000
+      MTB_OBJECT_SIGNING_ENDPOINT: https://minio-public:9000
+      MTB_OBJECT_CA: /tls/public.crt
+    command: [vendor/bin/phpunit, --configuration, tests/ObjectStorage/phpunit.xml, --no-coverage]
+    depends_on:
+      minio:
+        condition: service_healthy

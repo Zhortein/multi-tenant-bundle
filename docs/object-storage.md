@@ -2,11 +2,12 @@
 
 The opt-in `ObjectStorage\TenantObjectStorageInterface` is a backend-independent,
 non-AWS contract. All names below belong to `Zhortein\MultiTenantBundle\ObjectStorage`
-unless qualified otherwise. This core ships **no operational backend**, Flysystem
-bridge, S3 SDK or MinIO service, and requires no new production dependency.
+unless qualified otherwise. The core requires no new production dependency.
+An [optional Flysystem/S3-compatible bridge](object-storage-flysystem.md) and
+disposable MinIO test kit supply operational adapter proofs separately.
 Application services supply `ObjectStorageBackendInterface` and
-`StorageLocationBindingInterface`. The permanent tests use instrumented synthetic
-targets. Real adapter and physical-target derivation proofs belong to the next lot.
+`StorageLocationBindingInterface`. The core tests use instrumented synthetic
+targets; the bridge suite also proves real MinIO addressing and behavior.
 
 ## Coexistence with RC10 file storage
 
@@ -51,7 +52,7 @@ enter this identity. Neither identity fields nor option values may contain
 secrets. The core does not interpret URLs, receive endpoint configuration or
 infer an adapter's effective target: the binding service is a trusted server
 extension point. The synthetic contract proves target/root/options changes and
-credential rotation; the next bridge must prove actual configuration derivation.
+credential rotation; the optional bridge additionally proves real construction.
 A changed bucket, endpoint or root requires a **new location ID**. Reusing an ID
 with a changed binding rejects old references before backend I/O.
 
@@ -251,8 +252,8 @@ URLs intentionally avoid exposing bearer access over plaintext transport.
 The application **must authorize access before calling** `temporaryUrl()`.
 An issued bearer URL remains usable until expiration, even if the tenant
 context is reset or application permissions change. Expiration is not revocation.
-The next adapter must prove that its actual signature expiration matches this
-contract; a synthetic URL alone is not an S3 compatibility claim.
+The optional S3-compatible bridge verifies actual download and server-enforced
+signature expiration; a synthetic URL alone is not an S3 compatibility claim.
 
 ## Lifecycle and responsibilities
 
