@@ -30,11 +30,20 @@ final readonly class S3Capabilities implements KeysetListingInterface, Existence
                 'Bucket' => $this->config->bucket, 'Prefix' => $key, 'MaxKeys' => 1,
             ]));
             $contents = $result->get('Contents') ?? [];
-            if (!is_array($contents) || count($contents) > 1) {
+            $more = $result->get('IsTruncated');
+            if (!is_bool($more) || !is_array($contents) || !array_is_list($contents)
+                || count($contents) > 1 || ($more && [] === $contents)) {
+                throw new \RuntimeException();
+            }
+            if ([] === $contents) {
+                return false;
+            }
+            $item = $contents[0];
+            if (!is_array($item) || !is_string($item['Key'] ?? null) || !str_starts_with($item['Key'], $key)) {
                 throw new \RuntimeException();
             }
 
-            return isset($contents[0]) && is_array($contents[0]) && ($contents[0]['Key'] ?? null) === $key;
+            return $item['Key'] === $key;
         } catch (\Throwable) {
             throw new ObjectStorageBackendException();
         }

@@ -58,4 +58,25 @@ final class S3CapabilitiesTest extends TestCase
             }
         }
     }
+
+    public function testMalformedExistenceResponsesNeverBecomeAbsence(): void
+    {
+        foreach ([[], ['IsTruncated' => 'false'], ['IsTruncated' => true],
+            ['IsTruncated' => false, 'Contents' => [['Key' => 'neighbor/private-key']]],
+            ['IsTruncated' => false, 'Contents' => ['invalid-item']],
+            ['IsTruncated' => false, 'Contents' => [5 => ['Key' => 'unexpected']]],
+        ] as $response) {
+            $client = $this->createStub(S3ClientInterface::class);
+            $client->method('getCommand')->willReturn(new Command('ListObjectsV2'));
+            $client->method('execute')->willReturn(new Result($response));
+            $capability = new S3Capabilities($client, $client, new S3LocationConfiguration('https://minio', 'test-bucket'));
+            try {
+                $capability->exists('objects/v1/'.str_repeat('a', 64).'/'.str_repeat('b', 64));
+                self::fail('An invalid S3 response must not become an absent object.');
+            } catch (ObjectStorageBackendException $e) {
+                self::assertSame('Object storage: backend_failure.', $e->getMessage());
+                self::assertNull($e->getPrevious());
+            }
+        }
+    }
 }

@@ -156,7 +156,8 @@ There is no snapshot guarantee during concurrent writes.
 
 S3 existence uses successful `ListObjectsV2`, bounded to one exact-key prefix.
 It requires permission to list that prefix and distinguishes absent objects from
-inaccessible/missing buckets. The SDK's general `doesObjectExistV2()` turns all
+inaccessible/missing buckets. Malformed or out-of-scope responses fail closed.
+The SDK's general `doesObjectExistV2()` turns all
 HTTP 404 responses into false and cannot provide this distinction. Generic
 operators must uphold that distinction or supply `ExistenceCheckerInterface`.
 
