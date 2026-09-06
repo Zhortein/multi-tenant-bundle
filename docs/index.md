@@ -41,6 +41,9 @@ Welcome to the documentation for the fail-closed Zhortein Multi-Tenant Bundle fo
 - [Messenger](messenger.md) - Tenant-aware message queues and processing
 - [Scheduler](scheduler.md) - Safe boundaries for scheduled and custom persistent loops
 - [Storage](storage.md) - Fail-closed tenant-specific file storage
+- [Object Storage](object-storage.md) - Opt-in durable references and opaque tenant namespaces
+- [Flysystem Bridge](object-storage-flysystem.md) - Optional S3-compatible storage and MinIO proofs
+- [RC10 to RC11 Migration](migration-rc10-to-rc11.md) - Explicit activation, coexistence and physical generations
 - [Security Contract Migration](migration-security-contracts.md) - Breaking storage, cache, mailer, and observability migration
 - [RC1 to RC2 Migration](migration-rc1-to-rc2.md) - Fail-closed Doctrine and Messenger migration
 - [RC4 to RC5 Migration](migration-rc4-to-rc5.md) - Persistent-worker reset and late HTTP resolution

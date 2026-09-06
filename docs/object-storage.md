@@ -11,6 +11,9 @@ targets; the bridge suite also proves real MinIO addressing and behavior.
 
 ## Coexistence with RC10 file storage
 
+RC11 remains a prerelease. Follow the [RC10 to RC11 migration guide](migration-rc10-to-rc11.md)
+for an upgrade with no automatic activation or production migration.
+
 `Storage\TenantFileStorageInterface`, `LocalStorage`, `S3Storage`, their public
 constructors, service IDs and aliases retain their existing behavior. The old
 `storage` block and its defaults are unchanged. Historical paths remain

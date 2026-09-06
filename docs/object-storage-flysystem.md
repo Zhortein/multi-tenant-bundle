@@ -2,7 +2,7 @@
 
 This bridge implements the [object storage core](object-storage.md). The legacy
 RC10 file API, references, namespace rules and confidentiality contract remain
-unchanged. No version or release is changed.
+unchanged. It is available in RC11, which remains a prerelease.
 
 ## Installation and dependency graphs
 
@@ -235,10 +235,12 @@ bridge graphs run across PHP 8.3/8.4/8.5 and compatible Symfony 7.4/8.0/8.1
 combinations. Existing PostgreSQL 16/18, Scheduler, Messenger, lifecycle, cache
 and exact-consumer jobs remain. The bridge introduces no SQL.
 
-## Material for a future RC10 to RC11 guide
+## Upgrading from RC10
 
 Opt in explicitly, install optional packages when needed, provision durable
 opaque namespaces, construct immutable locations and persist references. Retain
 the old file API and historical object locations independently. Applications own
 data conversion and inter-provider migration, authorization, business records,
-quotas, antivirus and retention. This work publishes no version or release.
+quotas, antivirus and retention. MinIO is an S3-compatible validation target,
+not a required production provider. Upgrading executes no production migration.
+Follow the [RC10 to RC11 migration guide](migration-rc10-to-rc11.md).

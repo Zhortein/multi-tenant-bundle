@@ -39,6 +39,26 @@ middleware interface. Its integration can independently be disabled with
 `zhortein_multi_tenant.messenger.enabled: false`; disabled integration registers
 no bundle Messenger services and leaves Symfony's bus chains unchanged.
 
+## Optional object storage dependencies
+
+The RC11 object storage core adds no runtime dependency. Its integration is
+disabled by default and requires explicit consumer backend, binding and
+namespace services when enabled. The historical file storage API is unchanged.
+
+For the optional S3-compatible bridge, the consumer installs:
+
+```sh
+composer require 'league/flysystem:^3.30.2' \
+  'league/flysystem-aws-s3-v3:^3.30.1' 'aws/aws-sdk-php:^3.371.5'
+```
+
+These packages are suggestions and bundle development dependencies only. A
+non-S3 Flysystem backend needs only Flysystem, its chosen adapter and an explicit
+bounded listing capability. No Amazon service is required. MinIO supplies real
+protocol proofs and is not a production requirement. Missing bridge packages
+fail enabled service compilation with installation instructions; disabled
+integration must not load a bridge class. See the [bridge guide](object-storage-flysystem.md).
+
 ## Optional consumer test dependencies
 
 `TenantContextScope` needs no additional package. Applications extending the
