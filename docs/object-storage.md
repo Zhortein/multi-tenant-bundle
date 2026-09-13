@@ -1,7 +1,8 @@
 # Tenant-aware object storage core
 
-The RC12 prerelease adds optional [audit capabilities](object-storage-audit.md) extend this facade
-without changing the RC11 interface, reference format or strict listing behavior.
+The RC12 prerelease adds optional [audit capabilities](object-storage-audit.md)
+to this facade without changing the RC11 interface, reference format or strict
+listing behavior.
 
 The opt-in `ObjectStorage\TenantObjectStorageInterface` is a backend-independent,
 non-AWS contract. All names below belong to `Zhortein\MultiTenantBundle\ObjectStorage`
