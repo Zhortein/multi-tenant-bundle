@@ -323,8 +323,12 @@ The optional [object storage core](docs/object-storage.md) provides durable tena
 references and a backend-independent contract, disabled by default. The
 [optional Flysystem/S3-compatible bridge](docs/object-storage-flysystem.md) adds
 real MinIO proofs and leaves the historical file API unchanged.
-RC11 remains a prerelease; upgrading enables no new integration and executes no
-production migration. See the [RC10 to RC11 migration guide](docs/migration-rc10-to-rc11.md).
+RC12 remains a prerelease. Its [optional audit API](docs/object-storage-audit.md)
+adds lazy location inventory, explicit scopes and logical identity observations.
+Audit is disabled by default; historical objects without identity remain readable.
+Upgrading enables no integration and runs no SQL, object or metadata migration.
+See the [RC11 to RC12 migration guide](docs/migration-rc11-to-rc12.md), including
+the trust boundary, progressive adoption and application rollback.
 
 ## Changelog
 

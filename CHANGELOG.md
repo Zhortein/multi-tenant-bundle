@@ -7,6 +7,12 @@ and releases will follow [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [1.0.0-rc.12] - 2026-09-13
+
+This is a prerelease. Existing RC11 consumers require no change unless adopting
+audit. No SQL, object or metadata migration runs automatically. See the
+[RC11 to RC12 migration guide](docs/migration-rc11-to-rc12.md).
+
 ### Added
 
 - Optional object storage audit capabilities on the existing facade: lazy tenant
@@ -14,7 +20,8 @@ and releases will follow [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
   envelopes, and bounded observations that isolate metadata/reference anomalies.
   Preserve RC11 references, strict listing, optional dependencies and lifecycle.
   Historical objects without identity remain indeterminate for logical correlation.
-  See the [audit contract](docs/object-storage-audit.md); no release is published.
+  Audit is disabled by default. Logical claims do not attest content or prevent
+  administrator replay. See the [audit contract](docs/object-storage-audit.md).
 
 ## [1.0.0-rc.11] - 2026-09-06
 

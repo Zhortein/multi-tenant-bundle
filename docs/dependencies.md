@@ -59,6 +59,12 @@ protocol proofs and is not a production requirement. Missing bridge packages
 fail enabled service compilation with installation instructions; disabled
 integration must not load a bridge class. See the [bridge guide](object-storage-flysystem.md).
 
+RC12 keeps these production constraints unchanged. Its optional audit codec needs
+`ext-openssl` only when enabled and takes runtime application keys independently
+of storage credentials. Minimal installations need no Flysystem; Flysystem-only
+installations still need no S3 adapter or SDK. Generic audit backend ports expose
+no Symfony internals or SDK types. See [RC12 adoption](migration-rc11-to-rc12.md).
+
 ## Optional consumer test dependencies
 
 `TenantContextScope` needs no additional package. Applications extending the
