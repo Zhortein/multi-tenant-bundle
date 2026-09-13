@@ -19,12 +19,19 @@ final readonly class ObjectStorageAuditCodec
         }
         foreach ($keys as $id => $key) {
             Validation::identifier($id);
-            Validation::opaque($key);
+            self::validateKey($key);
+        }
+    }
+
+    private static function validateKey(#[\SensitiveParameter] mixed $key): void
+    {
+        if (!is_string($key) || 1 !== preg_match('/\A[a-f0-9]{64}\z/D', $key)) {
+            throw new ObjectStorageException(ObjectStorageError::INVALID_ARGUMENT);
         }
     }
 
     /** @param array<array-key, mixed> $data */
-    public function seal(array $data, string $purpose): string
+    public function seal(#[\SensitiveParameter] array $data, string $purpose): string
     {
         try {
             $json = json_encode($data, JSON_THROW_ON_ERROR);
@@ -45,7 +52,7 @@ final readonly class ObjectStorageAuditCodec
     }
 
     /** @return array<array-key, mixed> */
-    public function open(string $token, string $purpose): array
+    public function open(#[\SensitiveParameter] string $token, string $purpose): array
     {
         try {
             if (strlen($token) > 12288 || 1 !== preg_match('/\Aa1\.([A-Za-z][A-Za-z0-9_-]{0,63})\.([A-Za-z0-9_-]+)\z/D', $token, $parts)

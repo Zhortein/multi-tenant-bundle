@@ -455,4 +455,42 @@ final class ObjectStorageAuditTest extends TestCase
         $this->expectException(ObjectStorageException::class);
         unserialize(str_replace('s:7:"version";i:1;', 's:7:"version";i:2;', serialize($identity)));
     }
+
+    public function testSanitizedPageErrorDoesNotRetainBackendArgumentsInItsTrace(): void
+    {
+        $previous = ini_set('zend.exception_ignore_args', '0');
+        try {
+            $scope = $this->storage->auditScope('shared_v2');
+            $this->backend()->credentials = 'synthetic-sensitive-credential';
+            $this->backend()->failure = new \RuntimeException('synthetic-sensitive-credential');
+            try {
+                $this->storage->auditList($scope);
+                self::fail('Backend failure.');
+            } catch (ObjectStorageException $e) {
+                self::assertNull($e->getPrevious());
+                $trace = print_r(array_filter($e->getTrace(), static fn (array $frame): bool => str_starts_with($frame['class'] ?? '', 'Zhortein\\MultiTenantBundle\\ObjectStorage\\')), true);
+                self::assertStringNotContainsString('synthetic-sensitive-credential', $trace);
+                self::assertStringNotContainsString('objects/v1/', $trace);
+            }
+        } finally {
+            ini_set('zend.exception_ignore_args', $previous);
+        }
+    }
+
+    public function testInvalidCodecKeyIsNotRetainedInThePublicExceptionTrace(): void
+    {
+        $previous = ini_set('zend.exception_ignore_args', '0');
+        try {
+            try {
+                new ObjectStorageAuditCodec('current', ['current' => 'synthetic-sensitive-invalid-key']);
+                self::fail('Malformed key must fail.');
+            } catch (ObjectStorageException $e) {
+                self::assertNull($e->getPrevious());
+                $trace = array_filter($e->getTrace(), static fn (array $frame): bool => str_starts_with($frame['class'] ?? '', 'Zhortein\\MultiTenantBundle\\ObjectStorage\\'));
+                self::assertStringNotContainsString('synthetic-sensitive-invalid-key', print_r($trace, true));
+            }
+        } finally {
+            ini_set('zend.exception_ignore_args', $previous);
+        }
+    }
 }

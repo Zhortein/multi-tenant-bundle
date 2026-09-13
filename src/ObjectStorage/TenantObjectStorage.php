@@ -141,9 +141,12 @@ final class TenantObjectStorage implements TenantObjectStorageInterface, TenantO
             $previous = $key;
         }
         $guard();
-        $last = [] === $references ? null : $references[array_key_last($references)];
+        if ([] === $references) {
+            return new ObjectListingPage([], null);
+        }
+        $last = $references[array_key_last($references)];
 
-        return new ObjectListingPage($references, $page->hasMore && null !== $last ? $this->cursor($last) : null);
+        return new ObjectListingPage($references, $page->hasMore ? $this->cursor($last) : null);
     }
 
     public function copy(StoredObjectReference $source, StoredObjectReference $destination): void
@@ -282,16 +285,17 @@ final class TenantObjectStorage implements TenantObjectStorageInterface, TenantO
      *
      * @return T
      */
-    private function invoke(\Closure $guard, \Closure $operation): mixed
+    private function invoke(#[\SensitiveParameter] \Closure $guard, #[\SensitiveParameter] \Closure $operation): mixed
     {
         $guard();
         try {
             $result = $operation();
         } catch (ObjectStorageBackendException $exception) {
-            throw $exception;
+            // Discard the backend trace too: it may retain physical keys or client arguments.
+            throw new ObjectStorageBackendException($exception->outcome);
         } catch (ObjectStorageException $exception) {
             if (ObjectStorageError::OBJECT_NOT_FOUND === $exception->reason || ObjectStorageError::UNSUPPORTED_OPERATION === $exception->reason) {
-                throw $exception;
+                throw new ObjectStorageException($exception->reason);
             }
             // A stream/context failure after entry may already have applied bytes.
             throw new ObjectStorageBackendException();

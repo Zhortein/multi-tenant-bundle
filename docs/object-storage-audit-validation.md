@@ -101,6 +101,25 @@ No failure is counted as a successful check.
 
 ## Exact-SHA delivery gates
 
+PR: [#68](https://github.com/Zhortein/multi-tenant-bundle/pull/68).
+Initial implementation commit: `d9548f66272b91e386405aff05f6636d3f566199`.
+The adversarial review found exception-argument retention when PHP is configured
+with `zend.exception_ignore_args=0`. Two failing regression tests demonstrated
+retained backend closure arguments and an invalid key in a validation frame.
+The follow-up discards backend traces at the facade boundary and marks captured
+operations, keys, tokens and envelope payloads as sensitive parameters. Public
+reason/outcome semantics remain unchanged. Tests inspect bundle-owned frames;
+arbitrary caller stack arguments are outside the bundle's control.
+
+The first CI runs on that commit exposed an existing strict-listing null comparison
+as redundant under the newly resolved PHPStan version. All 215 critical tests passed
+there, but 19 matrix jobs stopped at static analysis. The follow-up expresses the
+empty-page branch explicitly, preserving the RC11 result and removing no validation.
+No PHPStan suppression or dependency pin was introduced to bypass the failure.
+Initial run records:
+[Compatibility](https://github.com/Zhortein/multi-tenant-bundle/actions/runs/34745904671),
+[Object storage](https://github.com/Zhortein/multi-tenant-bundle/actions/runs/34745904666).
+
 The implementation PR targets `develop`. Before merge, require the complete
 Compatibility and Object storage workflows, the exact head review, unchanged
 `main`/RC11, and no concurrent equivalent PR. The workflows cover supported PHP
