@@ -13,10 +13,13 @@ use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Reference;
 use Symfony\Component\HttpKernel\Kernel as BaseKernel;
 use Zhortein\MultiTenantBundle\Context\TenantContextInterface;
+use Zhortein\MultiTenantBundle\ObjectStorage\Bridge\Flysystem\AuditableFlysystemBackend;
 use Zhortein\MultiTenantBundle\ObjectStorage\Bridge\Flysystem\S3CompatibleStorageFactory;
 use Zhortein\MultiTenantBundle\ObjectStorage\Bridge\Flysystem\S3LocationConfiguration;
 use Zhortein\MultiTenantBundle\ObjectStorage\Bridge\Flysystem\SigningFlysystemBackend;
 use Zhortein\MultiTenantBundle\ObjectStorage\ConfiguredTenantStorageNamespaceResolver;
+use Zhortein\MultiTenantBundle\ObjectStorage\ObjectStorageAuditCodec;
+use Zhortein\MultiTenantBundle\ObjectStorage\TenantObjectStorageAuditInterface;
 use Zhortein\MultiTenantBundle\ObjectStorage\TenantObjectStorageInterface;
 use Zhortein\MultiTenantBundle\Registry\InMemoryTenantRegistry;
 use Zhortein\MultiTenantBundle\Registry\TenantRegistryInterface;
@@ -50,7 +53,7 @@ final class Kernel extends BaseKernel
             public function process(ContainerBuilder $container): void
             {
                 $container->setAlias(TenantRegistryInterface::class, InMemoryTenantRegistry::class)->setPublic(true);
-                foreach ([TenantObjectStorageInterface::class, TenantContextInterface::class, \Symfony\Component\Messenger\MessageBusInterface::class] as $alias) {
+                foreach ([TenantObjectStorageInterface::class, TenantObjectStorageAuditInterface::class, TenantContextInterface::class, \Symfony\Component\Messenger\MessageBusInterface::class] as $alias) {
                     if ($container->hasAlias($alias)) {
                         $container->getAlias($alias)->setPublic(true);
                     }
@@ -65,6 +68,7 @@ final class Kernel extends BaseKernel
     protected function configureContainer(ContainerBuilder $container): void
     {
         $enabled = '1' === getenv('MTB_OBJECT_ENABLED');
+        $audit = '1' === getenv('MTB_OBJECT_AUDIT_ENABLED');
         $container->loadFromExtension('framework', [
             'secret' => 'disposable-object-storage-consumer',
             'messenger' => ['transports' => ['async' => ['dsn' => 'in-memory://', 'options' => ['serialize' => true]]],
@@ -79,16 +83,20 @@ final class Kernel extends BaseKernel
             $container->register('object.config', S3LocationConfiguration::class)->setArguments([
                 '%env(MTB_OBJECT_ENDPOINT)%', '%env(MTB_OBJECT_BUCKET)%', 'consumer', true, 'us-east-1', '%env(MTB_OBJECT_SIGNING_ENDPOINT)%',
             ]);
-            $container->register('object.backend', SigningFlysystemBackend::class)
+            $container->register('object.backend', $audit ? AuditableFlysystemBackend::class : SigningFlysystemBackend::class)
                 ->setFactory([S3CompatibleStorageFactory::class, 'create'])
-                ->setArguments([new Reference('object.config'), '%env(MTB_OBJECT_ACCESS_KEY)%', '%env(MTB_OBJECT_SECRET_KEY)%', true, '%env(MTB_OBJECT_CA)%']);
+                ->setArguments([new Reference('object.config'), '%env(MTB_OBJECT_ACCESS_KEY)%', '%env(MTB_OBJECT_SECRET_KEY)%', true, '%env(MTB_OBJECT_CA)%', $audit]);
             $container->register('object.namespaces', ConfiguredTenantStorageNamespaceResolver::class)
                 ->setArguments([['A' => str_repeat('a', 64), 'B' => str_repeat('b', 64)]]);
             $storage += ['namespace_resolver' => 'object.namespaces',
                 'providers' => ['shared' => ['active_location' => 'shared_v1']],
-                'locations' => ['shared_v1' => ['backend' => 'object.backend', 'binding' => 'object.backend', 'allowed_tenants' => ['*'], 'temporary_urls' => true]],
+                'locations' => ['shared_v1' => ['backend' => 'object.backend', 'binding' => 'object.backend', 'allowed_tenants' => ['*'], 'temporary_urls' => true, 'audit_listing' => $audit, 'identity_observation' => $audit]],
                 'temporary_urls' => ['enabled' => true],
             ];
+            if ($audit) {
+                $storage['audit'] = ['enabled' => true, 'codec' => 'object.audit_codec'];
+                $container->register('object.audit_codec', ObjectStorageAuditCodec::class)->setArguments(['current', ['current' => '%env(MTB_OBJECT_AUDIT_KEY)%']]);
+            }
             $container->register(Handler::class)->setAutowired(true)->setPublic(true)
                 ->addTag('messenger.message_handler', ['handles' => StorageMessage::class]);
         }

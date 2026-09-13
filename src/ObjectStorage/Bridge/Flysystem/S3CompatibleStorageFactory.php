@@ -19,6 +19,7 @@ final class S3CompatibleStorageFactory
         #[\SensitiveParameter] string $secretKey,
         bool $temporaryUrls = false,
         ?string $caBundle = null,
+        bool $audit = false,
     ): FlysystemBackend {
         if (!class_exists(S3Client::class) || !class_exists(AwsS3V3Adapter::class) || !class_exists(Filesystem::class)) {
             throw new \LogicException('object_storage S3 bridge requires league/flysystem:^3.30.2, league/flysystem-aws-s3-v3:^3.30.1 and aws/aws-sdk-php:^3.371.5. Install them with Composer.');
@@ -35,6 +36,10 @@ final class S3CompatibleStorageFactory
             $adapter = new AwsS3V3Adapter($client, $config->bucket, $config->root, streamReads: true);
             $filesystem = new Filesystem($adapter);
             $capabilities = new S3Capabilities($client, $signer, $config);
+
+            if ($audit) {
+                return new AuditableFlysystemBackend($filesystem, $config->identity(), $capabilities, $capabilities, $capabilities, $capabilities, $temporaryUrls ? $capabilities : null);
+            }
 
             return $temporaryUrls
                 ? new SigningFlysystemBackend($filesystem, $config->identity(), $capabilities, $capabilities, $capabilities)

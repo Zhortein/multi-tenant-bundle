@@ -43,6 +43,7 @@ Welcome to the documentation for the fail-closed Zhortein Multi-Tenant Bundle fo
 - [Storage](storage.md) - Fail-closed tenant-specific file storage
 - [Object Storage](object-storage.md) - Opt-in durable references and opaque tenant namespaces
 - [Flysystem Bridge](object-storage-flysystem.md) - Optional S3-compatible storage and MinIO proofs
+- [Object Storage Audit](object-storage-audit.md) - Optional lazy inventory and logical identity observations (unreleased)
 - [RC10 to RC11 Migration](migration-rc10-to-rc11.md) - Explicit activation, coexistence and physical generations
 - [Security Contract Migration](migration-security-contracts.md) - Breaking storage, cache, mailer, and observability migration
 - [RC1 to RC2 Migration](migration-rc1-to-rc2.md) - Fail-closed Doctrine and Messenger migration
