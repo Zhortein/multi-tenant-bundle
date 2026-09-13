@@ -1,5 +1,8 @@
 # Tenant-aware object storage core
 
+The optional [audit capabilities](object-storage-audit.md) extend this facade
+without changing the RC11 interface, reference format or strict listing behavior.
+
 The opt-in `ObjectStorage\TenantObjectStorageInterface` is a backend-independent,
 non-AWS contract. All names below belong to `Zhortein\MultiTenantBundle\ObjectStorage`
 unless qualified otherwise. The core requires no new production dependency.

@@ -7,6 +7,15 @@ and releases will follow [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+### Added
+
+- Optional object storage audit capabilities on the existing facade: lazy tenant
+  location inventory, explicit historical scopes, authenticated logical identity
+  envelopes, and bounded observations that isolate metadata/reference anomalies.
+  Preserve RC11 references, strict listing, optional dependencies and lifecycle.
+  Historical objects without identity remain indeterminate for logical correlation.
+  See the [audit contract](docs/object-storage-audit.md); no release is published.
+
 ## [1.0.0-rc.11] - 2026-09-06
 
 This is a prerelease. Upgrading executes no production migration and does not

@@ -15,8 +15,9 @@ use Zhortein\MultiTenantBundle\ObjectStorage\Internal\Validation;
 use Zhortein\MultiTenantBundle\Observability\Event\TenantContextEndedEvent;
 use Zhortein\MultiTenantBundle\Observability\Event\TenantContextStartedEvent;
 
-final class TenantObjectStorage implements TenantObjectStorageInterface, EventSubscriberInterface
+final class TenantObjectStorage implements TenantObjectStorageInterface, TenantObjectStorageAuditInterface, EventSubscriberInterface
 {
+    use Internal\ObjectStorageAuditOperations;
     public const MAX_LIST_LIMIT = 1000;
 
     // Only an invalidation token is retained, never tenant selections, streams or pages.
@@ -30,6 +31,7 @@ final class TenantObjectStorage implements TenantObjectStorageInterface, EventSu
         private readonly bool $temporaryUrlsEnabled = false,
         private readonly int $defaultTtl = 300,
         private readonly int $maxTtl = 900,
+        private readonly ?ObjectStorageAuditCodec $auditCodec = null,
     ) {
         if ($defaultTtl <= 0 || $maxTtl < $defaultTtl || $maxTtl > 86400) {
             throw new ObjectStorageException(ObjectStorageError::INVALID_ARGUMENT);
@@ -191,7 +193,7 @@ final class TenantObjectStorage implements TenantObjectStorageInterface, EventSu
         if (!hash_equals($namespace, $reference->tenantNamespace)) {
             throw new ObjectStorageException(ObjectStorageError::FOREIGN_REFERENCE);
         }
-        $location = $this->registry->location($reference->locationId);
+        $location = $this->registry->forTenantLocation($reference->locationId, $tenant);
         if (!hash_equals($location->fingerprint(), $reference->locationBinding)) {
             throw new ObjectStorageException(ObjectStorageError::BINDING_MISMATCH);
         }

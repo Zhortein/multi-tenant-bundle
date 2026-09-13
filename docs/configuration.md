@@ -48,6 +48,8 @@ The separate `object_storage` integration is disabled by default. Its complete
 [configuration and service contracts](object-storage.md#configuration) and
 [optional Flysystem service example](object-storage-flysystem.md#common-construction-and-explicit-services)
 cover providers, immutable locations, namespace resolution and temporary URLs.
+The additive [audit configuration](object-storage-audit.md#configuration-and-lazy-inventory)
+is independently disabled by default and requires explicit capability declarations.
 It does not alter the historical `storage` block below. See the
 [RC10 to RC11 migration guide](migration-rc10-to-rc11.md) before enabling it.
 
