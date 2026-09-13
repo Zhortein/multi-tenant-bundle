@@ -78,6 +78,11 @@ final class ObjectStorageConfigurationTest extends TestCase
     public static function invalidConfigs(): iterable
     {
         yield 'missing required active config' => [['enabled' => true]];
+        yield 'audit without codec' => [['audit' => ['enabled' => true]]];
+        yield 'audit blank codec' => [['audit' => ['enabled' => true, 'codec' => ' ']]];
+        yield 'audit without storage' => [['enabled' => false, 'audit' => ['enabled' => true, 'codec' => 'codec']]];
+        yield 'ambiguous provider' => [['audit' => ['enabled' => true, 'codec' => 'codec'], 'providers' => ['other' => ['active_location' => 'shared_v1']]]];
+        yield 'unknown historical provider' => [['audit' => ['enabled' => true, 'codec' => 'codec'], 'locations' => ['shared_v1' => ['provider' => 'unknown']]]];
         yield 'blank default' => [['default_provider' => '']];
         yield 'numeric default' => [['default_provider' => 1]];
         yield 'unknown default' => [['default_provider' => 'missing']];
@@ -156,5 +161,27 @@ final class ObjectStorageConfigurationTest extends TestCase
         $this->expectException(\LogicException::class);
         $this->expectExceptionMessage('TemporaryObjectUrlBackendInterface');
         $container->compile();
+    }
+
+    public function testEnabledAuditRequiresConcreteCodecAndAdvertisedBackendCapabilities(): void
+    {
+        foreach (['codec', 'listing', 'identity'] as $case) {
+            $config = self::validConfig();
+            $config['audit'] = ['enabled' => true, 'codec' => 'test.codec'];
+            $config['locations']['shared_v1']['audit_listing'] = 'listing' === $case;
+            $config['locations']['shared_v1']['identity_observation'] = 'identity' === $case;
+            $container = $this->container($config);
+            if ('codec' !== $case) {
+                $container->register('test.codec', \Zhortein\MultiTenantBundle\ObjectStorage\ObjectStorageAuditCodec::class)
+                    ->setFactory([\Zhortein\MultiTenantBundle\Tests\Fixtures\ObjectStorage\AuditCodecFactory::class, 'create']);
+            }
+            try {
+                $container->compile();
+                self::fail('Incomplete capability configuration must fail at compilation.');
+            } catch (\LogicException $e) {
+                self::assertStringContainsString('object_storage:', $e->getMessage());
+                self::assertNull($e->getPrevious());
+            }
+        }
     }
 }

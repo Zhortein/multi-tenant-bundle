@@ -1040,7 +1040,14 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *             binding?: scalar|Param|null,
  *             allowed_tenants?: list<scalar|Param|null>,
  *             temporary_urls?: bool|Param, // Default: false
+ *             provider?: scalar|Param|null, // Default: null
+ *             audit_listing?: bool|Param, // Default: false
+ *             identity_observation?: bool|Param, // Default: false
  *         }>,
+ *         audit?: array{
+ *             enabled?: bool|Param, // Default: false
+ *             codec?: scalar|Param|null, // Default: null
+ *         },
  *         temporary_urls?: array{
  *             enabled?: bool|Param, // Default: false
  *             default_ttl?: int|Param, // Default: 300

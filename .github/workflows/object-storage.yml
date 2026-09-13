@@ -39,7 +39,7 @@ jobs:
           composer audit --no-interaction --abandoned=report
       - name: Unit contracts and maximum static analysis
         run: |
-          vendor/bin/phpunit --no-coverage tests/Unit/ObjectStorage tests/Integration/ObjectStorage
+          vendor/bin/phpunit --no-coverage --fail-on-skipped tests/Unit/ObjectStorage tests/Integration/ObjectStorage
           vendor/bin/phpstan analyse src -c phpstan.neon --memory-limit=512M
       - name: Real MinIO HTTPS, isolation, signing and persistent worker proofs
         env:
@@ -107,6 +107,12 @@ jobs:
         run: |
           composer install --prefer-dist --no-progress --no-interaction
           composer audit --no-interaction --abandoned=report
+          php bin/validate.php
+          # Inventory must work without instantiating the configured S3 backend.
+          unset MTB_OBJECT_ENDPOINT MTB_OBJECT_SIGNING_ENDPOINT MTB_OBJECT_BUCKET MTB_OBJECT_ACCESS_KEY MTB_OBJECT_SECRET_KEY MTB_OBJECT_CA
+          export MTB_OBJECT_AUDIT_ENABLED=1
+          MTB_OBJECT_AUDIT_KEY="$(php -r 'echo bin2hex(random_bytes(32));')"
+          export MTB_OBJECT_AUDIT_KEY
           php bin/validate.php
 
   missing-s3:

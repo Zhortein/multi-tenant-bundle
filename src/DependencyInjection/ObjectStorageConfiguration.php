@@ -7,17 +7,25 @@ namespace Zhortein\MultiTenantBundle\DependencyInjection;
 use Symfony\Component\Config\Definition\Builder\ArrayNodeDefinition;
 use Symfony\Component\Config\Definition\Builder\TreeBuilder;
 use Symfony\Component\Config\Definition\Exception\InvalidConfigurationException;
+use Symfony\Component\DependencyInjection\Argument\ServiceClosureArgument;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
+use Symfony\Component\DependencyInjection\Definition;
 use Symfony\Component\DependencyInjection\Reference;
 use Zhortein\MultiTenantBundle\Context\TenantContextInterface;
+use Zhortein\MultiTenantBundle\ObjectStorage\AuditListingBackendInterface;
 use Zhortein\MultiTenantBundle\ObjectStorage\ConfiguredTenantStorageProviderSelector;
 use Zhortein\MultiTenantBundle\ObjectStorage\Internal\Validation;
+use Zhortein\MultiTenantBundle\ObjectStorage\ObjectIdentityBackendInterface;
+use Zhortein\MultiTenantBundle\ObjectStorage\ObjectStorageAuditCodec;
 use Zhortein\MultiTenantBundle\ObjectStorage\ObjectStorageBackendInterface;
 use Zhortein\MultiTenantBundle\ObjectStorage\ObjectStorageRegistry;
 use Zhortein\MultiTenantBundle\ObjectStorage\StorageLocation;
 use Zhortein\MultiTenantBundle\ObjectStorage\StorageLocationBindingInterface;
+use Zhortein\MultiTenantBundle\ObjectStorage\StorageLocationDescriptor;
+use Zhortein\MultiTenantBundle\ObjectStorage\StorageLocationRegistration;
 use Zhortein\MultiTenantBundle\ObjectStorage\TemporaryObjectUrlBackendInterface;
 use Zhortein\MultiTenantBundle\ObjectStorage\TenantObjectStorage;
+use Zhortein\MultiTenantBundle\ObjectStorage\TenantObjectStorageAuditInterface;
 use Zhortein\MultiTenantBundle\ObjectStorage\TenantObjectStorageInterface;
 use Zhortein\MultiTenantBundle\ObjectStorage\TenantStorageNamespaceResolverInterface;
 use Zhortein\MultiTenantBundle\ObjectStorage\TenantStorageProviderSelectorInterface;
@@ -28,7 +36,8 @@ use Zhortein\MultiTenantBundle\ObjectStorage\TenantStorageProviderSelectorInterf
  * @phpstan-type StorageConfig array{
  *   enabled: bool, default_provider: string, namespace_resolver: ?string, provider_selector: ?string,
  *   tenant_overrides: array<string|int, string>, providers: array<string, array{active_location: string}>,
- *   locations: array<string, array{backend: string, binding: string, allowed_tenants: list<string>, temporary_urls: bool}>,
+ *   locations: array<string, array{backend: string, binding: string, allowed_tenants: list<string>, temporary_urls: bool, provider: ?string, audit_listing: bool, identity_observation: bool}>,
+ *   audit: array{enabled: bool, codec: ?string},
  *   temporary_urls: array{enabled: bool, default_ttl: int, max_ttl: int}
  * }
  */
@@ -55,7 +64,14 @@ final class ObjectStorageConfiguration
                     ->scalarNode('binding')->isRequired()->cannotBeEmpty()->end()
                     ->arrayNode('allowed_tenants')->isRequired()->requiresAtLeastOneElement()->scalarPrototype()->cannotBeEmpty()->end()->end()
                     ->booleanNode('temporary_urls')->defaultFalse()->end()
+                    ->scalarNode('provider')->defaultNull()->end()
+                    ->booleanNode('audit_listing')->defaultFalse()->end()
+                    ->booleanNode('identity_observation')->defaultFalse()->end()
                 ->end()->end()->end()
+            ->arrayNode('audit')->addDefaultsIfNotSet()->children()
+                ->booleanNode('enabled')->defaultFalse()->end()
+                ->scalarNode('codec')->defaultNull()->end()
+            ->end()->end()
             ->arrayNode('temporary_urls')->addDefaultsIfNotSet()->children()
                 ->booleanNode('enabled')->defaultFalse()->end()
                 ->integerNode('default_ttl')->min(1)->defaultValue(300)->end()
@@ -78,6 +94,9 @@ final class ObjectStorageConfiguration
         if ($config['temporary_urls']['default_ttl'] > $config['temporary_urls']['max_ttl']) {
             throw new InvalidConfigurationException('object_storage: default_ttl must not exceed max_ttl.');
         }
+        if ($config['audit']['enabled'] && (!$config['enabled'] || !is_string($config['audit']['codec']) || '' === trim($config['audit']['codec']) || !extension_loaded('openssl'))) {
+            throw new InvalidConfigurationException('object_storage.audit requires enabled object storage, a runtime codec service and ext-openssl.');
+        }
         foreach (['namespace_resolver', 'provider_selector'] as $option) {
             if (null !== $config[$option]) {
                 try {
@@ -98,6 +117,13 @@ final class ObjectStorageConfiguration
             }
             foreach ($config['locations'] as $id => $location) {
                 Validation::identifier($id);
+                if ($config['audit']['enabled']) {
+                    $owners = array_keys(array_filter($config['providers'], static fn (array $provider): bool => $provider['active_location'] === $id));
+                    $owner = $location['provider'] ?? (1 === count($owners) ? $owners[0] : null);
+                    if (null === $owner || !isset($config['providers'][$owner]) || count($owners) > 1 || ([] !== $owners && $owners !== [$owner])) {
+                        throw new \LogicException('Audit inventory requires one unambiguous registered provider per location, including historical generations.');
+                    }
+                }
                 foreach (['backend', 'binding'] as $option) {
                     Validation::nonEmptyString($location[$option]);
                 }
@@ -137,13 +163,35 @@ final class ObjectStorageConfiguration
         }
         $requirements = [];
         $locations = [];
+        $codec = null;
+        if ($config['audit']['enabled']) {
+            $codecId = $config['audit']['codec'];
+            if (null === $codecId) {
+                throw new \LogicException('object_storage.audit requires a runtime codec service.');
+            }
+            $codec = new Reference($codecId);
+            $requirements[] = [$codecId, ObjectStorageAuditCodec::class];
+        }
         foreach ($config['locations'] as $id => $location) {
             $service = 'zhortein_multi_tenant.object_storage.location.'.$id;
             $container->register($service, StorageLocation::class)->setArguments([
                 $id, new Reference($location['backend']), new Reference($location['binding']),
                 $location['allowed_tenants'], $location['temporary_urls'],
             ]);
-            $locations[] = new Reference($service);
+            if ($config['audit']['enabled']) {
+                $owners = array_keys(array_filter($config['providers'], static fn (array $provider): bool => $provider['active_location'] === $id));
+                $owner = $location['provider'] ?? $owners[0];
+                $descriptor = new Definition(StorageLocationDescriptor::class, [$id, $owner, $config['providers'][$owner]['active_location'] === $id, $location['audit_listing'], $location['identity_observation']]);
+                $locations[] = new Definition(StorageLocationRegistration::class, [$descriptor, $location['allowed_tenants'], new ServiceClosureArgument(new Reference($service))]);
+                if ($location['audit_listing']) {
+                    $requirements[] = [$location['backend'], AuditListingBackendInterface::class];
+                }
+                if ($location['identity_observation']) {
+                    $requirements[] = [$location['backend'], ObjectIdentityBackendInterface::class];
+                }
+            } else {
+                $locations[] = new Reference($service);
+            }
             $requirements[] = [$location['backend'], ObjectStorageBackendInterface::class];
             $requirements[] = [$location['binding'], StorageLocationBindingInterface::class];
             if ($location['temporary_urls']) {
@@ -151,7 +199,7 @@ final class ObjectStorageConfiguration
             }
         }
         $providers = array_map(static fn (array $provider): string => $provider['active_location'], $config['providers']);
-        $container->register('zhortein_multi_tenant.object_storage.registry', ObjectStorageRegistry::class)->setArguments([$locations, $providers]);
+        $container->register('zhortein_multi_tenant.object_storage.registry', ObjectStorageRegistry::class)->setArguments([$locations, $providers, $codec]);
         $container->setAlias(ObjectStorageRegistry::class, 'zhortein_multi_tenant.object_storage.registry');
         $selector = $config['provider_selector'] ?? 'zhortein_multi_tenant.object_storage.provider_selector';
         if (null === $config['provider_selector']) {
@@ -173,10 +221,14 @@ final class ObjectStorageConfiguration
             new Reference(TenantContextInterface::class), new Reference($selector), new Reference($namespaceResolver),
             new Reference(ObjectStorageRegistry::class), $config['temporary_urls']['enabled'],
             $config['temporary_urls']['default_ttl'], $config['temporary_urls']['max_ttl'],
+            $codec,
         ])->addTag('kernel.reset', ['method' => 'reset'])
             ->addTag('kernel.event_subscriber')
             ->addTag('zhortein_multi_tenant.lifecycle_resetter');
         $container->setAlias(TenantObjectStorageInterface::class, 'zhortein_multi_tenant.object_storage');
+        if ($config['audit']['enabled']) {
+            $container->setAlias(TenantObjectStorageAuditInterface::class, 'zhortein_multi_tenant.object_storage');
+        }
         $container->setParameter('zhortein_multi_tenant.object_storage.service_requirements', $requirements);
     }
 }

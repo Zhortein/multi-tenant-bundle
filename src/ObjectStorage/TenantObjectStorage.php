@@ -15,8 +15,9 @@ use Zhortein\MultiTenantBundle\ObjectStorage\Internal\Validation;
 use Zhortein\MultiTenantBundle\Observability\Event\TenantContextEndedEvent;
 use Zhortein\MultiTenantBundle\Observability\Event\TenantContextStartedEvent;
 
-final class TenantObjectStorage implements TenantObjectStorageInterface, EventSubscriberInterface
+final class TenantObjectStorage implements TenantObjectStorageInterface, TenantObjectStorageAuditInterface, EventSubscriberInterface
 {
+    use Internal\ObjectStorageAuditOperations;
     public const MAX_LIST_LIMIT = 1000;
 
     // Only an invalidation token is retained, never tenant selections, streams or pages.
@@ -30,6 +31,7 @@ final class TenantObjectStorage implements TenantObjectStorageInterface, EventSu
         private readonly bool $temporaryUrlsEnabled = false,
         private readonly int $defaultTtl = 300,
         private readonly int $maxTtl = 900,
+        private readonly ?ObjectStorageAuditCodec $auditCodec = null,
     ) {
         if ($defaultTtl <= 0 || $maxTtl < $defaultTtl || $maxTtl > 86400) {
             throw new ObjectStorageException(ObjectStorageError::INVALID_ARGUMENT);
@@ -139,9 +141,12 @@ final class TenantObjectStorage implements TenantObjectStorageInterface, EventSu
             $previous = $key;
         }
         $guard();
-        $last = [] === $references ? null : $references[array_key_last($references)];
+        if ([] === $references) {
+            return new ObjectListingPage([], null);
+        }
+        $last = $references[array_key_last($references)];
 
-        return new ObjectListingPage($references, $page->hasMore && null !== $last ? $this->cursor($last) : null);
+        return new ObjectListingPage($references, $page->hasMore ? $this->cursor($last) : null);
     }
 
     public function copy(StoredObjectReference $source, StoredObjectReference $destination): void
@@ -191,7 +196,7 @@ final class TenantObjectStorage implements TenantObjectStorageInterface, EventSu
         if (!hash_equals($namespace, $reference->tenantNamespace)) {
             throw new ObjectStorageException(ObjectStorageError::FOREIGN_REFERENCE);
         }
-        $location = $this->registry->location($reference->locationId);
+        $location = $this->registry->forTenantLocation($reference->locationId, $tenant);
         if (!hash_equals($location->fingerprint(), $reference->locationBinding)) {
             throw new ObjectStorageException(ObjectStorageError::BINDING_MISMATCH);
         }
@@ -280,16 +285,17 @@ final class TenantObjectStorage implements TenantObjectStorageInterface, EventSu
      *
      * @return T
      */
-    private function invoke(\Closure $guard, \Closure $operation): mixed
+    private function invoke(#[\SensitiveParameter] \Closure $guard, #[\SensitiveParameter] \Closure $operation): mixed
     {
         $guard();
         try {
             $result = $operation();
         } catch (ObjectStorageBackendException $exception) {
-            throw $exception;
+            // Discard the backend trace too: it may retain physical keys or client arguments.
+            throw new ObjectStorageBackendException($exception->outcome);
         } catch (ObjectStorageException $exception) {
             if (ObjectStorageError::OBJECT_NOT_FOUND === $exception->reason || ObjectStorageError::UNSUPPORTED_OPERATION === $exception->reason) {
-                throw $exception;
+                throw new ObjectStorageException($exception->reason);
             }
             // A stream/context failure after entry may already have applied bytes.
             throw new ObjectStorageBackendException();

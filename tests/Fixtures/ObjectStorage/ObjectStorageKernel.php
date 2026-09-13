@@ -51,6 +51,8 @@ final class ObjectStorageKernel extends Kernel
 
     protected function configureContainer(ContainerBuilder $container): void
     {
+        $audit = str_starts_with($this->environment, 'audit_');
+        $backend = $audit ? AuditBackend::class : InstrumentedBackend::class;
         $container->loadFromExtension('framework', ['secret' => 'synthetic-object-storage', 'test' => true,
             'messenger' => ['transports' => ['async' => ['dsn' => 'in-memory://', 'options' => ['serialize' => true]]],
                 'routing' => [StorageMessage::class => 'async', GlobalStorageMessage::class => 'async']],
@@ -66,12 +68,17 @@ final class ObjectStorageKernel extends Kernel
             'fixtures' => ['enabled' => false], 'mailer' => ['enabled' => false], 'storage' => ['enabled' => false],
             'messenger' => ['routing_strategy' => 'symfony_routing'],
             'object_storage' => ['enabled' => true, 'namespace_resolver' => 'object.namespaces',
+                'audit' => ['enabled' => $audit, 'codec' => $audit ? 'object.audit_codec' : null],
                 'providers' => ['shared' => ['active_location' => 'shared_v1']],
-                'locations' => ['shared_v1' => ['backend' => InstrumentedBackend::class, 'binding' => InstrumentedBackend::class, 'allowed_tenants' => ['*']]],
+                'locations' => ['shared_v1' => ['backend' => $backend, 'binding' => $backend, 'allowed_tenants' => ['*'], 'audit_listing' => $audit, 'identity_observation' => $audit]],
             ],
         ]);
         $container->register(InMemoryTenantRegistry::class)->setPublic(true);
         $container->register(InstrumentedBackend::class)->setPublic(true);
+        if ($audit) {
+            $container->register(AuditBackend::class)->setPublic(true);
+            $container->register('object.audit_codec', \Zhortein\MultiTenantBundle\ObjectStorage\ObjectStorageAuditCodec::class)->setFactory([AuditCodecFactory::class, 'create']);
+        }
         $container->register('object.namespaces', ConfiguredTenantStorageNamespaceResolver::class)->setArguments([['1' => str_repeat('a', 64), '2' => str_repeat('b', 64)]]);
         $container->register(StorageMessageHandler::class)->setAutowired(true)->setPublic(true)
             ->addTag('messenger.message_handler', ['handles' => StorageMessage::class])
