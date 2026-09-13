@@ -1,6 +1,6 @@
-# Optional object storage audit capabilities (unreleased)
+# Optional object storage audit capabilities (RC12 prerelease)
 
-This is upstream development, not an RC12 publication. The
+RC12 remains a prerelease. Audit is disabled by default. The
 [RC11 object storage contract](object-storage.md) remains the default. The
 existing `TenantObjectStorage` service additionally implements the optional
 `TenantObjectStorageAuditInterface`; no methods are added to the mandatory RC11
@@ -259,11 +259,11 @@ No snapshot is promised under concurrent writes. Exhausting one page or location
 does not prove completion of all locations. No repair, deletion, quarantine,
 reallocation, automatic retry or compensating write is part of these audit methods.
 
-## Historical RC11 objects and future migration
+## Historical RC11 objects and migration
 
 Historical references and objects remain readable and exactly resolvable. Their
 addresses can still be matched using unchanged v1 JSON and `equals()`. A historical
 object without an envelope has **no logical provenance supplied by this API**:
 `identity_absent` is indeterminate for logical correlation, not an orphan verdict.
 Equal content, dates, sizes or opaque key fragments cannot invent that provenance.
-See the [future RC11 to RC12 migration procedure](migration-rc11-to-rc12.md).
+See the [RC11 to RC12 migration procedure](migration-rc11-to-rc12.md).
