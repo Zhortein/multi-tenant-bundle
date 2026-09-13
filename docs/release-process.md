@@ -80,6 +80,46 @@ repository. Include production compilation, audit, PostgreSQL 16/18 persistent
 recipes and Symfony compatibility bounds. Preserve evidence of installed
 versions and bytes. Downstream applications are separate release lots.
 
+## RC12 distribution gate
+
+RC12 publishes only PR #68's optional audit capabilities above RC11. Review the
+complete RC11-to-develop diff and exact file inventory, including tenant isolation,
+lazy inventory, scope/cursor validation, metadata trust, foreign-entry redaction,
+sanitation, v1 JSON, optional dependencies and reset behavior. Record explicitly
+that author adversarial review is not independent human approval. A blocking
+functional correction needs its own branch, tests and PR before promotion.
+
+Prepare documentation through a normal PR to develop, preserving published main
+history through an ordinary merge where needed. Wait for all 38 checks on the PR
+and terminal develop commit. Build and validate a fresh ZIP from that exact SHA,
+then promote through a branch from main and a normal protected PR. Wait for all
+38 post-merge main checks before creating annotated v1.0.0-rc.12 on that validated
+main commit. Never rewrite RC1–RC11. Publish a public, non-draft GitHub prerelease
+with no extra release asset.
+
+The archive must match the tracked Git tree byte-for-byte, including MIT license
+and Composer metadata. There are currently no export-ignore rules: tracked source,
+documentation and reproducible fixtures are intentional. VCS directories, ignored
+caches, vendor installations, working archives, locks, release evidence and
+generated certificates must not enter the distribution. Compare every installed
+bundle file with the candidate, not only one command.
+
+Fresh candidate consumers use the explicit dev-candidate archive package repository.
+Validate minimal production without Flysystem, Flysystem without S3, and low/high
+S3 graphs. Exercise old RC11 calls, enabled audit, historical identity_absent, new
+identities, active/history inventory, sanitized entry anomalies, global page errors,
+pagination, lifecycle/reset and Messenger. Run real MinIO HTTPS and the Consumer
+App's persistent PostgreSQL 16/18 recipes.
+
+After publication, verify Packagist RC12 source/dist SHA, MIT license, unchanged
+Composer constraints and advisory status. Download its public archive and compare
+every file with the tag and candidate. Repeat consumer profiles from Packagist
+alone, without alternate repositories. Preserve exact locks, manifests, checksums,
+test counts, CI links, skips/notices and incidents outside the shipped archive.
+Clean only mission resources. Application repositories, deployment, persistent
+data and downstream integration remain separate work. Follow the
+[RC11 to RC12 guide](migration-rc11-to-rc12.md).
+
 ## Migration documentation
 
 Every intentional break must state the previous behavior, the new contract, required application or data migration, and rollback considerations. The current security-contract migration is documented in [Security Contract Migration](migration-security-contracts.md).

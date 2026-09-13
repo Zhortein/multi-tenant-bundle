@@ -89,6 +89,22 @@ targets; RC11 introduces no SQL and does not require PostgreSQL 18 in production
 See the [migration guide](migration-rc10-to-rc11.md) and
 [real MinIO recipe](object-storage-flysystem.md#disposable-minio-test-kit).
 
+## RC12 optional audit matrix
+
+RC12 preserves RC11 bounds and adds audit observations to the same 12 low/high
+MinIO HTTPS combinations above. Coverage includes shared/dedicated buckets, active
+and historical generations, identity present/absent/invalid/foreign, pagination,
+individual anomalies, global page errors, signing, streams and credential rotation.
+Critical object-storage and MinIO suites reject skips. Compiled kernels prove
+lazy inventory without S3 connection variables, A/B/A and Symfony/bundle resets.
+
+All 22 Compatibility and 16 Object storage jobs must pass on the candidate and
+post-promotion main. Minimal, Flysystem-only, archive and public consumers supplement
+the source matrix; a source checkout alone is not a distribution proof. The exact
+graph and persistent Messenger/Scheduler/PostgreSQL 16/18 recipes remain required.
+Keep locks and actual runtime patch versions with release evidence. No mandatory
+dependency or SQL migration is added. See [RC12 migration](migration-rc11-to-rc12.md).
+
 ## Local validation
 
 The default local environment validates with PHP 8.5.9. Cross-version support remains an explicit CI matrix rather than an accidentally mixed dependency graph.

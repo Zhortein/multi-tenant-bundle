@@ -2,7 +2,11 @@
 
 This bridge implements the [object storage core](object-storage.md). The legacy
 RC10 file API, references, namespace rules and confidentiality contract remain
-unchanged. It is available in RC11, which remains a prerelease.
+unchanged. It was introduced in RC11. RC12 also remains a prerelease and adds the optional
+[audit composition](object-storage-audit.md#configuration-and-lazy-inventory).
+Existing factory calls remain unchanged. Audit requires explicit `audit: true`,
+an `AuditableFlysystemBackend` declaration and the separate audit block. Ordinary
+overwrites can remove identity metadata; no automatic backfill runs.
 
 ## Installation and dependency graphs
 
@@ -243,4 +247,5 @@ the old file API and historical object locations independently. Applications own
 data conversion and inter-provider migration, authorization, business records,
 quotas, antivirus and retention. MinIO is an S3-compatible validation target,
 not a required production provider. Upgrading executes no production migration.
-Follow the [RC10 to RC11 migration guide](migration-rc10-to-rc11.md).
+Follow the [RC10 to RC11 migration guide](migration-rc10-to-rc11.md) for initial
+bridge adoption and the [RC11 to RC12 guide](migration-rc11-to-rc12.md) for audit.

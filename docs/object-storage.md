@@ -1,5 +1,9 @@
 # Tenant-aware object storage core
 
+The RC12 prerelease adds optional [audit capabilities](object-storage-audit.md)
+to this facade without changing the RC11 interface, reference format or strict
+listing behavior.
+
 The opt-in `ObjectStorage\TenantObjectStorageInterface` is a backend-independent,
 non-AWS contract. All names below belong to `Zhortein\MultiTenantBundle\ObjectStorage`
 unless qualified otherwise. The core requires no new production dependency.
@@ -12,7 +16,8 @@ targets; the bridge suite also proves real MinIO addressing and behavior.
 ## Coexistence with RC10 file storage
 
 RC11 remains a prerelease. Follow the [RC10 to RC11 migration guide](migration-rc10-to-rc11.md)
-for an upgrade with no automatic activation or production migration.
+for the original object storage adoption. The [RC11 to RC12 guide](migration-rc11-to-rc12.md)
+covers optional audit adoption with no automatic activation or migration.
 
 `Storage\TenantFileStorageInterface`, `LocalStorage`, `S3Storage`, their public
 constructors, service IDs and aliases retain their existing behavior. The old

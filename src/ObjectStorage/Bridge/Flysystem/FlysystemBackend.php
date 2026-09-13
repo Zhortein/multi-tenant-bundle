@@ -43,15 +43,27 @@ class FlysystemBackend implements ObjectStorageBackendInterface, StorageLocation
 
     public function write(string $qualifiedKey, string $content): void
     {
+        $this->writeWithOptions($qualifiedKey, $content, []);
+    }
+
+    /** @param array<string, mixed> $options */
+    protected function writeWithOptions(string $qualifiedKey, string $content, array $options): void
+    {
         QualifiedKey::validate($qualifiedKey);
         try {
-            $this->filesystem->write($qualifiedKey, $content, ['visibility' => 'private']);
+            $this->filesystem->write($qualifiedKey, $content, ['visibility' => 'private'] + $options);
         } catch (\Throwable) {
             throw new ObjectStorageBackendException();
         }
     }
 
     public function writeFromStream(string $qualifiedKey, ObjectStreamSourceInterface $source): void
+    {
+        $this->writeStreamWithOptions($qualifiedKey, $source, []);
+    }
+
+    /** @param array<string, mixed> $options */
+    protected function writeStreamWithOptions(string $qualifiedKey, ObjectStreamSourceInterface $source, array $options): void
     {
         QualifiedKey::validate($qualifiedKey);
         // Flysystem rewinds seekable input. Spool only unread caller bytes and never
@@ -79,7 +91,7 @@ class FlysystemBackend implements ObjectStorageBackendInterface, StorageLocation
                 throw new \RuntimeException();
             }
             $entered = true;
-            $this->filesystem->writeStream($qualifiedKey, $spool, ['visibility' => 'private']);
+            $this->filesystem->writeStream($qualifiedKey, $spool, ['visibility' => 'private'] + $options);
         } catch (\Throwable) {
             throw new ObjectStorageBackendException($entered ? OperationOutcome::UNKNOWN : OperationOutcome::NOT_APPLIED);
         } finally {
