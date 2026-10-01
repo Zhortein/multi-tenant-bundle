@@ -46,7 +46,7 @@ jobs:
           MTB_OBJECT_PHP_IMAGE: php:${{ matrix.runtime.php }}-cli
         run: sh tests/ObjectStorage/run-minio.sh
       - name: Preserve the exact resolved dependency graph
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: object-storage-php-${{ matrix.runtime.php }}-symfony-${{ matrix.runtime.symfony }}-${{ matrix.dependencies }}
           path: composer.lock
